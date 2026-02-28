@@ -86,6 +86,16 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
           <Row l="Salaire de base" v={p.salaireBase} />
           {p.sursalaire > 0 && <Row l="Sursalaire" v={p.sursalaire} />}
           {p.primeAnc > 0 && <Row l={`Prime ancienneté (${anc}%)`} v={p.primeAnc} c="text-senpaie-blue" />}
+          {p.totalHS > 0 && (
+            <>
+              {p.mtHS115 > 0 && <Row l={`HS 115% (${emp.hs115}h)`} v={p.mtHS115} />}
+              {p.mtHS140 > 0 && <Row l={`HS 140% (${emp.hs140}h)`} v={p.mtHS140} />}
+              {p.mtHS160 > 0 && <Row l={`HS 160% (${emp.hs160}h)`} v={p.mtHS160} />}
+              {p.mtHS200 > 0 && <Row l={`HS 200% (${emp.hs200}h)`} v={p.mtHS200} />}
+            </>
+          )}
+          {p.retAbsence > 0 && <Row l={`Retenue absences (${emp.heuresAbsence}h)`} v={p.retAbsence} c="text-destructive" neg />}
+          {p.indMaladie > 0 && <Row l="Indemnité maladie" v={p.indMaladie} />}
           <Row l="SALAIRE BRUT" v={p.brut} c="text-senpaie-blue" bold />
         </div>
 
@@ -100,10 +110,25 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
           <Row l="TOTAL RETENUES" v={p.totalRet} c="text-destructive" bold neg />
         </div>
 
+        {/* Avances & Retenues Diverses */}
+        {p.totalAvances > 0 && (
+          <div className="mb-2.5">
+            <div className="text-senpaie-yellow text-[10px] font-bold mb-1 uppercase tracking-wider">Avances & Retenues Diverses</div>
+            {p.avanceTabaski > 0 && <Row l="Avance Tabaski/Noël" v={p.avanceTabaski} c="text-senpaie-yellow" neg />}
+            {p.avanceCaisse > 0 && <Row l="Avance caisse" v={p.avanceCaisse} c="text-senpaie-yellow" neg />}
+            {p.avanceFinanciere > 0 && <Row l="Avance financière" v={p.avanceFinanciere} c="text-senpaie-yellow" neg />}
+            {p.retCooperative > 0 && <Row l="Retenue coopérative" v={p.retCooperative} c="text-senpaie-yellow" neg />}
+            {p.fraisMedicaux > 0 && <Row l="Frais médicaux" v={p.fraisMedicaux} c="text-senpaie-yellow" neg />}
+            <Row l="TOTAL AVANCES" v={p.totalAvances} c="text-senpaie-yellow" bold neg />
+          </div>
+        )}
+
         {/* Indemnités */}
         <div className="mb-3">
           <div className="text-primary text-[10px] font-bold mb-1 uppercase tracking-wider">Indemnités</div>
           <Row l="Indemnité de transport" v={p.transport} c="text-primary" />
+          {p.primePanier > 0 && <Row l={`Prime de panier (${emp.nbPaniers}j)`} v={p.primePanier} c="text-primary" />}
+          {p.indKilometrique > 0 && <Row l="Indemnité kilométrique" v={p.indKilometrique} c="text-primary" />}
         </div>
 
         {/* NET */}

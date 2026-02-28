@@ -24,6 +24,21 @@ export interface Employee {
   dateEntree: string;
   salaireBase: number;
   sursalaire: number;
+  // Gestion avancée
+  heuresAbsence: number;
+  heuresAbsMaladie: number;
+  tauxMaladie: number;
+  nbPaniers: number;
+  hs115: number;
+  hs140: number;
+  hs160: number;
+  hs200: number;
+  avanceTabaski: number;
+  avanceCaisse: number;
+  avanceFinanciere: number;
+  retCooperative: number;
+  fraisMedicaux: number;
+  indKilometrique: number;
 }
 
 export interface PayrollParams {
@@ -71,6 +86,23 @@ export interface PayrollResult {
   baseCSS: number;
   partsIR: number;
   partsTRIMFCap: number;
+  // Gestion avancée
+  tauxHoraire: number;
+  retAbsence: number;
+  indMaladie: number;
+  mtHS115: number;
+  mtHS140: number;
+  mtHS160: number;
+  mtHS200: number;
+  totalHS: number;
+  primePanier: number;
+  indKilometrique: number;
+  totalAvances: number;
+  avanceTabaski: number;
+  avanceCaisse: number;
+  avanceFinanciere: number;
+  retCooperative: number;
+  fraisMedicaux: number;
 }
 
 export interface Convention {
@@ -133,7 +165,31 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const anc = getAnciennete(emp.dateEntree, refDate);
   const ancRate = getTauxAnciennete(anc);
   const primeAnc = (emp.salaireBase || 0) * ancRate;
-  const brut = (emp.salaireBase || 0) + (emp.sursalaire || 0) + primeAnc;
+
+  // Taux horaire (base 173.33h/mois)
+  const TH = 173.33;
+  const tauxHoraire = (emp.salaireBase || 0) / TH;
+
+  // Heures supplémentaires
+  const mtHS115 = (emp.hs115 || 0) * tauxHoraire * 1.15;
+  const mtHS140 = (emp.hs140 || 0) * tauxHoraire * 1.40;
+  const mtHS160 = (emp.hs160 || 0) * tauxHoraire * 1.60;
+  const mtHS200 = (emp.hs200 || 0) * tauxHoraire * 2.00;
+  const totalHS = mtHS115 + mtHS140 + mtHS160 + mtHS200;
+
+  // Retenues absences
+  const retAbsence = (emp.heuresAbsence || 0) * tauxHoraire;
+
+  // Indemnité maladie
+  const indMaladie = (emp.heuresAbsMaladie || 0) * tauxHoraire * (emp.tauxMaladie || 0);
+
+  // Prime de panier (constante 3000 FCFA/jour × nb paniers)
+  const primePanier = (emp.nbPaniers || 0) * 3000;
+
+  // Indemnité kilométrique
+  const indKilometrique = emp.indKilometrique || 0;
+
+  const brut = (emp.salaireBase || 0) + (emp.sursalaire || 0) + primeAnc + totalHS - retAbsence + indMaladie;
 
   // Quotient familial IR
   const partsIR = emp.situationFamille === "Marié(e)"
@@ -181,10 +237,18 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const ipm_s = brut * p.IPM.taux * p.IPM.tauxSalarial;
   const ipm_p = brut * p.IPM.taux * p.IPM.tauxPatronal;
 
+  // Avances & retenues diverses
+  const avanceTabaski = emp.avanceTabaski || 0;
+  const avanceCaisse = emp.avanceCaisse || 0;
+  const avanceFinanciere = emp.avanceFinanciere || 0;
+  const retCooperative = emp.retCooperative || 0;
+  const fraisMedicaux = emp.fraisMedicaux || 0;
+  const totalAvances = avanceTabaski + avanceCaisse + avanceFinanciere + retCooperative + fraisMedicaux;
+
   const totalRet = ir + trimf + ipresRG_s + ipresRC_s + ipm_s;
   const chargesPat = cfce + ipresRG_p + ipresRC_p + css_af + css_at + ipm_p;
   const transport = p.transport.valeur || 0;
-  const net = brut - totalRet + transport;
+  const net = brut - totalRet + transport + primePanier + indKilometrique - totalAvances;
   const masse = brut + chargesPat;
 
   return {
@@ -192,6 +256,9 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
     primeAnc, brut, ir, trimf, ipresRG_s, ipresRC_s, ipm_s, totalRet,
     cfce, ipresRG_p, ipresRC_p, css_af, css_at, ipm_p, chargesPat,
     transport, net, masse, anc, ancRate, baseCSS, partsIR, partsTRIMFCap,
+    tauxHoraire, retAbsence, indMaladie, mtHS115, mtHS140, mtHS160, mtHS200, totalHS,
+    primePanier, indKilometrique, totalAvances,
+    avanceTabaski, avanceCaisse, avanceFinanciere, retCooperative, fraisMedicaux,
   };
 }
 
