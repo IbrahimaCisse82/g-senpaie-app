@@ -12,6 +12,9 @@ export const DEFAULT_EMPLOYEES: Employee[] = [
     fonction: "COMMIS", convention: "COMMERCE", categorie: "3_ème",
     statut: "employés", contrat: "CDI", dateEntree: "2009-01-01",
     salaireBase: 77840, sursalaire: 20104,
+    heuresAbsence: 0, heuresAbsMaladie: 0, tauxMaladie: 0, nbPaniers: 0,
+    hs115: 0, hs140: 0, hs160: 0, hs200: 0,
+    avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, indKilometrique: 0,
   },
   {
     matricule: "IF0002", prenom: "HELENE AIDA", nom: "MALACK", sexe: "F",
@@ -21,6 +24,9 @@ export const DEFAULT_EMPLOYEES: Employee[] = [
     fonction: "SECRETAIRE MEDICALE", convention: "COMMERCE", categorie: "7_ème B",
     statut: "agents de maîtrise", contrat: "CDI", dateEntree: "2009-06-01",
     salaireBase: 113984, sursalaire: 61659,
+    heuresAbsence: 0, heuresAbsMaladie: 0, tauxMaladie: 0, nbPaniers: 0,
+    hs115: 0, hs140: 0, hs160: 0, hs200: 0,
+    avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, indKilometrique: 0,
   },
 ];
 
@@ -381,6 +387,9 @@ export const EMPTY_EMPLOYEE: Employee = {
   femmes: 0, enfants: 0, fonction: "", convention: "COMMERCE",
   categorie: "", statut: "employés", contrat: "CDI",
   dateEntree: "", salaireBase: 0, sursalaire: 0,
+  heuresAbsence: 0, heuresAbsMaladie: 0, tauxMaladie: 0, nbPaniers: 0,
+  hs115: 0, hs140: 0, hs160: 0, hs200: 0,
+  avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, indKilometrique: 0,
 };
 
 export const STATUT_COLORS: Record<string, string> = {

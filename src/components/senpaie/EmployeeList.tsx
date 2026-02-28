@@ -140,7 +140,16 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
   };
 
   const handleSave = () => {
-    if (validate()) onSave({ ...form, salaireBase: +form.salaireBase, sursalaire: +form.sursalaire, enfants: +form.enfants, femmes: +form.femmes });
+    if (validate()) onSave({
+      ...form, salaireBase: +form.salaireBase, sursalaire: +form.sursalaire,
+      enfants: +form.enfants, femmes: +form.femmes,
+      heuresAbsence: +(form.heuresAbsence || 0), heuresAbsMaladie: +(form.heuresAbsMaladie || 0),
+      tauxMaladie: +(form.tauxMaladie || 0), nbPaniers: +(form.nbPaniers || 0),
+      hs115: +(form.hs115 || 0), hs140: +(form.hs140 || 0), hs160: +(form.hs160 || 0), hs200: +(form.hs200 || 0),
+      avanceTabaski: +(form.avanceTabaski || 0), avanceCaisse: +(form.avanceCaisse || 0),
+      avanceFinanciere: +(form.avanceFinanciere || 0), retCooperative: +(form.retCooperative || 0),
+      fraisMedicaux: +(form.fraisMedicaux || 0), indKilometrique: +(form.indKilometrique || 0),
+    });
   };
 
   return (
@@ -244,6 +253,76 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
           </Field>
           <Field label="Sursalaire (FCFA)">
             <input type="number" value={form.sursalaire} onChange={(e) => set("sursalaire", e.target.value)} className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Heures supplémentaires */}
+      <div className="mb-5">
+        <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">⏱️ Heures Supplémentaires</div>
+        <div className="grid grid-cols-4 gap-x-5">
+          <Field label="HS 115%">
+            <input type="number" min="0" value={form.hs115 || ""} onChange={(e) => set("hs115", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="HS 140%">
+            <input type="number" min="0" value={form.hs140 || ""} onChange={(e) => set("hs140", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="HS 160%">
+            <input type="number" min="0" value={form.hs160 || ""} onChange={(e) => set("hs160", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="HS 200%">
+            <input type="number" min="0" value={form.hs200 || ""} onChange={(e) => set("hs200", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Absences & Maladie */}
+      <div className="mb-5">
+        <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">🏥 Absences & Maladie</div>
+        <div className="grid grid-cols-3 gap-x-5">
+          <Field label="Heures d'absence">
+            <input type="number" min="0" value={form.heuresAbsence || ""} onChange={(e) => set("heuresAbsence", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Heures abs. maladie">
+            <input type="number" min="0" value={form.heuresAbsMaladie || ""} onChange={(e) => set("heuresAbsMaladie", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Taux maladie (0 à 1)">
+            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Indemnités supplémentaires */}
+      <div className="mb-5">
+        <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">🎫 Indemnités supplémentaires</div>
+        <div className="grid grid-cols-2 gap-x-5">
+          <Field label="Nombre de paniers">
+            <input type="number" min="0" value={form.nbPaniers || ""} onChange={(e) => set("nbPaniers", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Indemnité kilométrique (FCFA)">
+            <input type="number" min="0" value={form.indKilometrique || ""} onChange={(e) => set("indKilometrique", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Avances & Retenues */}
+      <div className="mb-5">
+        <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">💸 Avances & Retenues Diverses</div>
+        <div className="grid grid-cols-3 gap-x-5">
+          <Field label="Avance Tabaski/Noël">
+            <input type="number" min="0" value={form.avanceTabaski || ""} onChange={(e) => set("avanceTabaski", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Avance caisse">
+            <input type="number" min="0" value={form.avanceCaisse || ""} onChange={(e) => set("avanceCaisse", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Avance financière">
+            <input type="number" min="0" value={form.avanceFinanciere || ""} onChange={(e) => set("avanceFinanciere", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Retenue coopérative">
+            <input type="number" min="0" value={form.retCooperative || ""} onChange={(e) => set("retCooperative", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Frais médicaux">
+            <input type="number" min="0" value={form.fraisMedicaux || ""} onChange={(e) => set("fraisMedicaux", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
         </div>
       </div>
