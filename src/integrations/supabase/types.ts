@@ -14,7 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      employees: {
+        Row: {
+          adresse: string | null
+          avance_caisse: number
+          avance_financiere: number
+          avance_tabaski: number
+          categorie: string | null
+          contrat: string | null
+          convention: string | null
+          created_at: string
+          date_entree: string
+          date_naissance: string | null
+          enfants: number
+          femmes: number
+          fonction: string
+          frais_medicaux: number
+          heures_abs_maladie: number
+          heures_absence: number
+          hs115: number
+          hs140: number
+          hs160: number
+          hs200: number
+          id: string
+          ind_kilometrique: number
+          lieu_naissance: string | null
+          matricule: string
+          nationalite: string | null
+          nb_paniers: number
+          nom: string
+          prenom: string
+          ret_cooperative: number
+          salaire_base: number
+          sexe: string
+          situation_famille: string | null
+          statut: string | null
+          sursalaire: number
+          taux_maladie: number
+          telephone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adresse?: string | null
+          avance_caisse?: number
+          avance_financiere?: number
+          avance_tabaski?: number
+          categorie?: string | null
+          contrat?: string | null
+          convention?: string | null
+          created_at?: string
+          date_entree: string
+          date_naissance?: string | null
+          enfants?: number
+          femmes?: number
+          fonction?: string
+          frais_medicaux?: number
+          heures_abs_maladie?: number
+          heures_absence?: number
+          hs115?: number
+          hs140?: number
+          hs160?: number
+          hs200?: number
+          id?: string
+          ind_kilometrique?: number
+          lieu_naissance?: string | null
+          matricule: string
+          nationalite?: string | null
+          nb_paniers?: number
+          nom: string
+          prenom: string
+          ret_cooperative?: number
+          salaire_base?: number
+          sexe?: string
+          situation_famille?: string | null
+          statut?: string | null
+          sursalaire?: number
+          taux_maladie?: number
+          telephone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          adresse?: string | null
+          avance_caisse?: number
+          avance_financiere?: number
+          avance_tabaski?: number
+          categorie?: string | null
+          contrat?: string | null
+          convention?: string | null
+          created_at?: string
+          date_entree?: string
+          date_naissance?: string | null
+          enfants?: number
+          femmes?: number
+          fonction?: string
+          frais_medicaux?: number
+          heures_abs_maladie?: number
+          heures_absence?: number
+          hs115?: number
+          hs140?: number
+          hs160?: number
+          hs200?: number
+          id?: string
+          ind_kilometrique?: number
+          lieu_naissance?: string | null
+          matricule?: string
+          nationalite?: string | null
+          nb_paniers?: number
+          nom?: string
+          prenom?: string
+          ret_cooperative?: number
+          salaire_base?: number
+          sexe?: string
+          situation_famille?: string | null
+          statut?: string | null
+          sursalaire?: number
+          taux_maladie?: number
+          telephone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      entreprises: {
+        Row: {
+          adresse: string | null
+          created_at: string
+          email: string | null
+          id: string
+          logo: string | null
+          ninea: string | null
+          nom: string
+          rccm: string | null
+          telephone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adresse?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo?: string | null
+          ninea?: string | null
+          nom?: string
+          rccm?: string | null
+          telephone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          adresse?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo?: string | null
+          ninea?: string | null
+          nom?: string
+          rccm?: string | null
+          telephone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payroll_params: {
+        Row: {
+          created_at: string
+          id: string
+          params: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          params?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          params?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
