@@ -48,13 +48,13 @@ export const DEFAULT_PARAMS: PayrollParams = {
 //  Default Entreprise
 // ══════════════════════════════════════════════════════════════════════════════
 export const DEFAULT_ENTREPRISE: Entreprise = {
-  nom: "LE MEDICAL KAMANO",
+  nom: "",
   logo: "",
-  adresse: "4, Bld République x Mouhamed V, Dakar",
-  telephone: "+221 77 633 01 34",
-  email: "contact@medicalkamano.sn",
-  ninea: "006760210",
-  rccm: "SN-DKR-2005-B-12345",
+  adresse: "",
+  telephone: "",
+  email: "",
+  ninea: "",
+  rccm: "",
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
