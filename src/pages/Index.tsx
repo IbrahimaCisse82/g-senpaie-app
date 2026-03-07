@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
-import type { Employee, PayrollParams, PayrollResult, Convention, Entreprise } from "@/lib/payroll";
+import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt } from "@/lib/payroll";
-import { DEFAULT_CONVENTIONS, NAV_ITEMS, type TabId } from "@/lib/constants";
+import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
-import { useEmployees, useEntreprise, usePayrollParams } from "@/hooks/useSupabaseData";
+import { useEmployees, useEntreprise, usePayrollParams, useConventions } from "@/hooks/useSupabaseData";
 import { Dashboard } from "@/components/senpaie/Dashboard";
 import { EmployeeList, EmployeeForm } from "@/components/senpaie/EmployeeList";
 import { BulletinModal } from "@/components/senpaie/BulletinModal";
@@ -19,10 +19,10 @@ import { Modal } from "@/components/senpaie/Modal";
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { employees, saveEmployee, deleteEmployee, loading: empLoading } = useEmployees(user?.id);
-  const { entreprise, saveEntreprise } = useEntreprise(user?.id);
+  const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
   const { params, saveParams, resetParams } = usePayrollParams(user?.id);
+  const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
 
-  const [conventions, setConventions] = useState<Convention[]>(DEFAULT_CONVENTIONS);
   const [tab, setTab] = useState<TabId>("dashboard");
   const [showBulletin, setShowBulletin] = useState<Employee | null>(null);
   const [showForm, setShowForm] = useState<"new" | Employee | null>(null);
@@ -113,8 +113,23 @@ const Index = () => {
             {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} />}
             {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} />}
             {tab === "simulateur" && <Simulateur params={params} />}
-            {tab === "conventions" && <ConventionsPage conventions={conventions} setConventions={setConventions} showToast={showToast} />}
-            {tab === "entreprise" && <EntreprisePage entreprise={entreprise} onSave={async (d) => { await saveEntreprise(d); showToast("✅ Entreprise enregistrée"); }} />}
+            {tab === "conventions" && (
+              <ConventionsPage
+                conventions={conventions}
+                onSaveConvention={saveConvention}
+                onDeleteConvention={deleteConvention}
+                onSaveCategory={saveCategory}
+                onDeleteCategory={deleteCategory}
+                showToast={showToast}
+              />
+            )}
+            {tab === "entreprise" && (
+              <EntreprisePage
+                entreprise={entreprise}
+                onSave={async (d) => { await saveEntreprise(d); showToast("✅ Entreprise enregistrée"); }}
+                onUploadLogo={uploadLogo}
+              />
+            )}
             {tab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} />}
           </>
         )}

@@ -5,23 +5,43 @@ import { Field, inputClass } from "./Modal";
 interface EntreprisePageProps {
   entreprise: Entreprise;
   onSave: (data: Entreprise) => void;
+  onUploadLogo?: (file: File) => Promise<string | null>;
 }
 
-export function EntreprisePage({ entreprise, onSave }: EntreprisePageProps) {
+export function EntreprisePage({ entreprise, onSave, onUploadLogo }: EntreprisePageProps) {
   const [form, setForm] = useState<Entreprise>({ ...entreprise });
   const [logoPreview, setLogoPreview] = useState(entreprise.logo || "");
+  const [uploading, setUploading] = useState(false);
   const set = (k: keyof Entreprise, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setLogoPreview(result);
-      set("logo", result);
-    };
-    reader.readAsDataURL(file);
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Le fichier est trop volumineux. Max 2 Mo.");
+      return;
+    }
+
+    if (onUploadLogo) {
+      setUploading(true);
+      const url = await onUploadLogo(file);
+      setUploading(false);
+      if (url) {
+        setLogoPreview(url);
+        set("logo", url);
+      }
+    } else {
+      // Fallback to base64
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setLogoPreview(result);
+        set("logo", result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -41,7 +61,9 @@ export function EntreprisePage({ entreprise, onSave }: EntreprisePageProps) {
         <div className="text-primary text-xs font-bold mb-3.5 pb-2 border-b border-border">🖼️ Logo de l'entreprise</div>
         <div className="flex gap-5 items-center">
           <div className={`w-[140px] h-[80px] bg-background border-2 border-dashed rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${logoPreview ? "border-primary" : "border-border"}`}>
-            {logoPreview ? (
+            {uploading ? (
+              <div className="text-primary text-[11px] animate-pulse">Upload…</div>
+            ) : logoPreview ? (
               <img src={logoPreview} alt="logo" className="max-w-full max-h-full object-contain" />
             ) : (
               <div className="text-center text-muted-foreground text-[11px]"><div className="text-2xl mb-1">🖼️</div>Aucun logo</div>
@@ -50,7 +72,7 @@ export function EntreprisePage({ entreprise, onSave }: EntreprisePageProps) {
           <div>
             <label className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-xs cursor-pointer mb-2.5">
               📁 Choisir un logo
-              <input type="file" accept="image/*" onChange={handleLogo} className="hidden" />
+              <input type="file" accept="image/*" onChange={handleLogo} className="hidden" disabled={uploading} />
             </label>
             {logoPreview && (
               <button onClick={() => { setLogoPreview(""); set("logo", ""); }}

@@ -6,11 +6,14 @@ import { STATUT_COLORS } from "@/lib/constants";
 
 interface ConventionsPageProps {
   conventions: Convention[];
-  setConventions: React.Dispatch<React.SetStateAction<Convention[]>>;
+  onSaveConvention: (cc: Convention, isNew: boolean) => Promise<void>;
+  onDeleteConvention: (id: string) => Promise<void>;
+  onSaveCategory: (conventionId: string, cat: ConventionCategory, isNew: boolean) => Promise<void>;
+  onDeleteCategory: (id: string) => Promise<void>;
   showToast: (msg: string) => void;
 }
 
-export function ConventionsPage({ conventions, setConventions, showToast }: ConventionsPageProps) {
+export function ConventionsPage({ conventions, onSaveConvention, onDeleteConvention, onSaveCategory, onDeleteCategory, showToast }: ConventionsPageProps) {
   const [selectedId, setSelectedId] = useState<string | null>(conventions[0]?.id || null);
   const [showCCForm, setShowCCForm] = useState<"new" | Convention | null>(null);
   const [showCatForm, setShowCatForm] = useState<"new" | ConventionCategory | null>(null);
@@ -24,42 +27,38 @@ export function ConventionsPage({ conventions, setConventions, showToast }: Conv
   const [ccForm, setCcForm] = useState({ nom: "", secteur: "", dateSignature: "", description: "" });
   const [catForm, setCatForm] = useState({ code: "", libelle: "", statut: "employés", salaireMinima: 0 });
 
-  const saveCC = () => {
+  const saveCC = async () => {
     if (showCCForm === "new") {
-      const newCC: Convention = { id: `CC${Date.now()}`, ...ccForm, categories: [] };
-      setConventions((prev) => [...prev, newCC]);
-      setSelectedId(newCC.id);
+      await onSaveConvention({ id: "", ...ccForm, categories: [] }, true);
       showToast("✅ Convention ajoutée");
     } else if (showCCForm) {
-      setConventions((prev) => prev.map((c) => c.id === (showCCForm as Convention).id ? { ...c, ...ccForm } : c));
+      await onSaveConvention({ ...(showCCForm as Convention), ...ccForm }, false);
       showToast("✅ Convention modifiée");
     }
     setShowCCForm(null);
   };
 
-  const saveCat = () => {
+  const saveCat = async () => {
     if (!selectedCC) return;
     if (showCatForm === "new") {
-      const newCat: ConventionCategory = { id: `cat${Date.now()}`, ...catForm, salaireMinima: +catForm.salaireMinima };
-      setConventions((prev) => prev.map((c) => c.id === selectedCC.id ? { ...c, categories: [...c.categories, newCat] } : c));
+      await onSaveCategory(selectedCC.id, { id: "", ...catForm, salaireMinima: +catForm.salaireMinima }, true);
       showToast("✅ Catégorie ajoutée");
     } else if (showCatForm) {
-      setConventions((prev) => prev.map((c) => c.id === selectedCC.id ? { ...c, categories: c.categories.map((cat) => cat.id === (showCatForm as ConventionCategory).id ? { ...cat, ...catForm, salaireMinima: +catForm.salaireMinima } : cat) } : c));
+      await onSaveCategory(selectedCC.id, { ...(showCatForm as ConventionCategory), ...catForm, salaireMinima: +catForm.salaireMinima }, false);
       showToast("✅ Catégorie modifiée");
     }
     setShowCatForm(null);
   };
 
-  const deleteCC = (id: string) => {
-    setConventions((prev) => prev.filter((c) => c.id !== id));
+  const deleteCC = async (id: string) => {
+    await onDeleteConvention(id);
     if (selectedId === id) setSelectedId(conventions.find((c) => c.id !== id)?.id || null);
     setShowDelCC(null);
     showToast("🗑 Convention supprimée");
   };
 
-  const deleteCat = (id: string) => {
-    if (!selectedCC) return;
-    setConventions((prev) => prev.map((c) => c.id === selectedCC.id ? { ...c, categories: c.categories.filter((cat) => cat.id !== id) } : c));
+  const deleteCat = async (id: string) => {
+    await onDeleteCategory(id);
     setShowDelCat(null);
     showToast("🗑 Catégorie supprimée");
   };

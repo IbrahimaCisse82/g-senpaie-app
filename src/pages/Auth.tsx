@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const { user, loading, signIn, signUp } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -26,7 +27,17 @@ export default function Auth() {
     setSuccess("");
     setSubmitting(true);
 
-    if (isLogin) {
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) setError(error.message);
+      else setSuccess("✅ Un email de réinitialisation a été envoyé. Vérifiez votre boîte de réception.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (mode === "login") {
       const { error } = await signIn(email, password);
       if (error) setError(error);
     } else {
@@ -36,6 +47,12 @@ export default function Auth() {
       else setSuccess("✅ Compte créé ! Vérifiez votre email pour confirmer votre inscription.");
     }
     setSubmitting(false);
+  };
+
+  const switchMode = (newMode: "login" | "signup" | "forgot") => {
+    setMode(newMode);
+    setError("");
+    setSuccess("");
   };
 
   return (
@@ -48,67 +65,62 @@ export default function Auth() {
 
         <div className="bg-card border border-border rounded-xl p-6">
           <h2 className="text-foreground text-lg font-bold mb-5">
-            {isLogin ? "Connexion" : "Créer un compte"}
+            {mode === "login" ? "Connexion" : mode === "signup" ? "Créer un compte" : "Mot de passe oublié"}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {mode === "signup" && (
               <div>
                 <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Nom complet</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Prénom Nom"
-                  className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors"
-                />
+                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Prénom Nom"
+                  className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
               </div>
             )}
 
             <div>
               <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.com"
-                required
-                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors"
-              />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required
+                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
             </div>
 
-            <div>
-              <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors"
-              />
-            </div>
+            {mode !== "forgot" && (
+              <div>
+                <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Mot de passe</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
+                  className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
+              </div>
+            )}
 
             {error && <div className="text-destructive text-[12px] bg-destructive/10 rounded-lg px-3 py-2">⚠ {error}</div>}
             {success && <div className="text-primary text-[12px] bg-primary/10 rounded-lg px-3 py-2">{success}</div>}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none disabled:opacity-50"
-            >
-              {submitting ? "…" : isLogin ? "Se connecter" : "Créer le compte"}
+            <button type="submit" disabled={submitting}
+              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none disabled:opacity-50">
+              {submitting ? "…" : mode === "login" ? "Se connecter" : mode === "signup" ? "Créer le compte" : "Envoyer le lien"}
             </button>
           </form>
 
+          {mode === "login" && (
+            <div className="text-center mt-3">
+              <button onClick={() => switchMode("forgot")}
+                className="text-muted-foreground text-[11px] bg-transparent border-none cursor-pointer hover:text-primary hover:underline">
+                Mot de passe oublié ?
+              </button>
+            </div>
+          )}
+
           <div className="text-center mt-4">
-            <button
-              onClick={() => { setIsLogin(!isLogin); setError(""); setSuccess(""); }}
-              className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline"
-            >
-              {isLogin ? "Pas de compte ? Inscrivez-vous" : "Déjà un compte ? Connectez-vous"}
-            </button>
+            {mode === "forgot" ? (
+              <button onClick={() => switchMode("login")}
+                className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline">
+                ← Retour à la connexion
+              </button>
+            ) : (
+              <button onClick={() => switchMode(mode === "login" ? "signup" : "login")}
+                className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline">
+                {mode === "login" ? "Pas de compte ? Inscrivez-vous" : "Déjà un compte ? Connectez-vous"}
+              </button>
+            )}
           </div>
         </div>
       </div>
