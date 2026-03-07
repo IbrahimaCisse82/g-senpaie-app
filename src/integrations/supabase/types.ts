@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      convention_categories: {
+        Row: {
+          code: string
+          convention_id: string
+          created_at: string
+          id: string
+          libelle: string
+          salaire_minima: number | null
+          statut: string | null
+        }
+        Insert: {
+          code: string
+          convention_id: string
+          created_at?: string
+          id?: string
+          libelle: string
+          salaire_minima?: number | null
+          statut?: string | null
+        }
+        Update: {
+          code?: string
+          convention_id?: string
+          created_at?: string
+          id?: string
+          libelle?: string
+          salaire_minima?: number | null
+          statut?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convention_categories_convention_id_fkey"
+            columns: ["convention_id"]
+            isOneToOne: false
+            referencedRelation: "conventions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conventions: {
+        Row: {
+          created_at: string
+          date_signature: string | null
+          description: string | null
+          id: string
+          nom: string
+          secteur: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_signature?: string | null
+          description?: string | null
+          id?: string
+          nom: string
+          secteur?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_signature?: string | null
+          description?: string | null
+          id?: string
+          nom?: string
+          secteur?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           adresse: string | null
