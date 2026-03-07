@@ -67,12 +67,12 @@ export function EntreprisePage({ entreprise, onSave }: EntreprisePageProps) {
       <div className="bg-card rounded-lg p-5 border border-border">
         <div className="text-primary text-xs font-bold mb-3.5 pb-2 border-b border-border">📋 Coordonnées</div>
         <div className="grid grid-cols-2 gap-x-5">
-          <Field label="Nom de l'entreprise *"><input value={form.nom} onChange={(e) => set("nom", e.target.value)} className={inputClass} placeholder="ex: LE MEDICAL KAMANO" /></Field>
-          <Field label="Téléphone"><input value={form.telephone} onChange={(e) => set("telephone", e.target.value)} className={inputClass} placeholder="+221 77 000 00 00" /></Field>
-          <Field label="Adresse"><input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} className={inputClass} placeholder="Rue, Quartier, Ville" /></Field>
-          <Field label="Email"><input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputClass} placeholder="contact@entreprise.sn" /></Field>
-          <Field label="NINEA"><input value={form.ninea} onChange={(e) => set("ninea", e.target.value)} className={inputClass} placeholder="000000000" /></Field>
-          <Field label="RCCM"><input value={form.rccm} onChange={(e) => set("rccm", e.target.value)} className={inputClass} placeholder="SN-DKR-2005-B-00000" /></Field>
+           <Field label="Nom de l'entreprise *"><input value={form.nom} onChange={(e) => set("nom", e.target.value)} className={inputClass} placeholder="Nom officiel de votre entreprise" /></Field>
+           <Field label="Téléphone"><input value={form.telephone} onChange={(e) => set("telephone", e.target.value)} className={inputClass} placeholder="ex: +221 77 123 45 67" /></Field>
+           <Field label="Adresse"><input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} className={inputClass} placeholder="ex: Rue 01, Plateau, Dakar" /></Field>
+           <Field label="Email"><input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputClass} placeholder="ex: contact@entreprise.sn" /></Field>
+           <Field label="NINEA"><input value={form.ninea} onChange={(e) => set("ninea", e.target.value)} className={inputClass} placeholder="ex: 006760210 (9 chiffres)" /></Field>
+           <Field label="RCCM"><input value={form.rccm} onChange={(e) => set("rccm", e.target.value)} className={inputClass} placeholder="ex: SN-DKR-2024-B-00001" /></Field>
         </div>
       </div>
 
