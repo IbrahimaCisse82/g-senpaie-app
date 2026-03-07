@@ -206,15 +206,15 @@ export function usePayrollParams(userId: string | undefined) {
     if (fetchErr) { handleError("Vérification paramètres", fetchErr); return; }
 
     const { error } = existing
-      ? await supabase.from("payroll_params").update({ params: p as unknown as Record<string, unknown> }).eq("user_id", userId)
-      : await supabase.from("payroll_params").insert({ user_id: userId, params: p as unknown as Record<string, unknown> });
+      ? await supabase.from("payroll_params").update({ params: JSON.parse(JSON.stringify(p)) }).eq("user_id", userId)
+      : await supabase.from("payroll_params").insert([{ user_id: userId, params: JSON.parse(JSON.stringify(p)) }]);
     if (error) { handleError("Sauvegarde paramètres", error); return; }
     setParams(p);
   }, [userId]);
 
   const resetParams = useCallback(async () => {
     if (!userId) return;
-    const { error } = await supabase.from("payroll_params").update({ params: DEFAULT_PARAMS as unknown as Record<string, unknown> }).eq("user_id", userId);
+    const { error } = await supabase.from("payroll_params").update({ params: JSON.parse(JSON.stringify(DEFAULT_PARAMS)) }).eq("user_id", userId);
     if (error) { handleError("Réinitialisation paramètres", error); return; }
     setParams(DEFAULT_PARAMS);
   }, [userId]);
