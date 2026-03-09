@@ -43,6 +43,45 @@
     --senpaie-dim: 220 13% 26%;
     --senpaie-alt-row: 222 30% 10%;
   }
+
+  .light {
+    --background: 210 20% 96%;
+    --foreground: 220 20% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 14%;
+    --primary: 160 84% 32%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 16% 92%;
+    --secondary-foreground: 220 20% 14%;
+    --muted: 210 14% 89%;
+    --muted-foreground: 215 14% 46%;
+    --accent: 210 16% 92%;
+    --accent-foreground: 220 20% 14%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 18% 84%;
+    --input: 214 18% 84%;
+    --ring: 160 84% 32%;
+
+    --sidebar-background: 210 18% 93%;
+    --sidebar-foreground: 215 14% 46%;
+    --sidebar-primary: 160 84% 32%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 16% 88%;
+    --sidebar-accent-foreground: 220 20% 14%;
+    --sidebar-border: 214 18% 84%;
+    --sidebar-ring: 160 84% 32%;
+
+    --senpaie-blue: 217 80% 48%;
+    --senpaie-yellow: 40 90% 42%;
+    --senpaie-purple: 255 70% 55%;
+    --senpaie-red: 0 72% 51%;
+    --senpaie-green: 160 84% 32%;
+    --senpaie-dim: 215 14% 72%;
+    --senpaie-alt-row: 210 14% 95%;
+  }
 }
 
 @layer base {
