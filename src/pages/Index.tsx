@@ -1,10 +1,10 @@
 import { useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
-import { calculerPaie, fmt } from "@/lib/payroll";
+import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
-import { useEmployees, useEntreprise, usePayrollParams, useConventions } from "@/hooks/useSupabaseData";
+import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Dashboard } from "@/components/senpaie/Dashboard";
 import { EmployeeList, EmployeeForm } from "@/components/senpaie/EmployeeList";
@@ -24,6 +24,7 @@ const Index = () => {
   const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
   const { params, saveParams, resetParams } = usePayrollParams(user?.id);
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
+  const { history, saveSnapshot } = usePayrollHistory(user?.id);
   const isMobile = useIsMobile();
 
   const [tab, setTab] = useState<TabId>("dashboard");
@@ -64,6 +65,12 @@ const Index = () => {
     await deleteEmployee(mat);
     setShowDel(null);
     showToast("🗑 Employé supprimé");
+  };
+
+  const handleSaveSnapshot = async () => {
+    const now = new Date();
+    await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length);
+    showToast("💾 Mois clôturé et sauvegardé");
   };
 
   const handleTabChange = (id: TabId) => {
@@ -143,14 +150,21 @@ const Index = () => {
           </div>
         ) : (
           <>
-            {tab === "dashboard" && <Dashboard allPaies={allPaies} totaux={totaux} />}
+            {tab === "dashboard" && (
+              <Dashboard
+                allPaies={allPaies}
+                totaux={totaux}
+                history={history}
+                onSaveSnapshot={handleSaveSnapshot}
+              />
+            )}
             {tab === "employes" && (
               <EmployeeList employees={filtered} search={search} onSearchChange={setSearch}
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
                 onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
             )}
             {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} />}
-            {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} />}
+            {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {tab === "simulateur" && <Simulateur params={params} />}
             {tab === "conventions" && (
               <ConventionsPage
