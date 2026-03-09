@@ -35,6 +35,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showRapport, setShowRapport] = useState(false);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
