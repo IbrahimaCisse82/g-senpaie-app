@@ -6,6 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Landing from "./pages/Landing";
+import CGU from "./pages/CGU";
+import Confidentialite from "./pages/Confidentialite";
+import ProtectionDonnees from "./pages/ProtectionDonnees";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -20,7 +24,11 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/cgu" element={<CGU />} />
+            <Route path="/confidentialite" element={<Confidentialite />} />
+            <Route path="/protection-donnees" element={<ProtectionDonnees />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
