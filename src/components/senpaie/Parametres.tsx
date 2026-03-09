@@ -10,8 +10,11 @@ interface ParametresProps {
 
 export function Parametres({ params, onSave, onReset }: ParametresProps) {
   const [local, setLocal] = useState<PayrollParams>(() => JSON.parse(JSON.stringify(params)));
-  const setP = (key: string, field: string, value: string) => {
-    setLocal((prev: any) => ({ ...prev, [key]: { ...prev[key], [field]: isNaN(+value) ? value : +value } }));
+  const setP = (key: keyof PayrollParams, field: string, value: string) => {
+    setLocal((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] as Record<string, unknown>), [field]: isNaN(+value) ? value : +value },
+    }));
   };
 
   const KEYS = ["CFCE", "BRS", "IPRES_RG", "IPRES_RCC", "CSS_AF", "CSS_AT", "IPM"] as const;
@@ -47,7 +50,7 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
             </thead>
             <tbody>
               {KEYS.map((key, i) => {
-                const p = (local as any)[key];
+                const p = local[key];
                 return (
                   <tr key={key} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-senpaie-alt-row"}`}>
                     <td className="py-2.5 px-4 text-foreground font-semibold">{p.label}</td>

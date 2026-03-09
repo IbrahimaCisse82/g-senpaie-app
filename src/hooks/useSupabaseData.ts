@@ -15,7 +15,7 @@ function handleError(context: string, error: any) {
 }
 
 // ── Helpers: convert between DB snake_case and app camelCase ──
-function dbToEmployee(row: Record<string, unknown>): Employee {
+function dbToEmployee(row: Record<string, unknown> & { [k: string]: unknown }): Employee {
   return {
     matricule: row.matricule as string,
     prenom: row.prenom as string,
@@ -384,13 +384,16 @@ export function usePayrollHistory(userId: string | undefined) {
       .order("mois", { ascending: false });
     if (error) { handleError("Chargement historique", error); setLoading(false); return; }
     if (data) {
-      setHistory(data.map((r: any) => ({
-        mois: r.mois,
-        annee: r.annee,
-        totaux: (r.data as any)?.totaux || { brut: 0, net: 0, ch: 0, mass: 0 },
-        nbEmployees: (r.data as any)?.nbEmployees || 0,
-        savedAt: r.updated_at,
-      })));
+      setHistory(data.map((r) => {
+        const d = r.data as Record<string, unknown> | null;
+        return {
+          mois: r.mois,
+          annee: r.annee,
+          totaux: (d?.totaux as { brut: number; net: number; ch: number; mass: number }) || { brut: 0, net: 0, ch: 0, mass: 0 },
+          nbEmployees: (d?.nbEmployees as number) || 0,
+          savedAt: r.updated_at,
+        };
+      }));
     }
     setLoading(false);
   }, [userId]);
@@ -410,9 +413,10 @@ export function usePayrollHistory(userId: string | undefined) {
       .eq("annee", annee)
       .maybeSingle();
 
+    const jsonPayload = JSON.parse(JSON.stringify(payload));
     const { error } = existing
-      ? await supabase.from("payroll_history").update({ data: payload as any }).eq("id", existing.id)
-      : await supabase.from("payroll_history").insert({ user_id: userId, mois, annee, data: payload as any });
+      ? await supabase.from("payroll_history").update({ data: jsonPayload }).eq("id", existing.id)
+      : await supabase.from("payroll_history").insert([{ user_id: userId, mois, annee, data: jsonPayload }]);
 
     if (error) { handleError("Sauvegarde historique", error); return; }
     await fetchHistory();
