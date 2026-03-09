@@ -6,6 +6,7 @@ import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
 import { EmployeeList, EmployeeForm } from "@/components/senpaie/EmployeeList";
 import { BulletinModal } from "@/components/senpaie/BulletinModal";
@@ -27,6 +28,7 @@ const Index = () => {
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
   const { history, saveSnapshot } = usePayrollHistory(user?.id);
   const isMobile = useIsMobile();
+  const { theme, toggleTheme } = useTheme();
 
   const [tab, setTab] = useState<TabId>("dashboard");
   const [showBulletin, setShowBulletin] = useState<Employee | null>(null);
@@ -101,6 +103,9 @@ const Index = () => {
         ))}
       </nav>
       <div className="px-5 py-3.5 border-t border-border space-y-2">
+        <button onClick={toggleTheme} className="w-full px-3 py-1.5 bg-secondary text-foreground rounded-lg text-[11px] font-bold cursor-pointer border border-border hover:bg-accent transition-colors flex items-center justify-center gap-2">
+          {theme === "dark" ? "☀️ Mode clair" : "🌙 Mode sombre"}
+        </button>
         <div className="text-muted-foreground text-[10px] truncate">{user.email}</div>
         <button onClick={signOut} className="w-full px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer hover:bg-destructive/10 transition-colors">
           🚪 Déconnexion
