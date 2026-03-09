@@ -12,7 +12,7 @@ interface DashboardProps {
   onSaveSnapshot?: () => void;
 }
 
-const SMIG = 64281; // SMIG Sénégal
+const SMIG = 64281;
 
 export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: DashboardProps) {
   const barData = allPaies.map((e) => ({
@@ -33,34 +33,18 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: Da
   // Alerts
   const alerts = useMemo(() => {
     const list: { type: "warning" | "danger" | "info"; message: string }[] = [];
-
-    // SMIG check
     const belowSmig = allPaies.filter((e) => e.salaireBase < SMIG);
     if (belowSmig.length > 0) {
-      list.push({
-        type: "danger",
-        message: `⚠️ ${belowSmig.length} employé${belowSmig.length > 1 ? "s" : ""} sous le SMIG (${fmt(SMIG)} F) : ${belowSmig.map((e) => e.prenom).join(", ")}`,
-      });
+      list.push({ type: "danger", message: `⚠️ ${belowSmig.length} employé${belowSmig.length > 1 ? "s" : ""} sous le SMIG (${fmt(SMIG)} F) : ${belowSmig.map((e) => e.prenom).join(", ")}` });
     }
-
-    // IPRES ceiling check
     const atIpresCeiling = allPaies.filter((e) => e.paie.brut >= 432000);
     if (atIpresCeiling.length > 0) {
-      list.push({
-        type: "warning",
-        message: `📊 ${atIpresCeiling.length} employé${atIpresCeiling.length > 1 ? "s" : ""} au plafond IPRES RG (432 000 F)`,
-      });
+      list.push({ type: "warning", message: `📊 ${atIpresCeiling.length} employé${atIpresCeiling.length > 1 ? "s" : ""} au plafond IPRES RG (432 000 F)` });
     }
-
-    // High charges ratio
     const chargesRatio = totaux.ch / Math.max(totaux.brut, 1);
     if (chargesRatio > 0.30) {
-      list.push({
-        type: "info",
-        message: `📈 Ratio charges patronales/brut élevé : ${(chargesRatio * 100).toFixed(1)}%`,
-      });
+      list.push({ type: "info", message: `📈 Ratio charges patronales/brut élevé : ${(chargesRatio * 100).toFixed(1)}%` });
     }
-
     return list;
   }, [allPaies, totaux]);
 
@@ -71,11 +55,10 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: Da
     const chargesRate = totaux.brut > 0 ? (totaux.ch / totaux.brut * 100) : 0;
     const retRate = allPaies.length > 0
       ? (allPaies.reduce((s, e) => s + e.paie.totalRet, 0) / totaux.brut * 100) : 0;
-
     return { avgNet, avgBrut, chargesRate, retRate };
   }, [allPaies, totaux]);
 
-  // Previous month comparison from history
+  // Previous month comparison
   const prevMonth = useMemo(() => {
     if (history.length < 1) return null;
     const now = new Date();
@@ -88,27 +71,39 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: Da
     ? ((totaux.mass - prevMonth.totaux.mass) / Math.max(prevMonth.totaux.mass, 1) * 100)
     : null;
 
-  // History chart data
+  // History chart
   const historyChartData = useMemo(() => {
-    return history
-      .slice(0, 6)
-      .reverse()
-      .map((h) => ({
-        mois: MOIS[h.mois].slice(0, 3),
-        Masse: h.totaux.mass,
-        Net: h.totaux.net,
-      }));
+    return history.slice(0, 6).reverse().map((h) => ({
+      mois: MOIS[h.mois].slice(0, 3),
+      Masse: h.totaux.mass,
+      Net: h.totaux.net,
+    }));
   }, [history]);
+
+  // Top earners & distribution
+  const topEarners = useMemo(() => {
+    return [...allPaies].sort((a, b) => b.paie.net - a.paie.net).slice(0, 5);
+  }, [allPaies]);
+
+  const statutDistribution = useMemo(() => {
+    const map: Record<string, { count: number; totalNet: number }> = {};
+    allPaies.forEach((e) => {
+      const s = e.statut || "Non défini";
+      if (!map[s]) map[s] = { count: 0, totalNet: 0 };
+      map[s].count++;
+      map[s].totalNet += e.paie.net;
+    });
+    return Object.entries(map).map(([statut, data]) => ({ statut, ...data }));
+  }, [allPaies]);
+
+  const statutColors = ["hsl(160, 84%, 39%)", "hsl(217, 92%, 68%)", "hsl(45, 97%, 56%)", "hsl(255, 92%, 76%)", "hsl(0, 91%, 71%)"];
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-1">
         <h1 className="text-foreground text-xl font-extrabold">Tableau de Bord</h1>
         {onSaveSnapshot && (
-          <button
-            onClick={onSaveSnapshot}
-            className="px-4 py-2 bg-senpaie-blue text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap"
-          >
+          <button onClick={onSaveSnapshot} className="px-4 py-2 bg-senpaie-blue text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
             💾 Clôturer le mois
           </button>
         )}
@@ -126,18 +121,11 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: Da
       {alerts.length > 0 && (
         <div className="space-y-2 mb-4">
           {alerts.map((a, i) => (
-            <div
-              key={i}
-              className={`rounded-lg px-4 py-2.5 text-[12px] font-medium border ${
-                a.type === "danger"
-                  ? "bg-destructive/10 border-destructive text-destructive"
-                  : a.type === "warning"
-                  ? "bg-senpaie-yellow/10 border-senpaie-yellow text-senpaie-yellow"
-                  : "bg-senpaie-blue/10 border-senpaie-blue text-senpaie-blue"
-              }`}
-            >
-              {a.message}
-            </div>
+            <div key={i} className={`rounded-lg px-4 py-2.5 text-[12px] font-medium border ${
+              a.type === "danger" ? "bg-destructive/10 border-destructive text-destructive"
+                : a.type === "warning" ? "bg-senpaie-yellow/10 border-senpaie-yellow text-senpaie-yellow"
+                : "bg-senpaie-blue/10 border-senpaie-blue text-senpaie-blue"
+            }`}>{a.message}</div>
           ))}
         </div>
       )}
@@ -197,6 +185,55 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: Da
             </PieChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Top earners + Statut distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {topEarners.length > 0 && (
+          <div className="bg-card rounded-lg p-4 md:p-5">
+            <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">🏆 Top 5 salaires nets</div>
+            {topEarners.map((e, i) => (
+              <div key={e.matricule} className="flex justify-between items-center py-2 border-b border-border last:border-b-0">
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+                    i === 0 ? "bg-senpaie-yellow/20 text-senpaie-yellow" : "bg-muted text-muted-foreground"
+                  }`}>{i + 1}</span>
+                  <div>
+                    <div className="text-foreground text-xs font-bold">{e.prenom} {e.nom}</div>
+                    <div className="text-muted-foreground text-[10px]">{e.fonction} · {e.statut}</div>
+                  </div>
+                </div>
+                <div className="text-primary font-extrabold text-xs">{fmt(e.paie.net)} F</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {statutDistribution.length > 0 && (
+          <div className="bg-card rounded-lg p-4 md:p-5">
+            <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">📊 Répartition par statut</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={statutDistribution.map((s) => ({ name: s.statut, value: s.count }))}
+                  dataKey="value" cx="50%" cy="50%" outerRadius={60} paddingAngle={3}
+                >
+                  {statutDistribution.map((_, i) => <Cell key={i} fill={statutColors[i % statutColors.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "hsl(222, 43%, 9%)", border: "1px solid hsl(217, 29%, 16%)", color: "hsl(215, 25%, 91%)", fontSize: 11 }} />
+                <Legend wrapperStyle={{ color: "hsl(213, 14%, 49%)", fontSize: 10 }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-2 space-y-1">
+              {statutDistribution.map((s) => (
+                <div key={s.statut} className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">{s.statut} ({s.count})</span>
+                  <span className="text-foreground font-semibold">{fmt(s.totalNet)} F net</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Historique mensuel */}
