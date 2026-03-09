@@ -82,7 +82,7 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
   URL.revokeObjectURL(url);
 }
 
-export function CotisationsTable({ allPaies, totaux }: CotisationsTableProps) {
+export function CotisationsTable({ allPaies, totaux, onOpenRapport }: CotisationsTableProps) {
   const headers = ["Employé", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Net"];
 
   return (
