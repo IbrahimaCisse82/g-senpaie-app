@@ -250,6 +250,36 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_history: {
+        Row: {
+          annee: number
+          created_at: string
+          data: Json
+          id: string
+          mois: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          annee: number
+          created_at?: string
+          data?: Json
+          id?: string
+          mois: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          annee?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          mois?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payroll_params: {
         Row: {
           created_at: string
