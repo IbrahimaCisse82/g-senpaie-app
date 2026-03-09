@@ -5,6 +5,7 @@ import { calculerPaie, fmt } from "@/lib/payroll";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions } from "@/hooks/useSupabaseData";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Dashboard } from "@/components/senpaie/Dashboard";
 import { EmployeeList, EmployeeForm } from "@/components/senpaie/EmployeeList";
 import { BulletinModal } from "@/components/senpaie/BulletinModal";
@@ -15,6 +16,7 @@ import { TendancesPage } from "@/components/senpaie/TendancesPage";
 import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
 import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
 import { Modal } from "@/components/senpaie/Modal";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -22,6 +24,7 @@ const Index = () => {
   const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
   const { params, saveParams, resetParams } = usePayrollParams(user?.id);
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
+  const isMobile = useIsMobile();
 
   const [tab, setTab] = useState<TabId>("dashboard");
   const [showBulletin, setShowBulletin] = useState<Employee | null>(null);
@@ -29,6 +32,7 @@ const Index = () => {
   const [showDel, setShowDel] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
@@ -62,6 +66,40 @@ const Index = () => {
     showToast("🗑 Employé supprimé");
   };
 
+  const handleTabChange = (id: TabId) => {
+    setTab(id);
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const sidebarContent = (
+    <>
+      <div className="px-5 pt-5 pb-4 border-b border-border">
+        <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
+        <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+      </div>
+      <nav className="flex-1 py-2.5 overflow-y-auto">
+        {NAV_ITEMS.map((n) => (
+          <button key={n.id} onClick={() => handleTabChange(n.id)}
+            className={`w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all ${
+              tab === n.id
+                ? "bg-primary/10 text-primary border-l-[3px] border-l-primary"
+                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary"
+            }`}>
+            <span className="flex items-center gap-2.5"><span>{n.icon}</span>{n.label}</span>
+            {n.id === "employes" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{employees.length}</span>}
+            {n.id === "conventions" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{conventions.length}</span>}
+          </button>
+        ))}
+      </nav>
+      <div className="px-5 py-3.5 border-t border-border space-y-2">
+        <div className="text-muted-foreground text-[10px] truncate">{user.email}</div>
+        <button onClick={signOut} className="w-full px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer hover:bg-destructive/10 transition-colors">
+          🚪 Déconnexion
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground font-mono text-[13px]">
       {toast && (
@@ -70,34 +108,35 @@ const Index = () => {
         </div>
       )}
 
-      <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-sidebar border-r border-border flex flex-col z-[100]">
-        <div className="px-5 pt-5 pb-4 border-b border-border">
-          <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
-          <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
-        </div>
-        <nav className="flex-1 py-2.5">
-          {NAV_ITEMS.map((n) => (
-            <button key={n.id} onClick={() => setTab(n.id)}
-              className={`w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all ${
-                tab === n.id
-                  ? "bg-primary/10 text-primary border-l-[3px] border-l-primary"
-                  : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary"
-              }`}>
-              <span className="flex items-center gap-2.5"><span>{n.icon}</span>{n.label}</span>
-              {n.id === "employes" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{employees.length}</span>}
-              {n.id === "conventions" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{conventions.length}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="px-5 py-3.5 border-t border-border space-y-2">
-          <div className="text-muted-foreground text-[10px] truncate">{user.email}</div>
-          <button onClick={signOut} className="w-full px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer hover:bg-destructive/10 transition-colors">
-            🚪 Déconnexion
+      {/* Mobile header */}
+      {isMobile && (
+        <header className="fixed top-0 left-0 right-0 h-14 bg-sidebar border-b border-border flex items-center justify-between px-4 z-[100]">
+          <button onClick={() => setSidebarOpen(true)} className="text-foreground bg-transparent border-none cursor-pointer text-xl p-1">
+            ☰
           </button>
-        </div>
-      </aside>
+          <div className="text-primary text-[15px] font-black tracking-[2px]">G-SENPAIE</div>
+          <div className="w-8" />
+        </header>
+      )}
 
-      <main className="ml-[220px] p-7 min-h-screen">
+      {/* Mobile sidebar via Sheet */}
+      {isMobile && (
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent side="left" className="w-[260px] p-0 bg-sidebar flex flex-col">
+            <SheetTitle className="sr-only">Menu de navigation</SheetTitle>
+            {sidebarContent}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Desktop sidebar */}
+      {!isMobile && (
+        <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-sidebar border-r border-border flex flex-col z-[100]">
+          {sidebarContent}
+        </aside>
+      )}
+
+      <main className={`${isMobile ? "pt-14 px-3 pb-5" : "ml-[220px] p-7"} min-h-screen`}>
         {empLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-primary animate-pulse">Chargement des données…</div>

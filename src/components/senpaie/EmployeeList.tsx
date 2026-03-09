@@ -19,12 +19,12 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
           <h1 className="text-foreground text-xl font-extrabold mb-1">Gestion des Employés</h1>
           <div className="text-muted-foreground text-[11px]">{employees.length} employé{employees.length > 1 ? "s" : ""} enregistré{employees.length > 1 ? "s" : ""}</div>
         </div>
-        <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none">
+        <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
           + Nouvel Employé
         </button>
       </div>
@@ -33,7 +33,7 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
         placeholder="🔍  Rechercher par nom, matricule, fonction…"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
-        className={`${inputClass} max-w-[420px] mb-4`}
+        className={`${inputClass} max-w-full sm:max-w-[420px] mb-4`}
       />
 
       {employees.length === 0 && (
@@ -46,35 +46,35 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
         {employees.map((emp) => (
           <div key={emp.matricule} className={`bg-card rounded-lg border overflow-hidden transition-colors ${expanded === emp.matricule ? "border-primary" : "border-border"}`}>
             <div
-              className="px-5 py-3.5 flex justify-between items-center cursor-pointer"
+              className="px-4 md:px-5 py-3.5 flex flex-col sm:flex-row justify-between gap-3 cursor-pointer"
               onClick={() => setExpanded(expanded === emp.matricule ? null : emp.matricule)}
             >
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3.5 min-w-0">
                 <div className={`w-[38px] h-[38px] rounded-full flex items-center justify-center text-base shrink-0 ${emp.sexe === "F" ? "bg-senpaie-purple/20" : "bg-senpaie-blue/20"}`}>
                   {emp.sexe === "F" ? "♀" : "♂"}
                 </div>
-                <div>
-                  <div className="text-foreground font-bold">{emp.prenom} {emp.nom}</div>
-                  <div className="text-muted-foreground text-[11px] mt-0.5">{emp.matricule} · {emp.fonction} · {emp.contrat} · Cat. {emp.categorie}</div>
+                <div className="min-w-0">
+                  <div className="text-foreground font-bold truncate">{emp.prenom} {emp.nom}</div>
+                  <div className="text-muted-foreground text-[11px] mt-0.5 truncate">{emp.matricule} · {emp.fonction} · {emp.contrat}</div>
                 </div>
               </div>
-              <div className="flex gap-3 items-center">
+              <div className="flex gap-3 items-center justify-between sm:justify-end">
                 <div className="text-right">
-                  <div className="text-primary font-extrabold">{fmt(emp.paie.net)} FCFA</div>
-                  <div className="text-muted-foreground text-[10px]">Net · Brut {fmt(emp.paie.brut)}</div>
+                  <div className="text-primary font-extrabold text-sm">{fmt(emp.paie.net)} F</div>
+                  <div className="text-muted-foreground text-[10px]">Brut {fmt(emp.paie.brut)}</div>
                 </div>
-                <div className="flex gap-1.5">
-                  <button onClick={(e) => { e.stopPropagation(); onBulletin(emp); }} className="px-3 py-1.5 bg-senpaie-blue text-background rounded-lg text-[11px] font-bold cursor-pointer border-none">📄 Bulletin</button>
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-3 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer">✏️</button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer">🗑</button>
+                <div className="flex gap-1.5 shrink-0">
+                  <button onClick={(e) => { e.stopPropagation(); onBulletin(emp); }} className="px-2.5 py-1.5 bg-senpaie-blue text-background rounded-lg text-[11px] font-bold cursor-pointer border-none">📄</button>
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer">✏️</button>
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer">🗑</button>
                 </div>
-                <span className="text-muted-foreground">{expanded === emp.matricule ? "▲" : "▼"}</span>
+                <span className="text-muted-foreground hidden sm:inline">{expanded === emp.matricule ? "▲" : "▼"}</span>
               </div>
             </div>
 
             {expanded === emp.matricule && (
-              <div className="px-5 pb-4 border-t border-border">
-                <div className="grid grid-cols-4 gap-2.5 mt-3.5">
+              <div className="px-4 md:px-5 pb-4 border-t border-border">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-3.5">
                   {([
                     ["Ancienneté", `${getAnciennete(emp.dateEntree)} ans`],
                     ["Salaire base", `${fmt(emp.salaireBase)} F`],
@@ -157,7 +157,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Infos personnelles */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">🪪 Informations personnelles</div>
-        <div className="grid grid-cols-2 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
           {([
             { label: "Matricule *", key: "matricule" as const, disabled: !!initial?.matricule },
             { label: "Prénom *", key: "prenom" as const },
@@ -187,7 +187,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Situation familiale */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">👨‍👩‍👧 Situation familiale</div>
-        <div className="grid grid-cols-3 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5">
           <Field label="Situation de famille">
             <select value={form.situationFamille} onChange={(e) => set("situationFamille", e.target.value)} className={inputClass}>
               {["Célibataire", "Marié(e)", "Veuf(ve)", "Divorcé(e)"].map((o) => <option key={o} value={o}>{o}</option>)}
@@ -205,7 +205,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Infos professionnelles */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">💼 Informations professionnelles</div>
-        <div className="grid grid-cols-2 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
           <Field label="Fonction *">
             <input value={form.fonction} onChange={(e) => set("fonction", e.target.value)} className={`${inputClass} ${errors.fonction ? "border-destructive" : ""}`} />
             {errors.fonction && <div className="text-destructive text-[11px] mt-1">⚠ {errors.fonction}</div>}
@@ -246,7 +246,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Rémunération */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">💰 Rémunération</div>
-        <div className="grid grid-cols-2 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
           <Field label="Salaire de base (FCFA) *">
             <input type="number" value={form.salaireBase} onChange={(e) => set("salaireBase", e.target.value)} className={`${inputClass} ${errors.salaireBase ? "border-destructive" : ""}`} />
             {errors.salaireBase && <div className="text-destructive text-[11px] mt-1">⚠ {errors.salaireBase}</div>}
@@ -260,7 +260,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Heures supplémentaires */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">⏱️ Heures Supplémentaires</div>
-        <div className="grid grid-cols-4 gap-x-5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5">
           <Field label="HS 115%">
             <input type="number" min="0" value={form.hs115 || ""} onChange={(e) => set("hs115", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
@@ -279,7 +279,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Absences & Maladie */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">🏥 Absences & Maladie</div>
-        <div className="grid grid-cols-3 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5">
           <Field label="Heures d'absence">
             <input type="number" min="0" value={form.heuresAbsence || ""} onChange={(e) => set("heuresAbsence", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
@@ -295,7 +295,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Indemnités supplémentaires */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">🎫 Indemnités supplémentaires</div>
-        <div className="grid grid-cols-2 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
           <Field label="Nombre de paniers">
             <input type="number" min="0" value={form.nbPaniers || ""} onChange={(e) => set("nbPaniers", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
@@ -308,7 +308,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       {/* Avances & Retenues */}
       <div className="mb-5">
         <div className="text-primary text-xs font-bold mb-3 pb-2 border-b border-border">💸 Avances & Retenues Diverses</div>
-        <div className="grid grid-cols-3 gap-x-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5">
           <Field label="Avance Tabaski/Noël">
             <input type="number" min="0" value={form.avanceTabaski || ""} onChange={(e) => set("avanceTabaski", e.target.value)} placeholder="0" className={inputClass} />
           </Field>

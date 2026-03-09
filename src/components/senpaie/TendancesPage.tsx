@@ -30,7 +30,7 @@ export function TendancesPage({ allPaies, totaux }: TendancesProps) {
     <div>
       <h1 className="text-foreground text-xl font-extrabold mb-4">Analyse des Tendances</h1>
 
-      <div className="bg-card rounded-lg p-5 mb-4">
+      <div className="bg-card rounded-lg p-4 md:p-5 mb-4">
         <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Évolution masse salariale & net · Jan–Juin</div>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={tendData}>
@@ -45,11 +45,11 @@ export function TendancesPage({ allPaies, totaux }: TendancesProps) {
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         {stats.map((c) => (
           <div key={c.label} className={`bg-card rounded-lg p-5 border-t-[3px] ${colorClass[c.color]}`}>
             <div className="text-muted-foreground text-[11px]">{c.label}</div>
-            <div className={`text-3xl font-extrabold mt-2 ${colorClass[c.color].split(" ").pop()}`}>{c.value}</div>
+            <div className={`text-2xl md:text-3xl font-extrabold mt-2 ${colorClass[c.color].split(" ").pop()}`}>{c.value}</div>
           </div>
         ))}
       </div>
