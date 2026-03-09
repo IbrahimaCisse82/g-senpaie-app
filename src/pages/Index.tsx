@@ -28,6 +28,7 @@ const Index = () => {
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
   const { history, saveSnapshot } = usePayrollHistory(user?.id);
   const isMobile = useIsMobile();
+  const { theme, toggleTheme } = useTheme();
 
   const [tab, setTab] = useState<TabId>("dashboard");
   const [showBulletin, setShowBulletin] = useState<Employee | null>(null);
