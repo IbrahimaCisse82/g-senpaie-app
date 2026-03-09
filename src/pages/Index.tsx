@@ -165,7 +165,7 @@ const Index = () => {
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
                 onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
             )}
-            {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} />}
+            {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {tab === "simulateur" && <Simulateur params={params} />}
             {tab === "conventions" && (
