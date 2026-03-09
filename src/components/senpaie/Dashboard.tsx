@@ -32,15 +32,15 @@ export function Dashboard({ allPaies, totaux }: DashboardProps) {
         {MOIS[new Date().getMonth()]} {new Date().getFullYear()} · {allPaies.length} salariés
       </div>
 
-      <div className="flex gap-3.5 flex-wrap mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <StatCard icon="💼" label="Masse Salariale" value={`${fmt(totaux.mass)} F`} sub="Charges incluses" color="primary" />
         <StatCard icon="📊" label="Total Brut" value={`${fmt(totaux.brut)} F`} sub="Avant retenues" color="blue" />
         <StatCard icon="💳" label="Net Total" value={`${fmt(totaux.net)} F`} sub="Transport inclus" color="yellow" />
         <StatCard icon="🏛️" label="Charges Patronales" value={`${fmt(totaux.ch)} F`} sub="IPRES+CSS+IPM+CFCE" color="purple" />
       </div>
 
-      <div className="grid grid-cols-[3fr_2fr] gap-4">
-        <div className="bg-card rounded-lg p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
+        <div className="bg-card rounded-lg p-4 md:p-5">
           <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Brut / Net / Retenues par employé</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={barData} barGap={2}>
@@ -55,7 +55,7 @@ export function Dashboard({ allPaies, totaux }: DashboardProps) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="bg-card rounded-lg p-5">
+        <div className="bg-card rounded-lg p-4 md:p-5">
           <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Répartition masse salariale</div>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>

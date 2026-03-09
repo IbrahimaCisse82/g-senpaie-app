@@ -1,4 +1,11 @@
 import { ReactNode } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 interface ModalProps {
   title: string;
@@ -8,6 +15,21 @@ interface ModalProps {
 }
 
 export function Modal({ title, onClose, children, width = 720 }: ModalProps) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="border-b border-border px-5 py-3">
+            <DrawerTitle className="text-foreground font-bold text-[15px]">{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-5 py-4 overflow-y-auto scrollbar-thin">{children}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/80 z-[999] flex items-center justify-center p-5"
