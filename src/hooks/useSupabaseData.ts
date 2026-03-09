@@ -158,7 +158,6 @@ export function useEntreprise(userId: string | undefined) {
     const ext = file.name.split(".").pop() || "png";
     const path = `${userId}/logo.${ext}`;
 
-    // Remove old logo
     await supabase.storage.from("logos").remove([path]);
 
     const { error } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
@@ -277,7 +276,6 @@ export function useConventions(userId: string | undefined) {
     setInitialized(true);
   }, [userId]);
 
-  // Seed default conventions on first use
   const seedDefaults = useCallback(async () => {
     if (!userId) return;
     for (const cc of DEFAULT_CONVENTIONS) {
@@ -304,7 +302,6 @@ export function useConventions(userId: string | undefined) {
 
   useEffect(() => { fetchConventions(); }, [fetchConventions]);
 
-  // Seed defaults if user has no conventions
   useEffect(() => {
     if (initialized && conventions.length === 0 && userId) {
       seedDefaults();
@@ -360,4 +357,66 @@ export function useConventions(userId: string | undefined) {
   }, [fetchConventions]);
 
   return { conventions, loading, saveConvention, deleteConvention, saveCategory, deleteCategory, refetch: fetchConventions };
+}
+
+// ══════════════════════════════════════════════════════════════
+// usePayrollHistory — monthly payroll snapshots
+// ══════════════════════════════════════════════════════════════
+export interface PayrollSnapshot {
+  mois: number;
+  annee: number;
+  totaux: { brut: number; net: number; ch: number; mass: number };
+  nbEmployees: number;
+  savedAt: string;
+}
+
+export function usePayrollHistory(userId: string | undefined) {
+  const [history, setHistory] = useState<PayrollSnapshot[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchHistory = useCallback(async () => {
+    if (!userId) return;
+    const { data, error } = await supabase
+      .from("payroll_history")
+      .select("*")
+      .eq("user_id", userId)
+      .order("annee", { ascending: false })
+      .order("mois", { ascending: false });
+    if (error) { handleError("Chargement historique", error); setLoading(false); return; }
+    if (data) {
+      setHistory(data.map((r: any) => ({
+        mois: r.mois,
+        annee: r.annee,
+        totaux: (r.data as any)?.totaux || { brut: 0, net: 0, ch: 0, mass: 0 },
+        nbEmployees: (r.data as any)?.nbEmployees || 0,
+        savedAt: r.updated_at,
+      })));
+    }
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  const saveSnapshot = useCallback(async (mois: number, annee: number, totaux: { brut: number; net: number; ch: number; mass: number }, nbEmployees: number) => {
+    if (!userId) return;
+    const payload = { totaux, nbEmployees };
+
+    // Upsert
+    const { data: existing } = await supabase
+      .from("payroll_history")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("mois", mois)
+      .eq("annee", annee)
+      .maybeSingle();
+
+    const { error } = existing
+      ? await supabase.from("payroll_history").update({ data: payload as any }).eq("id", existing.id)
+      : await supabase.from("payroll_history").insert({ user_id: userId, mois, annee, data: payload as any });
+
+    if (error) { handleError("Sauvegarde historique", error); return; }
+    await fetchHistory();
+  }, [userId, fetchHistory]);
+
+  return { history, loading, saveSnapshot, refetch: fetchHistory };
 }
