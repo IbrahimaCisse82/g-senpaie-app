@@ -4,6 +4,7 @@ import { fmt, MOIS } from "@/lib/payroll";
 interface CotisationsTableProps {
   allPaies: (Employee & { paie: PayrollResult })[];
   totaux: { brut: number; net: number; ch: number; mass: number };
+  onOpenRapport?: () => void;
 }
 
 function exportCSV(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
