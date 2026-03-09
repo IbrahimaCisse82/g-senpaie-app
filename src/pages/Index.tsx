@@ -12,6 +12,7 @@ import { BulletinModal } from "@/components/senpaie/BulletinModal";
 import { Parametres } from "@/components/senpaie/Parametres";
 import { Simulateur } from "@/components/senpaie/Simulateur";
 import { CotisationsTable } from "@/components/senpaie/CotisationsTable";
+import { RapportCotisationsModal } from "@/components/senpaie/RapportCotisationsModal";
 import { TendancesPage } from "@/components/senpaie/TendancesPage";
 import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
 import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
@@ -34,6 +35,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showRapport, setShowRapport] = useState(false);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
@@ -163,7 +165,7 @@ const Index = () => {
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
                 onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
             )}
-            {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} />}
+            {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {tab === "simulateur" && <Simulateur params={params} />}
             {tab === "conventions" && (
@@ -194,6 +196,7 @@ const Index = () => {
         </Modal>
       )}
       {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} onClose={() => setShowBulletin(null)} />}
+      {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
       {showDel && (
         <Modal title="⚠️ Confirmation de suppression" onClose={() => setShowDel(null)} width={420}>
           <p className="text-foreground mb-5">

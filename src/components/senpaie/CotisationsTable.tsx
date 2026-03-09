@@ -4,6 +4,7 @@ import { fmt, MOIS } from "@/lib/payroll";
 interface CotisationsTableProps {
   allPaies: (Employee & { paie: PayrollResult })[];
   totaux: { brut: number; net: number; ch: number; mass: number };
+  onOpenRapport?: () => void;
 }
 
 function exportCSV(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
@@ -81,14 +82,22 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
   URL.revokeObjectURL(url);
 }
 
-export function CotisationsTable({ allPaies, totaux }: CotisationsTableProps) {
+export function CotisationsTable({ allPaies, totaux, onOpenRapport }: CotisationsTableProps) {
   const headers = ["Employé", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Net"];
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <h1 className="text-foreground text-xl font-extrabold">État des Cotisations</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {onOpenRapport && (
+            <button
+              onClick={onOpenRapport}
+              className="px-3 py-2 bg-transparent border border-senpaie-purple text-senpaie-purple rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap"
+            >
+              📊 Rapport période
+            </button>
+          )}
           <button
             onClick={() => exportAllBulletinsCSV(allPaies)}
             className="px-3 py-2 bg-transparent border border-senpaie-blue text-senpaie-blue rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap"
