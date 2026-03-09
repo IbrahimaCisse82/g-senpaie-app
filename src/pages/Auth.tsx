@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import authBg from "@/assets/auth-bg.jpg";
 
 export default function Auth() {
   const { user, loading, signIn, signUp } = useAuth();
@@ -56,71 +57,98 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center font-mono">
-      <div className="w-full max-w-[400px] mx-4">
-        <div className="text-center mb-8">
-          <div className="text-primary text-2xl font-black tracking-[4px] mb-1">G-SENPAIE</div>
-          <div className="text-muted-foreground text-[11px] tracking-wider">GESTION DE LA PAIE · SÉNÉGAL</div>
+    <div className="min-h-screen flex font-mono">
+      {/* Left: image */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <img src={authBg} alt="G-SENPAIE" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
+        <div className="relative z-10 flex flex-col justify-end h-full p-12">
+          <div className="text-white text-3xl font-black tracking-[5px] mb-2">G-SENPAIE</div>
+          <div className="text-white/70 text-sm max-w-md">
+            La solution complète de gestion de la paie conforme à la législation sénégalaise. Simplifiez vos bulletins, cotisations et déclarations.
+          </div>
+          <div className="text-white/40 text-xs mt-4">Par Grow Hub SARL · Dakar, Sénégal</div>
         </div>
+      </div>
 
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h2 className="text-foreground text-lg font-bold mb-5">
-            {mode === "login" ? "Connexion" : mode === "signup" ? "Créer un compte" : "Mot de passe oublié"}
-          </h2>
+      {/* Right: form */}
+      <div className="flex-1 bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-[400px]">
+          <div className="text-center mb-8 lg:hidden">
+            <div className="text-primary text-2xl font-black tracking-[4px] mb-1">G-SENPAIE</div>
+            <div className="text-muted-foreground text-[11px] tracking-wider">GESTION DE LA PAIE · SÉNÉGAL</div>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "signup" && (
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h2 className="text-foreground text-lg font-bold mb-5">
+              {mode === "login" ? "Connexion" : mode === "signup" ? "Créer un compte" : "Mot de passe oublié"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === "signup" && (
+                <div>
+                  <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Nom complet</label>
+                  <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Prénom Nom"
+                    className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
+                </div>
+              )}
+
               <div>
-                <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Nom complet</label>
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Prénom Nom"
+                <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required
                   className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
+              </div>
+
+              {mode !== "forgot" && (
+                <div>
+                  <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Mot de passe</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
+                    className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
+                </div>
+              )}
+
+              {error && <div className="text-destructive text-[12px] bg-destructive/10 rounded-lg px-3 py-2">⚠ {error}</div>}
+              {success && <div className="text-primary text-[12px] bg-primary/10 rounded-lg px-3 py-2">{success}</div>}
+
+              <button type="submit" disabled={submitting}
+                className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none disabled:opacity-50">
+                {submitting ? "…" : mode === "login" ? "Se connecter" : mode === "signup" ? "Créer le compte" : "Envoyer le lien"}
+              </button>
+            </form>
+
+            {mode === "login" && (
+              <div className="text-center mt-3">
+                <button onClick={() => switchMode("forgot")}
+                  className="text-muted-foreground text-[11px] bg-transparent border-none cursor-pointer hover:text-primary hover:underline">
+                  Mot de passe oublié ?
+                </button>
               </div>
             )}
 
-            <div>
-              <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required
-                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
+            <div className="text-center mt-4">
+              {mode === "forgot" ? (
+                <button onClick={() => switchMode("login")}
+                  className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline">
+                  ← Retour à la connexion
+                </button>
+              ) : (
+                <button onClick={() => switchMode(mode === "login" ? "signup" : "login")}
+                  className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline">
+                  {mode === "login" ? "Pas de compte ? Inscrivez-vous" : "Déjà un compte ? Connectez-vous"}
+                </button>
+              )}
             </div>
+          </div>
 
-            {mode !== "forgot" && (
-              <div>
-                <label className="text-muted-foreground text-[11px] font-semibold block mb-1.5">Mot de passe</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
-                  className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-primary transition-colors" />
-              </div>
-            )}
-
-            {error && <div className="text-destructive text-[12px] bg-destructive/10 rounded-lg px-3 py-2">⚠ {error}</div>}
-            {success && <div className="text-primary text-[12px] bg-primary/10 rounded-lg px-3 py-2">{success}</div>}
-
-            <button type="submit" disabled={submitting}
-              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none disabled:opacity-50">
-              {submitting ? "…" : mode === "login" ? "Se connecter" : mode === "signup" ? "Créer le compte" : "Envoyer le lien"}
-            </button>
-          </form>
-
-          {mode === "login" && (
-            <div className="text-center mt-3">
-              <button onClick={() => switchMode("forgot")}
-                className="text-muted-foreground text-[11px] bg-transparent border-none cursor-pointer hover:text-primary hover:underline">
-                Mot de passe oublié ?
-              </button>
-            </div>
-          )}
-
-          <div className="text-center mt-4">
-            {mode === "forgot" ? (
-              <button onClick={() => switchMode("login")}
-                className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline">
-                ← Retour à la connexion
-              </button>
-            ) : (
-              <button onClick={() => switchMode(mode === "login" ? "signup" : "login")}
-                className="text-primary text-[12px] bg-transparent border-none cursor-pointer hover:underline">
-                {mode === "login" ? "Pas de compte ? Inscrivez-vous" : "Déjà un compte ? Connectez-vous"}
-              </button>
-            )}
+          <div className="text-center mt-6 space-x-4 text-[10px] text-muted-foreground">
+            <Link to="/cgu" className="hover:text-primary transition-colors">CGU</Link>
+            <span>·</span>
+            <Link to="/confidentialite" className="hover:text-primary transition-colors">Confidentialité</Link>
+            <span>·</span>
+            <Link to="/protection-donnees" className="hover:text-primary transition-colors">Protection des données</Link>
+          </div>
+          <div className="text-center mt-2 text-[9px] text-muted-foreground">
+            © {new Date().getFullYear()} Grow Hub SARL · Dakar, Sénégal
           </div>
         </div>
       </div>
