@@ -103,6 +103,9 @@ const Index = () => {
         ))}
       </nav>
       <div className="px-5 py-3.5 border-t border-border space-y-2">
+        <button onClick={toggleTheme} className="w-full px-3 py-1.5 bg-secondary text-foreground rounded-lg text-[11px] font-bold cursor-pointer border border-border hover:bg-accent transition-colors flex items-center justify-center gap-2">
+          {theme === "dark" ? "☀️ Mode clair" : "🌙 Mode sombre"}
+        </button>
         <div className="text-muted-foreground text-[10px] truncate">{user.email}</div>
         <button onClick={signOut} className="w-full px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer hover:bg-destructive/10 transition-colors">
           🚪 Déconnexion
