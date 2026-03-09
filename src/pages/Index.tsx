@@ -12,6 +12,7 @@ import { BulletinModal } from "@/components/senpaie/BulletinModal";
 import { Parametres } from "@/components/senpaie/Parametres";
 import { Simulateur } from "@/components/senpaie/Simulateur";
 import { CotisationsTable } from "@/components/senpaie/CotisationsTable";
+import { RapportCotisationsModal } from "@/components/senpaie/RapportCotisationsModal";
 import { TendancesPage } from "@/components/senpaie/TendancesPage";
 import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
 import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
