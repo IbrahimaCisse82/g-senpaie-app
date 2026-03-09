@@ -50,7 +50,7 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
             </thead>
             <tbody>
               {KEYS.map((key, i) => {
-                const p = (local as any)[key];
+                const p = local[key];
                 return (
                   <tr key={key} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-senpaie-alt-row"}`}>
                     <td className="py-2.5 px-4 text-foreground font-semibold">{p.label}</td>

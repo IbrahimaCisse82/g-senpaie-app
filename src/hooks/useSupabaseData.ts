@@ -414,8 +414,8 @@ export function usePayrollHistory(userId: string | undefined) {
       .maybeSingle();
 
     const { error } = existing
-      ? await supabase.from("payroll_history").update({ data: payload as any }).eq("id", existing.id)
-      : await supabase.from("payroll_history").insert({ user_id: userId, mois, annee, data: payload as any });
+      ? await supabase.from("payroll_history").update({ data: payload as unknown as Record<string, unknown> }).eq("id", existing.id)
+      : await supabase.from("payroll_history").insert({ user_id: userId, mois, annee, data: payload as unknown as Record<string, unknown> });
 
     if (error) { handleError("Sauvegarde historique", error); return; }
     await fetchHistory();
