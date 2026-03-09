@@ -384,13 +384,16 @@ export function usePayrollHistory(userId: string | undefined) {
       .order("mois", { ascending: false });
     if (error) { handleError("Chargement historique", error); setLoading(false); return; }
     if (data) {
-      setHistory(data.map((r: any) => ({
-        mois: r.mois,
-        annee: r.annee,
-        totaux: (r.data as any)?.totaux || { brut: 0, net: 0, ch: 0, mass: 0 },
-        nbEmployees: (r.data as any)?.nbEmployees || 0,
-        savedAt: r.updated_at,
-      })));
+      setHistory(data.map((r) => {
+        const d = r.data as Record<string, unknown> | null;
+        return {
+          mois: r.mois,
+          annee: r.annee,
+          totaux: (d?.totaux as { brut: number; net: number; ch: number; mass: number }) || { brut: 0, net: 0, ch: 0, mass: 0 },
+          nbEmployees: (d?.nbEmployees as number) || 0,
+          savedAt: r.updated_at,
+        };
+      }));
     }
     setLoading(false);
   }, [userId]);
