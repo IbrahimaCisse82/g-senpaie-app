@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { Modal } from "./Modal";
@@ -8,6 +8,51 @@ interface BulletinModalProps {
   params: PayrollParams;
   entreprise: Entreprise;
   onClose: () => void;
+}
+
+function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee: number) {
+  const rows = [
+    ["Bulletin de Paie", `${MOIS[mois]} ${annee}`],
+    ["Employé", `${emp.prenom} ${emp.nom}`],
+    ["Matricule", emp.matricule],
+    ["Fonction", emp.fonction],
+    [],
+    ["Élément", "Montant (FCFA)"],
+    ["Salaire de base", Math.round(p.salaireBase)],
+    ["Sursalaire", Math.round(p.sursalaire)],
+    ["Prime ancienneté", Math.round(p.primeAnc)],
+    ["Heures supplémentaires", Math.round(p.totalHS)],
+    ["Retenue absences", -Math.round(p.retAbsence)],
+    ["Indemnité maladie", Math.round(p.indMaladie)],
+    ["SALAIRE BRUT", Math.round(p.brut)],
+    [],
+    ["IR", -Math.round(p.ir)],
+    ["TRIMF", -Math.round(p.trimf)],
+    ["IPRES RG salarié", -Math.round(p.ipresRG_s)],
+    ["IPRES RC salarié", -Math.round(p.ipresRC_s)],
+    ["IPM salarié", -Math.round(p.ipm_s)],
+    ["Total retenues", -Math.round(p.totalRet)],
+    [],
+    ["Transport", Math.round(p.transport)],
+    ["Prime panier", Math.round(p.primePanier)],
+    ["Indemnité kilométrique", Math.round(p.indKilometrique)],
+    ["Avances & retenues", -Math.round(p.totalAvances)],
+    [],
+    ["NET À PAYER", Math.round(p.net)],
+    [],
+    ["Charges patronales", Math.round(p.chargesPat)],
+    ["Masse salariale", Math.round(p.masse)],
+  ];
+
+  const csv = rows.map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bulletin_${emp.matricule}_${MOIS[mois]}_${annee}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModalProps) {
@@ -38,8 +83,8 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
 
   return (
     <Modal title="📄 Bulletin de Paie" onClose={onClose} width={680}>
-      {/* Période + Bouton */}
-      <div className="flex gap-3 items-center mb-5 p-3.5 bg-background rounded-lg flex-wrap">
+      {/* Période + Boutons */}
+      <div className="flex gap-2 items-center mb-5 p-3.5 bg-background rounded-lg flex-wrap">
         <div className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">Période :</div>
         <select value={mois} onChange={(e) => setMois(+e.target.value)} className="py-1.5 px-2.5 bg-background border border-border rounded-lg text-foreground text-[13px] font-mono outline-none">
           {MOIS.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -48,8 +93,11 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
         <div className="flex-1" />
-        <button onClick={openPDF} className="px-5 py-2.5 bg-destructive text-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none">
-          ⬇️ Générer PDF
+        <button onClick={() => exportBulletinCSV(emp, p, mois, annee)} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap">
+          📥 CSV
+        </button>
+        <button onClick={openPDF} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
+          ⬇️ PDF
         </button>
       </div>
 
@@ -161,7 +209,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         </div>
 
         <div className="mt-3.5 px-3.5 py-2.5 bg-senpaie-blue/10 rounded-lg border border-senpaie-blue text-senpaie-blue text-[11px]">
-          💡 Cliquez sur <strong>« ⬇️ Générer PDF »</strong> — un nouvel onglet s'ouvre. Utilisez <strong>Ctrl+P</strong> puis <em>"Enregistrer en PDF"</em>.
+          💡 <strong>PDF</strong> : un nouvel onglet s'ouvre, utilisez <strong>Ctrl+P</strong> → "Enregistrer en PDF". <strong>CSV</strong> : téléchargement direct pour Excel.
         </div>
       </div>
     </Modal>
@@ -209,6 +257,22 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
     ent.rccm && `<span>RCCM : ${ent.rccm}</span>`,
   ].filter(Boolean).join(`<span style="color:#d1d5db"> | </span>`);
 
+  // Build HS rows
+  const hsRows = [
+    p.mtHS115 > 0 ? row(`HS 115% (${emp.hs115}h)`, p.mtHS115, { indent: true, bg: "#f9fafb" }) : "",
+    p.mtHS140 > 0 ? row(`HS 140% (${emp.hs140}h)`, p.mtHS140, { indent: true }) : "",
+    p.mtHS160 > 0 ? row(`HS 160% (${emp.hs160}h)`, p.mtHS160, { indent: true, bg: "#f9fafb" }) : "",
+    p.mtHS200 > 0 ? row(`HS 200% (${emp.hs200}h)`, p.mtHS200, { indent: true }) : "",
+  ].join("");
+
+  const avancesRows = [
+    p.avanceTabaski > 0 ? row("Avance Tabaski/Noël", p.avanceTabaski, { neg: true, indent: true, color: "#b45309" }) : "",
+    p.avanceCaisse > 0 ? row("Avance caisse", p.avanceCaisse, { neg: true, indent: true, color: "#b45309" }) : "",
+    p.avanceFinanciere > 0 ? row("Avance financière", p.avanceFinanciere, { neg: true, indent: true, color: "#b45309" }) : "",
+    p.retCooperative > 0 ? row("Retenue coopérative", p.retCooperative, { neg: true, indent: true, color: "#b45309" }) : "",
+    p.fraisMedicaux > 0 ? row("Frais médicaux", p.fraisMedicaux, { neg: true, indent: true, color: "#b45309" }) : "",
+  ].filter(Boolean).join("");
+
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bulletin – ${emp.prenom} ${emp.nom} – ${periode}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#1f2937;background:#fff}.page{width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm;display:flex;flex-direction:column}.content{flex:1}.header{background:#064e3b;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-radius:6px}.bul-title{text-align:right}.bul-title h2{font-size:15px;font-weight:900;color:#fff;letter-spacing:1px}.bul-title .periode{font-size:11px;color:#a7f3d0;margin-top:3px}.bul-title .emis{font-size:9px;color:#6ee7b7;margin-top:2px}.emp-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:11px}.emp-cell{padding:5px 10px;font-size:10px;border-bottom:1px solid #e5e7eb}.emp-cell:nth-child(4n+1),.emp-cell:nth-child(4n+2){background:#f9fafb}.emp-label{color:#9ca3af;font-size:8px;text-transform:uppercase;letter-spacing:.5px;display:block}.emp-val{color:#1f2937;font-weight:700}.net-box{background:#ecfdf5;border:2px solid #10b981;border-radius:6px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin:10px 0}.net-label{font-size:14px;font-weight:800;color:#064e3b}.net-val{font-size:20px;font-weight:900;color:#10b981}.masse-box{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:4px;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sigs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:12px 0 8px}.sig{text-align:center}.sig-name{font-size:9px;color:#6b7280;margin-bottom:24px}.sig-line{border-top:1px solid #d1d5db;padding-top:5px;font-size:8px;color:#9ca3af}.footer{margin-top:auto;padding-top:10px;border-top:2px solid #10b981}.footer-coords{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 0;font-size:9px;color:#4b5563;padding:6px 0;text-align:center;line-height:1.8}.footer-doc{text-align:center;font-size:8px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:5px;margin-top:4px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{padding:10mm 12mm}.no-print{display:none!important}}</style></head><body>
 <div class="no-print" style="background:#1f2937;color:#fff;padding:10px 20px;text-align:center;font-family:Arial;font-size:13px;position:sticky;top:0;z-index:99;display:flex;align-items:center;justify-content:center;gap:16px">
@@ -218,9 +282,22 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
 <div class="page"><div class="content">
   <div class="header">${headerLeft}<div class="bul-title"><h2>BULLETIN DE PAIE</h2><div class="periode">Période : <b>${periode}</b></div><div class="emis">Émis le : ${date_emission}</div></div></div>
   <div class="emp-grid">${infoRows.map(([l, v]) => `<div class="emp-cell"><span class="emp-label">${l}</span><span class="emp-val">${v}</span></div>`).join("")}</div>
-  ${section("Éléments de Salaire", "#1d4ed8", row("Salaire de base", p.salaireBase, { bg: "#f9fafb" }) + (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") + (p.primeAnc > 0 ? row(`Prime d'ancienneté (${anc}%)`, p.primeAnc, { indent: true, color: "#1d4ed8", bg: "#f9fafb" }) : "") + row("SALAIRE BRUT", p.brut, { bold: true, color: "#1d4ed8" }))}
+  ${section("Éléments de Salaire", "#1d4ed8",
+    row("Salaire de base", p.salaireBase, { bg: "#f9fafb" }) +
+    (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") +
+    (p.primeAnc > 0 ? row(`Prime d'ancienneté (${anc}%)`, p.primeAnc, { indent: true, color: "#1d4ed8", bg: "#f9fafb" }) : "") +
+    hsRows +
+    (p.retAbsence > 0 ? row(`Retenue absences (${emp.heuresAbsence}h)`, p.retAbsence, { neg: true, color: "#dc2626" }) : "") +
+    (p.indMaladie > 0 ? row("Indemnité maladie", p.indMaladie, { color: "#059669" }) : "") +
+    row("SALAIRE BRUT", p.brut, { bold: true, color: "#1d4ed8" })
+  )}
   ${section("Retenues Salariales", "#dc2626", row("Impôt sur le Revenu (IR)", p.ir, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + row("TRIMF", p.trimf, { neg: true, indent: true, color: "#dc2626" }) + row("IPRES R.G. part salarié (5,6%)", p.ipresRG_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + (p.ipresRC_s > 0 ? row("IPRES R.C.C. part salarié (2,4%)", p.ipresRC_s, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row("IPM part salarié", p.ipm_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + row("TOTAL RETENUES", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
-  ${section("Indemnités", "#059669", row("Indemnité de transport", p.transport, { color: "#065f46", bg: "#f0fdf4" }))}
+  ${p.totalAvances > 0 ? section("Avances & Retenues Diverses", "#b45309", avancesRows + row("TOTAL AVANCES", p.totalAvances, { neg: true, bold: true, color: "#b45309" })) : ""}
+  ${section("Indemnités", "#059669",
+    row("Indemnité de transport", p.transport, { color: "#065f46", bg: "#f0fdf4" }) +
+    (p.primePanier > 0 ? row(`Prime de panier (${emp.nbPaniers}j)`, p.primePanier, { color: "#065f46" }) : "") +
+    (p.indKilometrique > 0 ? row("Indemnité kilométrique", p.indKilometrique, { color: "#065f46", bg: "#f0fdf4" }) : "")
+  )}
   <div class="net-box"><div><div class="net-label">NET À PAYER</div><div style="font-size:9px;color:#6b7280;margin-top:2px">Période : ${periode}</div></div><div class="net-val">${fmtN(p.net)} FCFA</div></div>
   ${section("Charges Patronales (informatif)", "#b45309", [["CFCE (3%)", p.cfce], ["IPRES R.G. patronal (8,4%)", p.ipresRG_p], p.ipresRC_p > 0 ? ["IPRES R.C.C. patronal (3,6%)", p.ipresRC_p] : null, ["CSS Alloc. Familiales (7%)", p.css_af], ["CSS Acc. Travail (1%)", p.css_at], p.ipm_p > 0 ? ["IPM patronal", p.ipm_p] : null].filter(Boolean).map(([l, v]: any, i: number) => row(l, v, { bg: i % 2 === 0 ? "#fffbeb" : "transparent", color: "#92400e" })).join("") + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
   <div class="masse-box"><span style="font-size:10px;font-weight:700;color:#5b21b6">MASSE SALARIALE TOTALE</span><span style="font-size:12px;font-weight:800;color:#5b21b6">${fmtN(p.masse)} FCFA</span></div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { fmt, getAnciennete } from "@/lib/payroll";
 import { Modal, Field, inputClass } from "./Modal";
@@ -14,36 +14,138 @@ interface EmployeeListProps {
   onBulletin: (emp: Employee) => void;
 }
 
+type SortKey = "nom" | "net" | "brut" | "anciennete";
+type SortDir = "asc" | "desc";
+
 export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin }: EmployeeListProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [filterStatut, setFilterStatut] = useState("");
+  const [filterContrat, setFilterContrat] = useState("");
+  const [filterConvention, setFilterConvention] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("nom");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Extract unique values for filters
+  const statuts = useMemo(() => [...new Set(employees.map((e) => e.statut).filter(Boolean))], [employees]);
+  const contrats = useMemo(() => [...new Set(employees.map((e) => e.contrat).filter(Boolean))], [employees]);
+  const conventions = useMemo(() => [...new Set(employees.map((e) => e.convention).filter(Boolean))], [employees]);
+
+  const activeFilters = [filterStatut, filterContrat, filterConvention].filter(Boolean).length;
+
+  // Filter & sort
+  const displayed = useMemo(() => {
+    let list = [...employees];
+    if (filterStatut) list = list.filter((e) => e.statut === filterStatut);
+    if (filterContrat) list = list.filter((e) => e.contrat === filterContrat);
+    if (filterConvention) list = list.filter((e) => e.convention === filterConvention);
+
+    list.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "nom": cmp = `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`); break;
+        case "net": cmp = a.paie.net - b.paie.net; break;
+        case "brut": cmp = a.paie.brut - b.paie.brut; break;
+        case "anciennete": cmp = getAnciennete(a.dateEntree) - getAnciennete(b.dateEntree); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [employees, filterStatut, filterContrat, filterConvention, sortKey, sortDir]);
+
+  const clearFilters = () => { setFilterStatut(""); setFilterContrat(""); setFilterConvention(""); };
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
           <h1 className="text-foreground text-xl font-extrabold mb-1">Gestion des Employés</h1>
-          <div className="text-muted-foreground text-[11px]">{employees.length} employé{employees.length > 1 ? "s" : ""} enregistré{employees.length > 1 ? "s" : ""}</div>
+          <div className="text-muted-foreground text-[11px]">{displayed.length} employé{displayed.length > 1 ? "s" : ""} affiché{displayed.length > 1 ? "s" : ""} sur {employees.length}</div>
         </div>
         <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
           + Nouvel Employé
         </button>
       </div>
 
-      <input
-        placeholder="🔍  Rechercher par nom, matricule, fonction…"
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className={`${inputClass} max-w-full sm:max-w-[420px] mb-4`}
-      />
+      {/* Search + Filter bar */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <input
+          placeholder="🔍  Rechercher par nom, matricule, fonction…"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className={`${inputClass} flex-1 max-w-full sm:max-w-[420px]`}
+        />
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`px-3 py-2 rounded-lg text-[11px] font-bold cursor-pointer border transition-colors ${
+            showFilters || activeFilters > 0
+              ? "bg-primary/10 border-primary text-primary"
+              : "bg-transparent border-border text-muted-foreground hover:border-primary hover:text-primary"
+          }`}
+        >
+          🔽 Filtres{activeFilters > 0 ? ` (${activeFilters})` : ""}
+        </button>
+        <div className="flex gap-1.5">
+          {(["nom", "net", "brut", "anciennete"] as SortKey[]).map((k) => (
+            <button key={k} onClick={() => toggleSort(k)}
+              className={`px-2.5 py-2 rounded-lg text-[10px] font-bold cursor-pointer border transition-colors ${
+                sortKey === k
+                  ? "bg-primary/10 border-primary text-primary"
+                  : "bg-transparent border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {k === "nom" ? "A-Z" : k === "net" ? "Net" : k === "brut" ? "Brut" : "Anc."}
+              {sortKey === k && (sortDir === "asc" ? " ↑" : " ↓")}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {employees.length === 0 && (
+      {/* Filter dropdowns */}
+      {showFilters && (
+        <div className="bg-card border border-border rounded-lg p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-muted-foreground text-[10px] uppercase tracking-wider block mb-1">Statut</label>
+            <select value={filterStatut} onChange={(e) => setFilterStatut(e.target.value)} className={`${inputClass} py-2 text-[12px]`}>
+              <option value="">Tous</option>
+              {statuts.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-muted-foreground text-[10px] uppercase tracking-wider block mb-1">Contrat</label>
+            <select value={filterContrat} onChange={(e) => setFilterContrat(e.target.value)} className={`${inputClass} py-2 text-[12px]`}>
+              <option value="">Tous</option>
+              {contrats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-muted-foreground text-[10px] uppercase tracking-wider block mb-1">Convention</label>
+            <select value={filterConvention} onChange={(e) => setFilterConvention(e.target.value)} className={`${inputClass} py-2 text-[12px]`}>
+              <option value="">Toutes</option>
+              {conventions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {activeFilters > 0 && (
+            <button onClick={clearFilters} className="text-destructive text-[11px] font-bold cursor-pointer bg-transparent border-none hover:underline sm:col-span-3 text-left">
+              ✕ Effacer les filtres
+            </button>
+          )}
+        </div>
+      )}
+
+      {displayed.length === 0 && (
         <div className="text-center text-muted-foreground py-16 bg-card rounded-lg">
-          {search ? "Aucun résultat" : "Aucun employé. Cliquez sur « + Nouvel Employé »."}
+          {search || activeFilters > 0 ? "Aucun résultat pour ces critères" : "Aucun employé. Cliquez sur « + Nouvel Employé »."}
         </div>
       )}
 
       <div className="grid gap-2.5">
-        {employees.map((emp) => (
+        {displayed.map((emp) => (
           <div key={emp.matricule} className={`bg-card rounded-lg border overflow-hidden transition-colors ${expanded === emp.matricule ? "border-primary" : "border-border"}`}>
             <div
               className="px-4 md:px-5 py-3.5 flex flex-col sm:flex-row justify-between gap-3 cursor-pointer"
@@ -55,7 +157,10 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
                 </div>
                 <div className="min-w-0">
                   <div className="text-foreground font-bold truncate">{emp.prenom} {emp.nom}</div>
-                  <div className="text-muted-foreground text-[11px] mt-0.5 truncate">{emp.matricule} · {emp.fonction} · {emp.contrat}</div>
+                  <div className="text-muted-foreground text-[11px] mt-0.5 truncate">
+                    {emp.matricule} · {emp.fonction} · {emp.contrat}
+                    {emp.statut && <span className="ml-1 text-senpaie-blue">· {emp.statut}</span>}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-3 items-center justify-between sm:justify-end">
@@ -64,9 +169,9 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
                   <div className="text-muted-foreground text-[10px]">Brut {fmt(emp.paie.brut)}</div>
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  <button onClick={(e) => { e.stopPropagation(); onBulletin(emp); }} className="px-2.5 py-1.5 bg-senpaie-blue text-background rounded-lg text-[11px] font-bold cursor-pointer border-none">📄</button>
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer">✏️</button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer">🗑</button>
+                  <button onClick={(e) => { e.stopPropagation(); onBulletin(emp); }} className="px-2.5 py-1.5 bg-senpaie-blue text-background rounded-lg text-[11px] font-bold cursor-pointer border-none" title="Bulletin de paie">📄</button>
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer" title="Modifier">✏️</button>
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer" title="Supprimer">🗑</button>
                 </div>
                 <span className="text-muted-foreground hidden sm:inline">{expanded === emp.matricule ? "▲" : "▼"}</span>
               </div>
@@ -84,6 +189,10 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
                     ["TRIMF", `${fmt(emp.paie.trimf)} F`],
                     ["IPRES RG sal.", `${fmt(emp.paie.ipresRG_s)} F`],
                     ["Charges pat.", `${fmt(emp.paie.chargesPat)} F`],
+                    ...(emp.paie.totalHS > 0 ? [["Heures sup.", `${fmt(emp.paie.totalHS)} F`]] : []),
+                    ...(emp.paie.totalAvances > 0 ? [["Avances", `${fmt(emp.paie.totalAvances)} F`]] : []),
+                    ...(emp.convention ? [["Convention", emp.convention]] : []),
+                    ...(emp.categorie ? [["Catégorie", emp.categorie]] : []),
                   ] as [string, string][]).map(([l, v]) => (
                     <div key={l} className="bg-background rounded-lg p-2.5">
                       <div className="text-muted-foreground text-[10px]">{l}</div>
