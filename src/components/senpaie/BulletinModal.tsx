@@ -1,4 +1,5 @@
 import { useState } from "react";
+import html2pdf from "html2pdf.js";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { Modal } from "./Modal";
@@ -66,12 +67,35 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   const periodeLabel = `${MOIS[mois]} ${annee}`;
   const years = Array.from({ length: 10 }, (_, i) => now.getFullYear() - i);
 
-  const openPDF = () => {
-    const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
-    const win = window.open("", "_blank");
-    if (!win) { alert("Veuillez autoriser les popups pour ce site."); return; }
-    win.document.write(html);
-    win.document.close();
+  const [generating, setGenerating] = useState(false);
+
+  const downloadPDF = async () => {
+    setGenerating(true);
+    try {
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      // Extract just the .page content for clean PDF
+      const page = container.querySelector(".page") || container;
+      document.body.appendChild(container);
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+
+      await html2pdf().set({
+        margin: 0,
+        filename: `bulletin_${emp.matricule}_${MOIS[mois]}_${annee}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      }).from(page as HTMLElement).save();
+
+      document.body.removeChild(container);
+    } catch (e) {
+      console.error("Erreur PDF:", e);
+      alert("Erreur lors de la génération du PDF.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const Row = ({ l, v, c = "text-foreground", bold = false, neg = false }: { l: string; v: number; c?: string; bold?: boolean; neg?: boolean }) => (
@@ -96,8 +120,8 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         <button onClick={() => exportBulletinCSV(emp, p, mois, annee)} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap">
           📥 CSV
         </button>
-        <button onClick={openPDF} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
-          ⬇️ PDF
+        <button onClick={downloadPDF} disabled={generating} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap disabled:opacity-50">
+          {generating ? "⏳ Génération..." : "⬇️ PDF"}
         </button>
       </div>
 
@@ -209,7 +233,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         </div>
 
         <div className="mt-3.5 px-3.5 py-2.5 bg-senpaie-blue/10 rounded-lg border border-senpaie-blue text-senpaie-blue text-[11px]">
-          💡 <strong>PDF</strong> : un nouvel onglet s'ouvre, utilisez <strong>Ctrl+P</strong> → "Enregistrer en PDF". <strong>CSV</strong> : téléchargement direct pour Excel.
+          💡 <strong>PDF</strong> : téléchargement direct du bulletin en PDF. <strong>CSV</strong> : téléchargement direct pour Excel.
         </div>
       </div>
     </Modal>
