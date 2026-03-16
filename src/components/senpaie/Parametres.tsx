@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PayrollParams } from "@/lib/payroll";
+import { BULLETIN_TEMPLATES, type BulletinTemplateId } from "@/lib/bulletinTemplates";
 import { Field, inputClass } from "./Modal";
 
 interface ParametresProps {
@@ -18,6 +19,7 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
   };
 
   const KEYS = ["CFCE", "BRS", "IPRES_RG", "IPRES_RCC", "CSS_AF", "CSS_AT", "IPM"] as const;
+  const selectedTemplate = (local.bulletinTemplate || "classique") as BulletinTemplateId;
 
   return (
     <div>
@@ -29,6 +31,45 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
         <div className="flex gap-2.5">
           <button onClick={onReset} className="px-4 py-2 bg-transparent border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px] cursor-pointer">↺ Réinitialiser</button>
           <button onClick={() => onSave(local)} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none">💾 Enregistrer</button>
+        </div>
+      </div>
+
+      {/* Template Bulletin */}
+      <div className="bg-card rounded-lg mb-5 overflow-hidden border border-border">
+        <div className="px-5 py-3.5 border-b border-border bg-background">
+          <div className="text-primary font-bold text-[13px]">📄 Modèle de Bulletin de Paie</div>
+          <div className="text-muted-foreground text-[11px] mt-0.5">Choisissez le style de présentation du PDF</div>
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          {BULLETIN_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setLocal((prev) => ({ ...prev, bulletinTemplate: t.id }))}
+              className={`relative text-left p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                selectedTemplate === t.id
+                  ? "border-primary bg-primary/5 shadow-md"
+                  : "border-border bg-card hover:border-muted-foreground/50 hover:bg-secondary/50"
+              }`}
+            >
+              {selectedTemplate === t.id && (
+                <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-[10px] font-bold">✓</div>
+              )}
+              {/* Preview mini */}
+              <div className="w-full h-16 rounded mb-2 overflow-hidden flex flex-col" style={{ border: `1px solid ${t.previewColors.accent}20` }}>
+                <div style={{ background: t.previewColors.header, height: "12px" }} className="flex items-center px-1.5">
+                  <div className="w-3 h-1.5 rounded-sm" style={{ background: "rgba(255,255,255,0.4)" }}></div>
+                </div>
+                <div style={{ background: t.previewColors.bg, flex: 1 }} className="p-1 flex flex-col gap-0.5">
+                  <div className="h-1 rounded-full w-3/4" style={{ background: `${t.previewColors.accent}30` }}></div>
+                  <div className="h-1 rounded-full w-1/2" style={{ background: `${t.previewColors.accent}20` }}></div>
+                  <div className="h-1 rounded-full w-2/3" style={{ background: `${t.previewColors.accent}30` }}></div>
+                  <div className="mt-auto h-2 rounded-sm" style={{ background: t.previewColors.accent }}></div>
+                </div>
+              </div>
+              <div className="text-[12px] font-bold text-foreground">{t.icon} {t.name}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{t.description}</div>
+            </button>
+          ))}
         </div>
       </div>
 
