@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
-import { genererBulletinParTemplate, type BulletinTemplateId } from "@/lib/bulletinTemplates";
+import { genererBulletinParTemplate, BULLETIN_TEMPLATES, type BulletinTemplateId } from "@/lib/bulletinTemplates";
 import { Modal } from "./Modal";
 
 interface BulletinModalProps {
@@ -60,6 +60,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   const now = new Date();
   const [mois, setMois] = useState(now.getMonth());
   const [annee, setAnnee] = useState(now.getFullYear());
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const refDate = new Date(annee, mois + 1, 0);
   const p = calculerPaie(emp, params, refDate);
@@ -67,6 +68,23 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   const periodeLabel = `${MOIS[mois]} ${annee}`;
   const years = Array.from({ length: 10 }, (_, i) => now.getFullYear() - i);
   const templateId = (params.bulletinTemplate || "classique") as BulletinTemplateId;
+  const currentTemplate = BULLETIN_TEMPLATES.find(t => t.id === templateId);
+
+  const previewHtml = useMemo(() => {
+    const html = genererBulletinParTemplate(templateId, emp, p, mois, annee, anc, entreprise);
+    // Remove the print bar for the preview and hide signatures for compact view
+    return html.replace(/class="no-print"[^>]*>[\s\S]*?<\/div>/, '');
+  }, [templateId, emp, p, mois, annee, anc, entreprise]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(previewHtml);
+    doc.close();
+  }, [previewHtml]);
 
   const openPDF = () => {
     const html = genererBulletinParTemplate(templateId, emp, p, mois, annee, anc, entreprise);
@@ -76,17 +94,10 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
     win.document.close();
   };
 
-  const Row = ({ l, v, c = "text-foreground", bold = false, neg = false }: { l: string; v: number; c?: string; bold?: boolean; neg?: boolean }) => (
-    <div className="flex justify-between py-1 border-b border-border">
-      <span className="text-muted-foreground text-xs">{l}</span>
-      <span className={`text-xs ${c} ${bold ? "font-bold" : ""}`}>{neg ? "– " : ""}{fmt(v)} FCFA</span>
-    </div>
-  );
-
   return (
-    <Modal title="📄 Bulletin de Paie" onClose={onClose} width={680}>
-      {/* Période + Boutons */}
-      <div className="flex gap-2 items-center mb-5 p-3.5 bg-background rounded-lg flex-wrap">
+    <Modal title="📄 Bulletin de Paie" onClose={onClose} width={780}>
+      {/* Période + Template + Boutons */}
+      <div className="flex gap-2 items-center mb-3 p-3 bg-muted/50 rounded-lg flex-wrap">
         <div className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">Période :</div>
         <select value={mois} onChange={(e) => setMois(+e.target.value)} className="py-1.5 px-2.5 bg-background border border-border rounded-lg text-foreground text-[13px] font-mono outline-none">
           {MOIS.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -98,121 +109,39 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         <button onClick={() => exportBulletinCSV(emp, p, mois, annee)} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap">
           📥 CSV
         </button>
-        <button onClick={openPDF} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
+        <button onClick={openPDF} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
           ⬇️ PDF
         </button>
       </div>
 
-      {/* Aperçu */}
-      <div className="font-mono">
-        <div className="bg-background rounded-lg p-3 mb-3.5 flex justify-between items-center border border-border">
+      {/* Template indicator */}
+      {currentTemplate && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-muted/30 rounded-lg border border-border">
+          <span className="text-lg">{currentTemplate.icon}</span>
           <div>
-            <div className="text-primary text-[15px] font-black tracking-widest">G-SENPAIE</div>
-            <div className="text-muted-foreground text-[9px] mt-0.5">BULLETIN DE PAIE</div>
+            <div className="text-foreground text-xs font-semibold">{currentTemplate.name}</div>
+            <div className="text-muted-foreground text-[10px]">{currentTemplate.description}</div>
           </div>
-          <div className="text-right text-muted-foreground text-[11px]">
-            <div>Période : <strong className="text-foreground">{periodeLabel}</strong></div>
-            <div className="text-[10px] mt-0.5">Émis le : {now.toLocaleDateString("fr-FR")}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 mb-3.5 bg-background rounded-lg p-3 border border-border">
-          {([
-            ["Matricule", emp.matricule], ["Fonction", emp.fonction],
-            ["Employé", `${emp.prenom} ${emp.nom}`], ["Catégorie", emp.categorie || "—"],
-            ["Convention", emp.convention || "—"], ["Contrat", emp.contrat],
-            ["Date d'entrée", emp.dateEntree], ["Ancienneté", `${anc} an${anc > 1 ? "s" : ""}`],
-          ] as [string, string][]).map(([l, v], i) => (
-            <div key={i}>
-              <span className="text-senpaie-dim text-[10px]">{l} : </span>
-              <span className="text-foreground text-[11px] font-semibold">{v}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Éléments de salaire */}
-        <div className="mb-2.5">
-          <div className="text-senpaie-blue text-[10px] font-bold mb-1 uppercase tracking-wider">Éléments de salaire</div>
-          <Row l="Salaire de base" v={p.salaireBase} />
-          {p.sursalaire > 0 && <Row l="Sursalaire" v={p.sursalaire} />}
-          {p.primeAnc > 0 && <Row l={`Prime ancienneté (${anc}%)`} v={p.primeAnc} c="text-senpaie-blue" />}
-          {p.totalHS > 0 && (
-            <>
-              {p.mtHS115 > 0 && <Row l={`HS 115% (${emp.hs115}h)`} v={p.mtHS115} />}
-              {p.mtHS140 > 0 && <Row l={`HS 140% (${emp.hs140}h)`} v={p.mtHS140} />}
-              {p.mtHS160 > 0 && <Row l={`HS 160% (${emp.hs160}h)`} v={p.mtHS160} />}
-              {p.mtHS200 > 0 && <Row l={`HS 200% (${emp.hs200}h)`} v={p.mtHS200} />}
-            </>
-          )}
-          {p.retAbsence > 0 && <Row l={`Retenue absences (${emp.heuresAbsence}h)`} v={p.retAbsence} c="text-destructive" neg />}
-          {p.indMaladie > 0 && <Row l="Indemnité maladie" v={p.indMaladie} />}
-          <Row l="SALAIRE BRUT" v={p.brut} c="text-senpaie-blue" bold />
-        </div>
-
-        {/* Retenues */}
-        <div className="mb-2.5">
-          <div className="text-destructive text-[10px] font-bold mb-1 uppercase tracking-wider">Retenues salariales</div>
-          <Row l="Impôt sur le Revenu (IR)" v={p.ir} c="text-destructive" neg />
-          <Row l="TRIMF" v={p.trimf} c="text-destructive" neg />
-          <Row l="IPRES R.G. salarié (5,6%)" v={p.ipresRG_s} c="text-destructive" neg />
-          {p.ipresRC_s > 0 && <Row l="IPRES R.C.C. salarié (2,4%)" v={p.ipresRC_s} c="text-destructive" neg />}
-          {p.ipm_s > 0 && <Row l="IPM salarié" v={p.ipm_s} c="text-destructive" neg />}
-          <Row l="TOTAL RETENUES" v={p.totalRet} c="text-destructive" bold neg />
-        </div>
-
-        {/* Avances & Retenues Diverses */}
-        {p.totalAvances > 0 && (
-          <div className="mb-2.5">
-            <div className="text-senpaie-yellow text-[10px] font-bold mb-1 uppercase tracking-wider">Avances & Retenues Diverses</div>
-            {p.avanceTabaski > 0 && <Row l="Avance Tabaski/Noël" v={p.avanceTabaski} c="text-senpaie-yellow" neg />}
-            {p.avanceCaisse > 0 && <Row l="Avance caisse" v={p.avanceCaisse} c="text-senpaie-yellow" neg />}
-            {p.avanceFinanciere > 0 && <Row l="Avance financière" v={p.avanceFinanciere} c="text-senpaie-yellow" neg />}
-            {p.retCooperative > 0 && <Row l="Retenue coopérative" v={p.retCooperative} c="text-senpaie-yellow" neg />}
-            {p.fraisMedicaux > 0 && <Row l="Frais médicaux" v={p.fraisMedicaux} c="text-senpaie-yellow" neg />}
-            <Row l="TOTAL AVANCES" v={p.totalAvances} c="text-senpaie-yellow" bold neg />
-          </div>
-        )}
-
-        {/* Indemnités */}
-        <div className="mb-3">
-          <div className="text-primary text-[10px] font-bold mb-1 uppercase tracking-wider">Indemnités</div>
-          <Row l="Indemnité de transport" v={p.transport} c="text-primary" />
-          {p.primePanier > 0 && <Row l={`Prime de panier (${emp.nbPaniers}j)`} v={p.primePanier} c="text-primary" />}
-          {p.indKilometrique > 0 && <Row l="Indemnité kilométrique" v={p.indKilometrique} c="text-primary" />}
-        </div>
-
-        {/* NET */}
-        <div className="bg-primary/10 border border-primary rounded-lg px-4 py-3 flex justify-between items-center mb-3">
-          <div>
-            <div className="text-foreground font-bold text-sm">NET À PAYER</div>
-            <div className="text-muted-foreground text-[10px] mt-0.5">Période : {periodeLabel}</div>
-          </div>
-          <div className="text-primary text-[22px] font-black">{fmt(p.net)} FCFA</div>
-        </div>
-
-        {/* Charges patronales */}
-        <div className="bg-background rounded-lg p-3 border border-border">
-          <div className="text-senpaie-yellow text-[10px] font-bold mb-2 uppercase">Charges patronales (informatif)</div>
-          {([
-            ["CFCE", p.cfce], ["IPRES R.G. patronal", p.ipresRG_p],
-            ["IPRES R.C.C. patronal", p.ipresRC_p], ["CSS Alloc. Fam.", p.css_af],
-            ["CSS Acc. Trav.", p.css_at], ["IPM patronal", p.ipm_p],
-          ] as [string, number][]).filter(([, v]) => v > 0).map(([l, v]) => (
-            <div key={l} className="flex justify-between text-muted-foreground text-[11px] py-0.5">
-              <span>{l}</span><span>{fmt(v)} F</span>
-            </div>
-          ))}
-          <div className="flex justify-between text-senpaie-yellow font-bold border-t border-border pt-1.5 mt-1 text-xs">
-            <span>Total charges patronales</span><span>{fmt(p.chargesPat)} FCFA</span>
-          </div>
-          <div className="flex justify-between text-senpaie-purple font-bold mt-1 text-xs">
-            <span>Masse salariale totale</span><span>{fmt(p.masse)} FCFA</span>
+          <div className="ml-auto flex gap-1">
+            <div className="w-3 h-3 rounded-full" style={{ background: currentTemplate.previewColors.header }} />
+            <div className="w-3 h-3 rounded-full" style={{ background: currentTemplate.previewColors.accent }} />
           </div>
         </div>
+      )}
 
-        <div className="mt-3.5 px-3.5 py-2.5 bg-senpaie-blue/10 rounded-lg border border-senpaie-blue text-senpaie-blue text-[11px]">
-          💡 <strong>PDF</strong> : un nouvel onglet s'ouvre, utilisez <strong>Ctrl+P</strong> → "Enregistrer en PDF". <strong>CSV</strong> : téléchargement direct pour Excel.
-        </div>
+      {/* Live preview iframe */}
+      <div className="border border-border rounded-lg overflow-hidden bg-white" style={{ height: 520 }}>
+        <iframe
+          ref={iframeRef}
+          title="Aperçu bulletin"
+          className="w-full h-full border-0"
+          sandbox="allow-same-origin"
+          style={{ transform: "scale(0.62)", transformOrigin: "top left", width: "161.3%", height: "161.3%" }}
+        />
+      </div>
+
+      <div className="mt-3 px-3.5 py-2 bg-muted/50 rounded-lg border border-border text-muted-foreground text-[11px]">
+        💡 Cliquez <strong>⬇️ PDF</strong> pour ouvrir dans un nouvel onglet, puis <strong>Ctrl+P</strong> → "Enregistrer en PDF". Le template peut être changé dans <strong>Paramètres</strong>.
       </div>
     </Modal>
   );
