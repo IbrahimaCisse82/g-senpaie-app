@@ -233,7 +233,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         </div>
 
         <div className="mt-3.5 px-3.5 py-2.5 bg-senpaie-blue/10 rounded-lg border border-senpaie-blue text-senpaie-blue text-[11px]">
-          💡 <strong>PDF</strong> : un nouvel onglet s'ouvre, utilisez <strong>Ctrl+P</strong> → "Enregistrer en PDF". <strong>CSV</strong> : téléchargement direct pour Excel.
+          💡 <strong>PDF</strong> : téléchargement direct du bulletin en PDF. <strong>CSV</strong> : téléchargement direct pour Excel.
         </div>
       </div>
     </Modal>
