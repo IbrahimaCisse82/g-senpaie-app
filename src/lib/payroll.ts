@@ -50,6 +50,7 @@ export interface PayrollParams {
   CSS_AT: CotisationParam;
   IPM: CotisationParam;
   transport: { label: string; valeur: number };
+  bulletinTemplate?: string;
 }
 
 export interface CotisationParam {
