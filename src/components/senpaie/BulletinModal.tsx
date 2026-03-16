@@ -120,8 +120,8 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         <button onClick={() => exportBulletinCSV(emp, p, mois, annee)} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap">
           📥 CSV
         </button>
-        <button onClick={openPDF} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
-          ⬇️ PDF
+        <button onClick={downloadPDF} disabled={generating} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap disabled:opacity-50">
+          {generating ? "⏳ Génération..." : "⬇️ PDF"}
         </button>
       </div>
 
