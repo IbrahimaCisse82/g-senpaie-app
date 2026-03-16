@@ -1,5 +1,4 @@
 import { useState } from "react";
-import html2pdf from "html2pdf.js";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { Modal } from "./Modal";
@@ -72,27 +71,54 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   const downloadPDF = async () => {
     setGenerating(true);
     try {
+      const { default: jsPDF } = await import("jspdf");
+      const { default: html2canvas } = await import("html2canvas");
+
       const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
       const container = document.createElement("div");
       container.innerHTML = html;
-      // Extract just the .page content for clean PDF
-      const page = container.querySelector(".page") || container;
+      container.style.position = "fixed";
+      container.style.left = "-10000px";
+      container.style.top = "0";
+      container.style.width = "794px";
       document.body.appendChild(container);
-      container.style.position = "absolute";
-      container.style.left = "-9999px";
 
-      await html2pdf().set({
-        margin: 0,
-        filename: `bulletin_${emp.matricule}_${MOIS[mois]}_${annee}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      }).from(page as HTMLElement).save();
+      const pageEl = container.querySelector(".page") as HTMLElement || container;
+
+      const canvas = await html2canvas(pageEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: 794,
+        windowWidth: 794,
+      });
 
       document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfW, pdfH);
+
+      // Use blob approach for reliable download in iframes
+      const pdfBlob = pdf.output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `bulletin_${emp.matricule}_${MOIS[mois]}_${annee}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (e) {
       console.error("Erreur PDF:", e);
-      alert("Erreur lors de la génération du PDF.");
+      // Fallback: open in new tab
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
+      const win = window.open("", "_blank");
+      if (win) { win.document.write(html); win.document.close(); }
+      else { alert("Erreur lors de la génération du PDF. Veuillez autoriser les popups."); }
     } finally {
       setGenerating(false);
     }
