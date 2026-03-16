@@ -224,14 +224,14 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
   const row = (label: string, val: number, opts: any = {}) => {
     const { neg = false, bold = false, color = "#1f2937", bg = "transparent", indent = false } = opts;
     return `<tr style="background:${bg}">
-      <td style="padding:5px 8px 5px ${indent ? '20px' : '8px'};font-size:11px;color:#374151;border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${label}</td>
-      <td style="padding:5px 10px;text-align:right;font-size:11px;color:${color};border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${neg ? '– ' : ''}<b>${fmtN(val)} FCFA</b></td>
+      <td style="padding:3px 6px 3px ${indent ? '16px' : '6px'};font-size:9px;color:#374151;border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${label}</td>
+      <td style="padding:3px 8px;text-align:right;font-size:9px;color:${color};border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${neg ? '– ' : ''}<b>${fmtN(val)} FCFA</b></td>
     </tr>`;
   };
 
   const section = (title: string, bgColor: string, rows: string) => `
-    <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
-      <thead><tr><th colspan="2" style="background:${bgColor};color:#fff;padding:6px 10px;text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase">${title}</th></tr></thead>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:4px">
+      <thead><tr><th colspan="2" style="background:${bgColor};color:#fff;padding:4px 8px;text-align:left;font-size:8px;letter-spacing:1px;text-transform:uppercase">${title}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 
