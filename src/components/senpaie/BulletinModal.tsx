@@ -87,7 +87,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      }).from(page).save();
+      }).from(page as HTMLElement).save();
 
       document.body.removeChild(container);
     } catch (e) {
