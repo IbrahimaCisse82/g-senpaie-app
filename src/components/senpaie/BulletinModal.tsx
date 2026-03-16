@@ -67,12 +67,35 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   const periodeLabel = `${MOIS[mois]} ${annee}`;
   const years = Array.from({ length: 10 }, (_, i) => now.getFullYear() - i);
 
-  const openPDF = () => {
-    const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
-    const win = window.open("", "_blank");
-    if (!win) { alert("Veuillez autoriser les popups pour ce site."); return; }
-    win.document.write(html);
-    win.document.close();
+  const [generating, setGenerating] = useState(false);
+
+  const downloadPDF = async () => {
+    setGenerating(true);
+    try {
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      // Extract just the .page content for clean PDF
+      const page = container.querySelector(".page") || container;
+      document.body.appendChild(container);
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+
+      await html2pdf().set({
+        margin: 0,
+        filename: `bulletin_${emp.matricule}_${MOIS[mois]}_${annee}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      }).from(page).save();
+
+      document.body.removeChild(container);
+    } catch (e) {
+      console.error("Erreur PDF:", e);
+      alert("Erreur lors de la génération du PDF.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const Row = ({ l, v, c = "text-foreground", bold = false, neg = false }: { l: string; v: number; c?: string; bold?: boolean; neg?: boolean }) => (
