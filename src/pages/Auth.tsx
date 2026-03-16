@@ -57,17 +57,27 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center font-mono px-4">
-      {/* Full-screen background image */}
-      <img src={authBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-      <div className="absolute inset-0 bg-black/60" />
-
-      {/* Form */}
-      <div className="relative z-10 w-full max-w-[400px]">
-        <div className="text-center mb-8">
-          <div className="text-white text-2xl font-black tracking-[4px] mb-1">G-SENPAIE</div>
-          <div className="text-white/50 text-[11px] tracking-wider">GESTION DE LA PAIE · SÉNÉGAL</div>
+    <div className="min-h-screen flex font-mono">
+      {/* Left: image */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <img src={authBg} alt="G-SENPAIE" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
+        <div className="relative z-10 flex flex-col justify-end h-full p-12">
+          <div className="text-white text-3xl font-black tracking-[5px] mb-2">G-SENPAIE</div>
+          <div className="text-white/70 text-sm max-w-md">
+            La solution complète de gestion de la paie conforme à la législation sénégalaise. Simplifiez vos bulletins, cotisations et déclarations.
+          </div>
+          <div className="text-white/40 text-xs mt-4">Par Grow Hub SARL · Dakar, Sénégal</div>
         </div>
+      </div>
+
+      {/* Right: form */}
+      <div className="flex-1 bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-[400px]">
+          <div className="text-center mb-8 lg:hidden">
+            <div className="text-primary text-2xl font-black tracking-[4px] mb-1">G-SENPAIE</div>
+            <div className="text-muted-foreground text-[11px] tracking-wider">GESTION DE LA PAIE · SÉNÉGAL</div>
+          </div>
 
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-foreground text-lg font-bold mb-5">
@@ -130,17 +140,18 @@ export default function Auth() {
             </div>
           </div>
 
-          <div className="text-center mt-6 space-x-4 text-[10px] text-white/40">
-            <Link to="/cgu" className="hover:text-white/70 transition-colors">CGU</Link>
+          <div className="text-center mt-6 space-x-4 text-[10px] text-muted-foreground">
+            <Link to="/cgu" className="hover:text-primary transition-colors">CGU</Link>
             <span>·</span>
-            <Link to="/confidentialite" className="hover:text-white/70 transition-colors">Confidentialité</Link>
+            <Link to="/confidentialite" className="hover:text-primary transition-colors">Confidentialité</Link>
             <span>·</span>
-            <Link to="/protection-donnees" className="hover:text-white/70 transition-colors">Protection des données</Link>
+            <Link to="/protection-donnees" className="hover:text-primary transition-colors">Protection des données</Link>
           </div>
-          <div className="text-center mt-2 text-[9px] text-white/30">
+          <div className="text-center mt-2 text-[9px] text-muted-foreground">
             © {new Date().getFullYear()} Grow Hub SARL · Dakar, Sénégal
           </div>
         </div>
       </div>
+    </div>
   );
 }
