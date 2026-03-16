@@ -35,8 +35,8 @@ function commonData({ emp, p, mois, annee, anc, ent }: GenParams) {
   const date_emission = new Date().toLocaleDateString("fr-FR");
 
   const headerLogo = ent.logo
-    ? `<img src="${ent.logo}" alt="logo" style="height:48px;max-width:120px;object-fit:contain;display:block"/>`
-    : `<div style="width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">🏢</div>`;
+    ? `<img src="${ent.logo}" alt="logo" style="height:36px;max-width:100px;object-fit:contain;display:block"/>`
+    : `<div style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">🏢</div>`;
 
   const infoRows: [string, string][] = [
     ["Matricule", emp.matricule], ["Fonction", emp.fonction],
@@ -82,18 +82,18 @@ function commonData({ emp, p, mois, annee, anc, ent }: GenParams) {
 }
 
 function printBar(title: string) {
-  return `<div class="no-print" style="background:#1f2937;color:#fff;padding:10px 20px;text-align:center;font-family:Arial;font-size:13px;position:sticky;top:0;z-index:99;display:flex;align-items:center;justify-content:center;gap:16px">
+  return `<div class="no-print" style="background:#1f2937;color:#fff;padding:8px 16px;text-align:center;font-family:Arial;font-size:12px;position:sticky;top:0;z-index:99;display:flex;align-items:center;justify-content:center;gap:12px">
     <span>📄 ${title}</span>
-    <button onclick="window.print()" style="background:#10b981;color:#fff;border:none;padding:8px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Enregistrer en PDF</button>
+    <button onclick="window.print()" style="background:#10b981;color:#fff;border:none;padding:6px 18px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Enregistrer en PDF</button>
   </div>`;
 }
 
 function pageWrap(styles: string, body: string, emp: Employee, periode: string) {
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bulletin – ${emp.prenom} ${emp.nom} – ${periode}</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;color:#1f2937;background:#fff}
-.page{width:210mm;height:297mm;max-height:297mm;overflow:hidden;margin:0 auto;padding:8mm 10mm;display:flex;flex-direction:column}
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:8px;color:#1f2937;background:#fff}
+.page{width:210mm;min-height:297mm;max-height:297mm;overflow:hidden;margin:0 auto;padding:4mm 7mm;display:flex;flex-direction:column}
 .content{flex:1;overflow:hidden}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{padding:6mm 8mm}.no-print{display:none!important}}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{padding:4mm 7mm}.no-print{display:none!important}}
 @page{size:A4 portrait;margin:0}
 ${styles}</style></head><body>${body}</body></html>`;
 }
@@ -107,12 +107,12 @@ function genClassique(g: GenParams): string {
 
   const row = (label: string, val: number, opts: any = {}) => {
     const { neg = false, bold = false, color = "#1f2937", bg = "transparent", indent = false } = opts;
-    return `<tr style="background:${bg}"><td style="padding:3px 6px 3px ${indent ? '16px' : '6px'};font-size:9px;color:#374151;border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${label}</td><td style="padding:3px 8px;text-align:right;font-size:9px;color:${color};border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${neg ? '– ' : ''}<b>${fmtN(val)} FCFA</b></td></tr>`;
+    return `<tr style="background:${bg}"><td style="padding:1.5px 4px 1.5px ${indent ? '12px' : '4px'};font-size:8px;color:#374151;border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${label}</td><td style="padding:1.5px 5px;text-align:right;font-size:8px;color:${color};border-bottom:1px solid #e5e7eb;font-weight:${bold ? 700 : 400}">${neg ? '– ' : ''}${fmtN(val)} F</td></tr>`;
   };
 
-  const section = (title: string, bgColor: string, rows: string) => `<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><thead><tr><th colspan="2" style="background:${bgColor};color:#fff;padding:4px 8px;text-align:left;font-size:8px;letter-spacing:1px;text-transform:uppercase">${title}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const section = (title: string, bgColor: string, rows: string) => `<table style="width:100%;border-collapse:collapse;margin-bottom:2px"><thead><tr><th colspan="2" style="background:${bgColor};color:#fff;padding:2px 5px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase">${title}</th></tr></thead><tbody>${rows}</tbody></table>`;
 
-  const headerLeft = `<div style="display:flex;align-items:center;gap:14px">${d.headerLogo}<div><div style="font-size:15px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:9px;color:#a7f3d0;margin-top:2px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
+  const headerLeft = `<div style="display:flex;align-items:center;gap:8px">${d.headerLogo}<div><div style="font-size:12px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:7px;color:#a7f3d0;margin-top:1px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
 
   const hsHtml = d.hsRows.map((r, i) => row(r.label, r.val, { indent: true, bg: i % 2 === 0 ? "#f9fafb" : "transparent" })).join("");
   const avHtml = d.avancesRows.map(r => row(r.label, r.val, { neg: true, indent: true, color: "#b45309" })).join("");
@@ -120,18 +120,18 @@ function genClassique(g: GenParams): string {
 
   const body = `${printBar("Bulletin prêt à imprimer")}
 <div class="page"><div class="content">
-  <div style="background:#064e3b;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-radius:4px">${headerLeft}<div style="text-align:right"><div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:1px">BULLETIN DE PAIE</div><div style="font-size:10px;color:#a7f3d0;margin-top:2px">Période : <b>${d.periode}</b></div><div style="font-size:8px;color:#6ee7b7;margin-top:1px">Émis le : ${d.date_emission}</div></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:6px">${d.infoRows.map(([l, v], i) => `<div style="padding:3px 8px;font-size:9px;border-bottom:1px solid #e5e7eb;${i % 4 < 2 ? 'background:#f9fafb' : ''}"><span style="color:#9ca3af;font-size:7px;text-transform:uppercase;letter-spacing:.5px;display:block">${l}</span><span style="color:#1f2937;font-weight:700">${v}</span></div>`).join("")}</div>
+  <div style="background:#064e3b;color:#fff;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;border-radius:3px">${headerLeft}<div style="text-align:right"><div style="font-size:10px;font-weight:900;color:#fff;letter-spacing:1px">BULLETIN DE PAIE</div><div style="font-size:8px;color:#a7f3d0;margin-top:1px">Période : <b>${d.periode}</b></div><div style="font-size:7px;color:#6ee7b7">Émis le : ${d.date_emission}</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #e5e7eb;border-radius:2px;overflow:hidden;margin-bottom:3px">${d.infoRows.map(([l, v], i) => `<div style="padding:1.5px 5px;font-size:8px;border-bottom:1px solid #e5e7eb;${i % 4 < 2 ? 'background:#f9fafb' : ''}"><span style="color:#9ca3af;font-size:6px;text-transform:uppercase;letter-spacing:.5px;display:block">${l}</span><span style="color:#1f2937;font-weight:700">${v}</span></div>`).join("")}</div>
   ${section("Éléments de Salaire", "#1d4ed8", row("Salaire de base", p.salaireBase, { bg: "#f9fafb" }) + (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") + (p.primeAnc > 0 ? row(`Prime d'ancienneté (${d.infoRows[7][1]})`, p.primeAnc, { indent: true, color: "#1d4ed8", bg: "#f9fafb" }) : "") + hsHtml + (p.retAbsence > 0 ? row(`Retenue absences (${emp.heuresAbsence}h)`, p.retAbsence, { neg: true, color: "#dc2626" }) : "") + (p.indMaladie > 0 ? row("Indemnité maladie", p.indMaladie, { color: "#059669" }) : "") + row("SALAIRE BRUT", p.brut, { bold: true, color: "#1d4ed8" }))}
   ${section("Retenues Salariales", "#dc2626", row("IR", p.ir, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + row("TRIMF", p.trimf, { neg: true, indent: true, color: "#dc2626" }) + row("IPRES R.G. salarié (5,6%)", p.ipresRG_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + (p.ipresRC_s > 0 ? row("IPRES R.C.C. salarié (2,4%)", p.ipresRC_s, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row("IPM salarié", p.ipm_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + row("TOTAL RETENUES", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
   ${p.totalAvances > 0 ? section("Avances & Retenues Diverses", "#b45309", avHtml + row("TOTAL AVANCES", p.totalAvances, { neg: true, bold: true, color: "#b45309" })) : ""}
   ${section("Indemnités", "#059669", row("Indemnité de transport", p.transport, { color: "#065f46", bg: "#f0fdf4" }) + (p.primePanier > 0 ? row(`Prime de panier (${emp.nbPaniers}j)`, p.primePanier, { color: "#065f46" }) : "") + (p.indKilometrique > 0 ? row("Indemnité kilométrique", p.indKilometrique, { color: "#065f46", bg: "#f0fdf4" }) : ""))}
-  <div style="background:#ecfdf5;border:2px solid #10b981;border-radius:4px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center;margin:6px 0"><div><div style="font-size:12px;font-weight:800;color:#064e3b">NET À PAYER</div><div style="font-size:9px;color:#6b7280;margin-top:2px">Période : ${d.periode}</div></div><div style="font-size:16px;font-weight:900;color:#10b981">${fmtN(p.net)} FCFA</div></div>
+  <div style="background:#ecfdf5;border:2px solid #10b981;border-radius:3px;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;margin:3px 0"><div><div style="font-size:10px;font-weight:800;color:#064e3b">NET À PAYER</div><div style="font-size:7px;color:#6b7280;margin-top:1px">${d.periode}</div></div><div style="font-size:13px;font-weight:900;color:#10b981">${fmtN(p.net)} FCFA</div></div>
   ${section("Charges Patronales (informatif)", "#b45309", chHtml + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
-  <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:3px;padding:4px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:#5b21b6">MASSE SALARIALE TOTALE</span><span style="font-size:12px;font-weight:800;color:#5b21b6">${fmtN(p.masse)} FCFA</span></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0 4px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:8px;color:#6b7280;margin-bottom:18px">${s}</div><div style="border-top:1px solid #d1d5db;padding-top:4px;font-size:7px;color:#9ca3af">Signature & cachet</div></div>`).join("")}</div>
+  <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:2px;padding:2px 6px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:8px;font-weight:700;color:#5b21b6">MASSE SALARIALE TOTALE</span><span style="font-size:10px;font-weight:800;color:#5b21b6">${fmtN(p.masse)} FCFA</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:3px 0 1px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:6px;color:#6b7280;margin-bottom:10px">${s}</div><div style="border-top:1px solid #d1d5db;padding-top:2px;font-size:6px;color:#9ca3af">Signature & cachet</div></div>`).join("")}</div>
 </div>
-<div style="margin-top:auto;padding-top:6px;border-top:2px solid #10b981"><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:3px 0;font-size:8px;color:#4b5563;padding:4px 0;text-align:center;line-height:1.6">${d.footerItems}</div><div style="text-align:center;font-size:7px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:4px;margin-top:3px">Document généré par G-SENPAIE · ${d.periode} · Confidentiel</div></div>
+<div style="margin-top:auto;padding-top:3px;border-top:2px solid #10b981"><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px 0;font-size:7px;color:#4b5563;padding:2px 0;text-align:center;line-height:1.3">${d.footerItems}</div><div style="text-align:center;font-size:6px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:2px;margin-top:2px">Document généré par G-SENPAIE · ${d.periode} · Confidentiel</div></div>
 </div>`;
 
   return pageWrap("", body, emp, d.periode);
@@ -145,12 +145,12 @@ function genModerne(g: GenParams): string {
   const { emp, p, ent } = g;
 
   const row = (label: string, val: number, neg = false, bold = false) =>
-    `<tr><td style="padding:3px 8px;font-size:9px;border-bottom:1px solid #e2e8f0;font-weight:${bold ? 700 : 400}">${label}</td><td style="padding:3px 8px;text-align:right;font-size:9px;border-bottom:1px solid #e2e8f0;font-weight:${bold ? 700 : 400}">${neg ? '– ' : ''}${fmtN(val)} F</td></tr>`;
+    `<tr><td style="padding:1.5px 5px;font-size:8px;border-bottom:1px solid #e2e8f0;font-weight:${bold ? 700 : 400}">${label}</td><td style="padding:1.5px 5px;text-align:right;font-size:8px;border-bottom:1px solid #e2e8f0;font-weight:${bold ? 700 : 400}">${neg ? '– ' : ''}${fmtN(val)} F</td></tr>`;
 
   const card = (title: string, color: string, content: string) =>
-    `<div style="border:1px solid ${color}30;border-radius:6px;overflow:hidden;margin-bottom:5px"><div style="background:${color};color:#fff;padding:4px 10px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${title}</div><table style="width:100%;border-collapse:collapse">${content}</table></div>`;
+    `<div style="border:1px solid ${color}30;border-radius:4px;overflow:hidden;margin-bottom:2px"><div style="background:${color};color:#fff;padding:2px 6px;font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${title}</div><table style="width:100%;border-collapse:collapse">${content}</table></div>`;
 
-  const headerLeft = `<div style="display:flex;align-items:center;gap:12px">${d.headerLogo}<div><div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:1px">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:8px;color:#bfdbfe;margin-top:2px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
+  const headerLeft = `<div style="display:flex;align-items:center;gap:8px">${d.headerLogo}<div><div style="font-size:12px;font-weight:900;color:#fff;letter-spacing:1px">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:7px;color:#bfdbfe;margin-top:1px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
 
   const hsHtml = d.hsRows.map(r => row(r.label, r.val)).join("");
   const avHtml = d.avancesRows.map(r => row(r.label, r.val, true)).join("");
@@ -158,18 +158,18 @@ function genModerne(g: GenParams): string {
 
   const body = `${printBar("Bulletin Moderne")}
 <div class="page"><div class="content">
-  <div style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-radius:8px">${headerLeft}<div style="text-align:right"><div style="font-size:14px;font-weight:900;letter-spacing:2px">BULLETIN DE PAIE</div><div style="font-size:10px;color:#bfdbfe;margin-top:3px">Période : <b>${d.periode}</b></div><div style="font-size:8px;color:#93c5fd;margin-top:1px">Émis le : ${d.date_emission}</div></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">${d.infoRows.map(([l, v]) => `<div style="background:#f8fafc;border-radius:4px;padding:3px 8px;font-size:9px"><span style="color:#94a3b8;font-size:7px;display:block">${l}</span><span style="font-weight:700">${v}</span></div>`).join("")}</div>
+  <div style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;border-radius:5px">${headerLeft}<div style="text-align:right"><div style="font-size:11px;font-weight:900;letter-spacing:2px">BULLETIN DE PAIE</div><div style="font-size:8px;color:#bfdbfe;margin-top:1px">Période : <b>${d.periode}</b></div><div style="font-size:7px;color:#93c5fd">Émis le : ${d.date_emission}</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:3px">${d.infoRows.map(([l, v]) => `<div style="background:#f8fafc;border-radius:2px;padding:1.5px 5px;font-size:8px"><span style="color:#94a3b8;font-size:6px;display:block">${l}</span><span style="font-weight:700">${v}</span></div>`).join("")}</div>
   ${card("💰 Éléments de Salaire", "#2563eb", row("Salaire de base", p.salaireBase) + (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") + (p.primeAnc > 0 ? row("Prime d'ancienneté", p.primeAnc) : "") + hsHtml + (p.retAbsence > 0 ? row("Retenue absences", p.retAbsence, true) : "") + (p.indMaladie > 0 ? row("Indemnité maladie", p.indMaladie) : "") + row("SALAIRE BRUT", p.brut, false, true))}
   ${card("🔻 Retenues Salariales", "#dc2626", row("IR", p.ir, true) + row("TRIMF", p.trimf, true) + row("IPRES R.G. (5,6%)", p.ipresRG_s, true) + (p.ipresRC_s > 0 ? row("IPRES R.C.C. (2,4%)", p.ipresRC_s, true) : "") + (p.ipm_s > 0 ? row("IPM salarié", p.ipm_s, true) : "") + row("TOTAL RETENUES", p.totalRet, true, true))}
   ${p.totalAvances > 0 ? card("⚠️ Avances & Retenues", "#f59e0b", avHtml + row("TOTAL AVANCES", p.totalAvances, true, true)) : ""}
   ${card("🚌 Indemnités", "#059669", row("Transport", p.transport) + (p.primePanier > 0 ? row("Prime de panier", p.primePanier) : "") + (p.indKilometrique > 0 ? row("Ind. kilométrique", p.indKilometrique) : ""))}
-  <div style="background:linear-gradient(135deg,#2563eb,#3b82f6);border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin:6px 0"><div><div style="font-size:13px;font-weight:900;color:#fff">NET À PAYER</div><div style="font-size:8px;color:#bfdbfe;margin-top:2px">${d.periode}</div></div><div style="font-size:18px;font-weight:900;color:#fff">${fmtN(p.net)} FCFA</div></div>
+  <div style="background:linear-gradient(135deg,#2563eb,#3b82f6);border-radius:5px;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;margin:3px 0"><div><div style="font-size:10px;font-weight:900;color:#fff">NET À PAYER</div><div style="font-size:7px;color:#bfdbfe;margin-top:1px">${d.periode}</div></div><div style="font-size:13px;font-weight:900;color:#fff">${fmtN(p.net)} FCFA</div></div>
   ${card("📊 Charges Patronales", "#92400e", chHtml + row("TOTAL CHARGES", p.chargesPat, false, true))}
-  <div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:6px;padding:5px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:#fff">MASSE SALARIALE</span><span style="font-size:13px;font-weight:900;color:#fff">${fmtN(p.masse)} FCFA</span></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0 4px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:8px;color:#6b7280;margin-bottom:18px">${s}</div><div style="border-top:1px solid #d1d5db;padding-top:4px;font-size:7px;color:#9ca3af">Signature</div></div>`).join("")}</div>
+  <div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:3px;padding:2px 8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:8px;font-weight:700;color:#fff">MASSE SALARIALE</span><span style="font-size:10px;font-weight:900;color:#fff">${fmtN(p.masse)} FCFA</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:3px 0 1px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:6px;color:#6b7280;margin-bottom:10px">${s}</div><div style="border-top:1px solid #d1d5db;padding-top:2px;font-size:6px;color:#9ca3af">Signature</div></div>`).join("")}</div>
 </div>
-<div style="margin-top:auto;padding-top:6px;border-top:2px solid #3b82f6"><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:3px;font-size:8px;color:#4b5563;padding:4px 0;text-align:center;line-height:1.6">${d.footerItems}</div><div style="text-align:center;font-size:7px;color:#9ca3af;margin-top:3px">G-SENPAIE · ${d.periode} · Confidentiel</div></div>
+<div style="margin-top:auto;padding-top:3px;border-top:2px solid #3b82f6"><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px;font-size:7px;color:#4b5563;padding:2px 0;text-align:center;line-height:1.3">${d.footerItems}</div><div style="text-align:center;font-size:6px;color:#9ca3af;margin-top:2px">G-SENPAIE · ${d.periode} · Confidentiel</div></div>
 </div>`;
 
   return pageWrap("", body, emp, d.periode);
@@ -183,28 +183,28 @@ function genMinimaliste(g: GenParams): string {
   const { emp, p, ent } = g;
 
   const row = (label: string, val: number, neg = false, bold = false) =>
-    `<div style="display:flex;justify-content:space-between;padding:2px 0;${bold ? 'font-weight:700;border-top:1px solid #e5e7eb;margin-top:2px;padding-top:4px' : ''}"><span style="font-size:9px;color:#6b7280">${label}</span><span style="font-size:9px;color:${neg ? '#ef4444' : '#111827'};font-weight:${bold ? 700 : 500}">${neg ? '– ' : ''}${fmtN(val)} F</span></div>`;
+    `<div style="display:flex;justify-content:space-between;padding:1px 0;${bold ? 'font-weight:700;border-top:1px solid #e5e7eb;margin-top:1px;padding-top:2px' : ''}"><span style="font-size:8px;color:#6b7280">${label}</span><span style="font-size:8px;color:${neg ? '#ef4444' : '#111827'};font-weight:${bold ? 700 : 500}">${neg ? '– ' : ''}${fmtN(val)} F</span></div>`;
 
   const section = (title: string, content: string) =>
-    `<div style="margin-bottom:6px"><div style="font-size:7px;text-transform:uppercase;letter-spacing:2px;color:#9ca3af;margin-bottom:3px;padding-bottom:2px;border-bottom:1px solid #f3f4f6">${title}</div>${content}</div>`;
+    `<div style="margin-bottom:3px"><div style="font-size:6px;text-transform:uppercase;letter-spacing:2px;color:#9ca3af;margin-bottom:1px;padding-bottom:1px;border-bottom:1px solid #f3f4f6">${title}</div>${content}</div>`;
 
   const body = `${printBar("Bulletin Minimaliste")}
 <div class="page"><div class="content">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #111827">
-    <div style="display:flex;align-items:center;gap:12px">${d.headerLogo}<div><div style="font-size:16px;font-weight:900;color:#111827;letter-spacing:1px">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:8px;color:#9ca3af;margin-top:2px">NINEA ${ent.ninea}</div>` : ""}</div></div>
-    <div style="text-align:right"><div style="font-size:11px;font-weight:300;color:#6b7280;letter-spacing:3px;text-transform:uppercase">Bulletin de paie</div><div style="font-size:18px;font-weight:900;color:#111827;margin-top:4px">${d.periode}</div><div style="font-size:8px;color:#9ca3af;margin-top:2px">${d.date_emission}</div></div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #111827">
+    <div style="display:flex;align-items:center;gap:8px">${d.headerLogo}<div><div style="font-size:13px;font-weight:900;color:#111827;letter-spacing:1px">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:7px;color:#9ca3af;margin-top:1px">NINEA ${ent.ninea}</div>` : ""}</div></div>
+    <div style="text-align:right"><div style="font-size:9px;font-weight:300;color:#6b7280;letter-spacing:3px;text-transform:uppercase">Bulletin de paie</div><div style="font-size:13px;font-weight:900;color:#111827;margin-top:2px">${d.periode}</div><div style="font-size:7px;color:#9ca3af;margin-top:1px">${d.date_emission}</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-bottom:10px">${d.infoRows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #f9fafb"><span style="font-size:8px;color:#9ca3af">${l}</span><span style="font-size:9px;font-weight:600;color:#111827">${v}</span></div>`).join("")}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 10px;margin-bottom:4px">${d.infoRows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;padding:1px 0;border-bottom:1px solid #f9fafb"><span style="font-size:7px;color:#9ca3af">${l}</span><span style="font-size:8px;font-weight:600;color:#111827">${v}</span></div>`).join("")}</div>
   ${section("Éléments de salaire", row("Salaire de base", p.salaireBase) + (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") + (p.primeAnc > 0 ? row("Prime ancienneté", p.primeAnc) : "") + d.hsRows.map(r => row(r.label, r.val)).join("") + (p.retAbsence > 0 ? row("Retenue absences", p.retAbsence, true) : "") + row("Salaire brut", p.brut, false, true))}
   ${section("Retenues", row("IR", p.ir, true) + row("TRIMF", p.trimf, true) + row("IPRES R.G.", p.ipresRG_s, true) + (p.ipresRC_s > 0 ? row("IPRES R.C.C.", p.ipresRC_s, true) : "") + (p.ipm_s > 0 ? row("IPM", p.ipm_s, true) : "") + row("Total retenues", p.totalRet, true, true))}
   ${p.totalAvances > 0 ? section("Avances", d.avancesRows.map(r => row(r.label, r.val, true)).join("") + row("Total avances", p.totalAvances, true, true)) : ""}
   ${section("Indemnités", row("Transport", p.transport) + (p.primePanier > 0 ? row("Prime panier", p.primePanier) : "") + (p.indKilometrique > 0 ? row("Ind. kilométrique", p.indKilometrique) : ""))}
-  <div style="border:2px solid #111827;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin:8px 0"><div style="font-size:12px;font-weight:900;color:#111827">NET À PAYER</div><div style="font-size:18px;font-weight:900;color:#111827">${fmtN(p.net)} FCFA</div></div>
+  <div style="border:2px solid #111827;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;margin:3px 0"><div style="font-size:10px;font-weight:900;color:#111827">NET À PAYER</div><div style="font-size:13px;font-weight:900;color:#111827">${fmtN(p.net)} FCFA</div></div>
   ${section("Charges patronales", d.chargesRows.map(r => row(r.label, r.val)).join("") + row("Total charges", p.chargesPat, false, true))}
-  <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:2px solid #111827;margin-top:4px"><span style="font-size:10px;font-weight:700">Masse salariale</span><span style="font-size:11px;font-weight:900">${fmtN(p.masse)} FCFA</span></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0 4px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:7px;color:#9ca3af;margin-bottom:20px">${s}</div><div style="border-top:1px solid #e5e7eb;padding-top:3px;font-size:7px;color:#d1d5db">Signature</div></div>`).join("")}</div>
+  <div style="display:flex;justify-content:space-between;padding:2px 0;border-top:2px solid #111827;margin-top:2px"><span style="font-size:8px;font-weight:700">Masse salariale</span><span style="font-size:9px;font-weight:900">${fmtN(p.masse)} FCFA</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0 1px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:6px;color:#9ca3af;margin-bottom:10px">${s}</div><div style="border-top:1px solid #e5e7eb;padding-top:2px;font-size:6px;color:#d1d5db">Signature</div></div>`).join("")}</div>
 </div>
-<div style="margin-top:auto;padding-top:4px;border-top:1px solid #e5e7eb"><div style="text-align:center;font-size:8px;color:#9ca3af;line-height:1.6">${d.footerItems}</div><div style="text-align:center;font-size:7px;color:#d1d5db;margin-top:3px">G-SENPAIE · ${d.periode}</div></div>
+<div style="margin-top:auto;padding-top:3px;border-top:1px solid #e5e7eb"><div style="text-align:center;font-size:7px;color:#9ca3af;line-height:1.3">${d.footerItems}</div><div style="text-align:center;font-size:6px;color:#d1d5db;margin-top:2px">G-SENPAIE · ${d.periode}</div></div>
 </div>`;
 
   return pageWrap("", body, emp, d.periode);
@@ -219,28 +219,28 @@ function genTableau(g: GenParams): string {
 
   const tRow = (label: string, base: string, taux: string, sal: string, pat: string, opts: any = {}) => {
     const { bold = false, bg = "transparent", color = "#1f2937" } = opts;
-    const s = `font-size:8px;padding:2px 6px;border:1px solid #cbd5e1;color:${color};font-weight:${bold ? 700 : 400};background:${bg}`;
+    const s = `font-size:7px;padding:1px 3px;border:1px solid #cbd5e1;color:${color};font-weight:${bold ? 700 : 400};background:${bg}`;
     return `<tr><td style="${s}">${label}</td><td style="${s};text-align:right">${base}</td><td style="${s};text-align:center">${taux}</td><td style="${s};text-align:right">${sal}</td><td style="${s};text-align:right">${pat}</td></tr>`;
   };
 
-  const headerLeft = `<div style="display:flex;align-items:center;gap:10px">${d.headerLogo}<div><div style="font-size:13px;font-weight:900;color:#fff">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:8px;color:#93c5fd;margin-top:1px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
+  const headerLeft = `<div style="display:flex;align-items:center;gap:8px">${d.headerLogo}<div><div style="font-size:11px;font-weight:900;color:#fff">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:7px;color:#93c5fd;margin-top:1px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
 
-  const tableHeader = `<tr style="background:#1e3a5f;color:#fff"><th style="font-size:7px;padding:3px 6px;text-align:left;letter-spacing:1px">RUBRIQUE</th><th style="font-size:7px;padding:3px 6px;text-align:right">BASE</th><th style="font-size:7px;padding:3px 6px;text-align:center">TAUX</th><th style="font-size:7px;padding:3px 6px;text-align:right">PART SALARIÉ</th><th style="font-size:7px;padding:3px 6px;text-align:right">PART PATRONALE</th></tr>`;
+  const tableHeader = `<tr style="background:#1e3a5f;color:#fff"><th style="font-size:6px;padding:2px 3px;text-align:left;letter-spacing:1px">RUBRIQUE</th><th style="font-size:6px;padding:2px 3px;text-align:right">BASE</th><th style="font-size:6px;padding:2px 3px;text-align:center">TAUX</th><th style="font-size:6px;padding:2px 3px;text-align:right">PART SALARIÉ</th><th style="font-size:6px;padding:2px 3px;text-align:right">PART PATRONALE</th></tr>`;
 
   const body = `${printBar("Bulletin Tableau Structuré")}
 <div class="page"><div class="content">
-  <div style="background:#1e3a5f;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-radius:3px">${headerLeft}<div style="text-align:right"><div style="font-size:12px;font-weight:900;letter-spacing:2px">BULLETIN DE PAIE</div><div style="font-size:9px;color:#93c5fd;margin-top:2px">${d.periode} · ${d.date_emission}</div></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #cbd5e1;margin-bottom:6px">${d.infoRows.map(([l, v], i) => `<div style="padding:2px 6px;font-size:8px;border-bottom:1px solid #e2e8f0;${i % 4 < 2 ? 'background:#f0f4f8' : ''}"><span style="color:#64748b;font-size:7px">${l}: </span><span style="font-weight:700">${v}</span></div>`).join("")}</div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:4px">
+  <div style="background:#1e3a5f;color:#fff;padding:5px 8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;border-radius:2px">${headerLeft}<div style="text-align:right"><div style="font-size:10px;font-weight:900;letter-spacing:2px">BULLETIN DE PAIE</div><div style="font-size:8px;color:#93c5fd;margin-top:1px">${d.periode} · ${d.date_emission}</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #cbd5e1;margin-bottom:3px">${d.infoRows.map(([l, v], i) => `<div style="padding:1px 4px;font-size:7px;border-bottom:1px solid #e2e8f0;${i % 4 < 2 ? 'background:#f0f4f8' : ''}"><span style="color:#64748b;font-size:6px">${l}: </span><span style="font-weight:700">${v}</span></div>`).join("")}</div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:2px">
     ${tableHeader}
-    <tr style="background:#dbeafe"><td colspan="5" style="padding:2px 6px;font-size:7px;font-weight:700;color:#1e40af;letter-spacing:1px">ÉLÉMENTS DE SALAIRE</td></tr>
+    <tr style="background:#dbeafe"><td colspan="5" style="padding:1px 3px;font-size:6px;font-weight:700;color:#1e40af;letter-spacing:1px">ÉLÉMENTS DE SALAIRE</td></tr>
     ${tRow("Salaire de base", fmtN(p.salaireBase), "—", fmtN(p.salaireBase), "—", { bg: "#f8fafc" })}
     ${p.sursalaire > 0 ? tRow("Sursalaire", fmtN(p.sursalaire), "—", fmtN(p.sursalaire), "—") : ""}
     ${p.primeAnc > 0 ? tRow("Prime ancienneté", fmtN(p.brut), `${g.anc}%`, fmtN(p.primeAnc), "—", { bg: "#f8fafc" }) : ""}
     ${d.hsRows.map(r => tRow(r.label, "", "", fmtN(r.val), "—")).join("")}
     ${p.retAbsence > 0 ? tRow("Retenue absences", "", "", `– ${fmtN(p.retAbsence)}`, "—", { color: "#dc2626" }) : ""}
     ${tRow("SALAIRE BRUT", "", "", fmtN(p.brut), "", { bold: true, bg: "#dbeafe", color: "#1e40af" })}
-    <tr style="background:#fee2e2"><td colspan="5" style="padding:2px 6px;font-size:7px;font-weight:700;color:#dc2626;letter-spacing:1px">RETENUES</td></tr>
+    <tr style="background:#fee2e2"><td colspan="5" style="padding:1px 3px;font-size:6px;font-weight:700;color:#dc2626;letter-spacing:1px">RETENUES</td></tr>
     ${tRow("IR", fmtN(p.brut), "barème", `– ${fmtN(p.ir)}`, "—", { color: "#dc2626", bg: "#fef2f2" })}
     ${tRow("TRIMF", "", "barème", `– ${fmtN(p.trimf)}`, "—", { color: "#dc2626" })}
     ${tRow("IPRES R.G.", fmtN(Math.min(p.brut, 432000)), "5,6% / 8,4%", `– ${fmtN(p.ipresRG_s)}`, fmtN(p.ipresRG_p), { bg: "#fef2f2" })}
@@ -250,17 +250,17 @@ function genTableau(g: GenParams): string {
     ${tRow("CSS Alloc. Fam.", "", "7%", "—", fmtN(p.css_af), { bg: "#fef2f2" })}
     ${tRow("CSS Acc. Trav.", "", "1%", "—", fmtN(p.css_at))}
     ${tRow("TOTAL RETENUES", "", "", `– ${fmtN(p.totalRet)}`, fmtN(p.chargesPat), { bold: true, bg: "#fee2e2", color: "#dc2626" })}
-    ${p.totalAvances > 0 ? `<tr style="background:#fef3c7"><td colspan="5" style="padding:2px 6px;font-size:7px;font-weight:700;color:#92400e;letter-spacing:1px">AVANCES & RETENUES DIVERSES</td></tr>` + d.avancesRows.map(r => tRow(r.label, "", "", `– ${fmtN(r.val)}`, "—", { color: "#92400e" })).join("") + tRow("TOTAL AVANCES", "", "", `– ${fmtN(p.totalAvances)}`, "—", { bold: true, bg: "#fef3c7", color: "#92400e" }) : ""}
-    <tr style="background:#d1fae5"><td colspan="5" style="padding:2px 6px;font-size:7px;font-weight:700;color:#065f46;letter-spacing:1px">INDEMNITÉS</td></tr>
+    ${p.totalAvances > 0 ? `<tr style="background:#fef3c7"><td colspan="5" style="padding:1px 3px;font-size:6px;font-weight:700;color:#92400e;letter-spacing:1px">AVANCES & RETENUES DIVERSES</td></tr>` + d.avancesRows.map(r => tRow(r.label, "", "", `– ${fmtN(r.val)}`, "—", { color: "#92400e" })).join("") + tRow("TOTAL AVANCES", "", "", `– ${fmtN(p.totalAvances)}`, "—", { bold: true, bg: "#fef3c7", color: "#92400e" }) : ""}
+    <tr style="background:#d1fae5"><td colspan="5" style="padding:1px 3px;font-size:6px;font-weight:700;color:#065f46;letter-spacing:1px">INDEMNITÉS</td></tr>
     ${tRow("Transport", "", "", fmtN(p.transport), "—", { bg: "#ecfdf5", color: "#065f46" })}
     ${p.primePanier > 0 ? tRow("Prime panier", "", "", fmtN(p.primePanier), "—", { color: "#065f46" }) : ""}
     ${p.indKilometrique > 0 ? tRow("Ind. kilométrique", "", "", fmtN(p.indKilometrique), "—", { bg: "#ecfdf5", color: "#065f46" }) : ""}
   </table>
-  <div style="background:#1e3a5f;color:#fff;border-radius:3px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center;margin:4px 0"><div style="font-size:12px;font-weight:900">NET À PAYER</div><div style="font-size:16px;font-weight:900">${fmtN(p.net)} FCFA</div></div>
-  <div style="display:flex;justify-content:space-between;padding:4px 8px;background:#f0f4f8;border-radius:3px;margin-bottom:6px"><span style="font-size:9px;font-weight:700;color:#1e3a5f">MASSE SALARIALE</span><span style="font-size:10px;font-weight:900;color:#1e3a5f">${fmtN(p.masse)} FCFA</span></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:6px 0 4px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:7px;color:#64748b;margin-bottom:18px">${s}</div><div style="border-top:1px solid #cbd5e1;padding-top:3px;font-size:7px;color:#94a3b8">Signature & cachet</div></div>`).join("")}</div>
+  <div style="background:#1e3a5f;color:#fff;border-radius:2px;padding:3px 8px;display:flex;justify-content:space-between;align-items:center;margin:2px 0"><div style="font-size:10px;font-weight:900">NET À PAYER</div><div style="font-size:13px;font-weight:900">${fmtN(p.net)} FCFA</div></div>
+  <div style="display:flex;justify-content:space-between;padding:2px 5px;background:#f0f4f8;border-radius:2px;margin-bottom:3px"><span style="font-size:8px;font-weight:700;color:#1e3a5f">MASSE SALARIALE</span><span style="font-size:9px;font-weight:900;color:#1e3a5f">${fmtN(p.masse)} FCFA</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:3px 0 1px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:6px;color:#64748b;margin-bottom:10px">${s}</div><div style="border-top:1px solid #cbd5e1;padding-top:2px;font-size:6px;color:#94a3b8">Signature & cachet</div></div>`).join("")}</div>
 </div>
-<div style="margin-top:auto;padding-top:4px;border-top:2px solid #1e3a5f"><div style="text-align:center;font-size:8px;color:#4b5563;line-height:1.6">${d.footerItems}</div><div style="text-align:center;font-size:7px;color:#94a3b8;margin-top:2px">G-SENPAIE · ${d.periode} · Confidentiel</div></div>
+<div style="margin-top:auto;padding-top:3px;border-top:2px solid #1e3a5f"><div style="text-align:center;font-size:7px;color:#4b5563;line-height:1.3">${d.footerItems}</div><div style="text-align:center;font-size:6px;color:#94a3b8;margin-top:2px">G-SENPAIE · ${d.periode} · Confidentiel</div></div>
 </div>`;
 
   return pageWrap("", body, emp, d.periode);
@@ -275,28 +275,28 @@ function genSenegalais(g: GenParams): string {
 
   const row = (label: string, val: number, opts: any = {}) => {
     const { neg = false, bold = false, color = "#44403c" } = opts;
-    return `<div style="display:flex;justify-content:space-between;padding:2px 0;${bold ? 'border-top:1px solid #d6d3d1;margin-top:2px;padding-top:3px' : ''}"><span style="font-size:9px;color:#78716c;font-weight:${bold ? 700 : 400}">${label}</span><span style="font-size:9px;color:${color};font-weight:${bold ? 800 : 500}">${neg ? '– ' : ''}${fmtN(val)} F</span></div>`;
+    return `<div style="display:flex;justify-content:space-between;padding:1px 0;${bold ? 'border-top:1px solid #d6d3d1;margin-top:1px;padding-top:2px' : ''}"><span style="font-size:8px;color:#78716c;font-weight:${bold ? 700 : 400}">${label}</span><span style="font-size:8px;color:${color};font-weight:${bold ? 800 : 500}">${neg ? '– ' : ''}${fmtN(val)} F</span></div>`;
   };
 
   const section = (title: string, icon: string, content: string) =>
-    `<div style="margin-bottom:5px"><div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><span style="font-size:10px">${icon}</span><span style="font-size:7px;text-transform:uppercase;letter-spacing:2px;color:#92400e;font-weight:700">${title}</span></div>${content}</div>`;
+    `<div style="margin-bottom:3px"><div style="display:flex;align-items:center;gap:3px;margin-bottom:1px"><span style="font-size:8px">${icon}</span><span style="font-size:6px;text-transform:uppercase;letter-spacing:2px;color:#92400e;font-weight:700">${title}</span></div>${content}</div>`;
 
-  const headerLeft = `<div style="display:flex;align-items:center;gap:12px">${d.headerLogo}<div><div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:1px">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:8px;color:#fde68a;margin-top:2px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
+  const headerLeft = `<div style="display:flex;align-items:center;gap:8px">${d.headerLogo}<div><div style="font-size:12px;font-weight:900;color:#fff;letter-spacing:1px">${ent.nom || "ENTREPRISE"}</div>${ent.ninea ? `<div style="font-size:7px;color:#fde68a;margin-top:1px">NINEA : ${ent.ninea}</div>` : ""}</div></div>`;
 
   const body = `${printBar("Bulletin Élégant Sénégalais")}
 <div class="page"><div class="content">
-  <div style="background:linear-gradient(135deg,#78350f,#92400e,#065f46);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-radius:6px;border-bottom:3px solid #d97706">${headerLeft}<div style="text-align:right"><div style="font-size:13px;font-weight:900;letter-spacing:2px;color:#fde68a">BULLETIN DE PAIE</div><div style="font-size:10px;color:#fef3c7;margin-top:3px">${d.periode}</div><div style="font-size:8px;color:#fde68a;margin-top:1px">${d.date_emission}</div></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:8px;border:1px solid #d6d3d1;border-radius:4px;overflow:hidden">${d.infoRows.map(([l, v], i) => `<div style="padding:3px 8px;font-size:8px;${i % 4 < 2 ? 'background:#fffbeb' : 'background:#fff'}"><span style="color:#a8a29e;font-size:7px;display:block">${l}</span><span style="font-weight:700;color:#44403c">${v}</span></div>`).join("")}</div>
+  <div style="background:linear-gradient(135deg,#78350f,#92400e,#065f46);color:#fff;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;border-radius:4px;border-bottom:2px solid #d97706">${headerLeft}<div style="text-align:right"><div style="font-size:10px;font-weight:900;letter-spacing:2px;color:#fde68a">BULLETIN DE PAIE</div><div style="font-size:8px;color:#fef3c7;margin-top:1px">${d.periode}</div><div style="font-size:7px;color:#fde68a">${d.date_emission}</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-bottom:3px;border:1px solid #d6d3d1;border-radius:2px;overflow:hidden">${d.infoRows.map(([l, v], i) => `<div style="padding:1.5px 5px;font-size:7px;${i % 4 < 2 ? 'background:#fffbeb' : 'background:#fff'}"><span style="color:#a8a29e;font-size:6px;display:block">${l}</span><span style="font-weight:700;color:#44403c">${v}</span></div>`).join("")}</div>
   ${section("Éléments de salaire", "💰", row("Salaire de base", p.salaireBase) + (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") + (p.primeAnc > 0 ? row("Prime ancienneté", p.primeAnc) : "") + d.hsRows.map(r => row(r.label, r.val)).join("") + (p.retAbsence > 0 ? row("Retenue absences", p.retAbsence, { neg: true, color: "#dc2626" }) : "") + row("Salaire brut", p.brut, { bold: true, color: "#92400e" }))}
   ${section("Retenues salariales", "🔻", row("IR", p.ir, { neg: true, color: "#dc2626" }) + row("TRIMF", p.trimf, { neg: true, color: "#dc2626" }) + row("IPRES R.G.", p.ipresRG_s, { neg: true, color: "#dc2626" }) + (p.ipresRC_s > 0 ? row("IPRES R.C.C.", p.ipresRC_s, { neg: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row("IPM", p.ipm_s, { neg: true, color: "#dc2626" }) : "") + row("Total retenues", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
   ${p.totalAvances > 0 ? section("Avances", "⚠️", d.avancesRows.map(r => row(r.label, r.val, { neg: true, color: "#b45309" })).join("") + row("Total avances", p.totalAvances, { neg: true, bold: true, color: "#b45309" })) : ""}
   ${section("Indemnités", "🚌", row("Transport", p.transport, { color: "#065f46" }) + (p.primePanier > 0 ? row("Prime panier", p.primePanier, { color: "#065f46" }) : "") + (p.indKilometrique > 0 ? row("Ind. kilométrique", p.indKilometrique, { color: "#065f46" }) : ""))}
-  <div style="background:linear-gradient(135deg,#78350f,#d97706);border-radius:6px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin:6px 0;border:2px solid #fbbf24"><div><div style="font-size:13px;font-weight:900;color:#fff">NET À PAYER</div><div style="font-size:8px;color:#fde68a;margin-top:2px">${d.periode}</div></div><div style="font-size:18px;font-weight:900;color:#fde68a">${fmtN(p.net)} FCFA</div></div>
+  <div style="background:linear-gradient(135deg,#78350f,#d97706);border-radius:4px;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;margin:3px 0;border:2px solid #fbbf24"><div><div style="font-size:10px;font-weight:900;color:#fff">NET À PAYER</div><div style="font-size:7px;color:#fde68a;margin-top:1px">${d.periode}</div></div><div style="font-size:13px;font-weight:900;color:#fde68a">${fmtN(p.net)} FCFA</div></div>
   ${section("Charges patronales", "📊", d.chargesRows.map(r => row(r.label, r.val)).join("") + row("Total charges", p.chargesPat, { bold: true, color: "#92400e" }))}
-  <div style="background:#fffbeb;border:1px solid #d97706;border-radius:4px;padding:4px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:#78350f">MASSE SALARIALE</span><span style="font-size:12px;font-weight:900;color:#d97706">${fmtN(p.masse)} FCFA</span></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0 4px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:7px;color:#a8a29e;margin-bottom:18px">${s}</div><div style="border-top:1px solid #d6d3d1;padding-top:3px;font-size:7px;color:#d6d3d1">Signature & cachet</div></div>`).join("")}</div>
+  <div style="background:#fffbeb;border:1px solid #d97706;border-radius:2px;padding:2px 6px;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:8px;font-weight:700;color:#78350f">MASSE SALARIALE</span><span style="font-size:10px;font-weight:900;color:#d97706">${fmtN(p.masse)} FCFA</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:3px 0 1px">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div style="text-align:center"><div style="font-size:6px;color:#a8a29e;margin-bottom:10px">${s}</div><div style="border-top:1px solid #d6d3d1;padding-top:2px;font-size:6px;color:#d6d3d1">Signature & cachet</div></div>`).join("")}</div>
 </div>
-<div style="margin-top:auto;padding-top:4px;border-top:2px solid #d97706"><div style="text-align:center;font-size:8px;color:#78716c;line-height:1.6">${d.footerItems}</div><div style="text-align:center;font-size:7px;color:#a8a29e;margin-top:3px">🌿 G-SENPAIE · ${d.periode} · Confidentiel</div></div>
+<div style="margin-top:auto;padding-top:3px;border-top:2px solid #d97706"><div style="text-align:center;font-size:7px;color:#78716c;line-height:1.3">${d.footerItems}</div><div style="text-align:center;font-size:6px;color:#a8a29e;margin-top:2px">🌿 G-SENPAIE · ${d.periode} · Confidentiel</div></div>
 </div>`;
 
   return pageWrap("", body, emp, d.periode);
