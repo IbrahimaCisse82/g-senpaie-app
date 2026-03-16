@@ -130,18 +130,17 @@ export default function Auth() {
             </div>
           </div>
 
-          <div className="text-center mt-6 space-x-4 text-[10px] text-muted-foreground">
-            <Link to="/cgu" className="hover:text-primary transition-colors">CGU</Link>
+          <div className="text-center mt-6 space-x-4 text-[10px] text-white/40">
+            <Link to="/cgu" className="hover:text-white/70 transition-colors">CGU</Link>
             <span>·</span>
-            <Link to="/confidentialite" className="hover:text-primary transition-colors">Confidentialité</Link>
+            <Link to="/confidentialite" className="hover:text-white/70 transition-colors">Confidentialité</Link>
             <span>·</span>
-            <Link to="/protection-donnees" className="hover:text-primary transition-colors">Protection des données</Link>
+            <Link to="/protection-donnees" className="hover:text-white/70 transition-colors">Protection des données</Link>
           </div>
-          <div className="text-center mt-2 text-[9px] text-muted-foreground">
+          <div className="text-center mt-2 text-[9px] text-white/30">
             © {new Date().getFullYear()} Grow Hub SARL · Dakar, Sénégal
           </div>
         </div>
       </div>
-    </div>
   );
 }
