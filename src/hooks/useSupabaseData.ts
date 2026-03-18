@@ -422,5 +422,17 @@ export function usePayrollHistory(userId: string | undefined) {
     await fetchHistory();
   }, [userId, fetchHistory]);
 
-  return { history, loading, saveSnapshot, refetch: fetchHistory };
+  const deleteSnapshot = useCallback(async (mois: number, annee: number) => {
+    if (!userId) return;
+    const { error } = await supabase
+      .from("payroll_history")
+      .delete()
+      .eq("user_id", userId)
+      .eq("mois", mois)
+      .eq("annee", annee);
+    if (error) { handleError("Réouverture du mois", error); return; }
+    await fetchHistory();
+  }, [userId, fetchHistory]);
+
+  return { history, loading, saveSnapshot, deleteSnapshot, refetch: fetchHistory };
 }

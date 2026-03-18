@@ -10,11 +10,12 @@ interface DashboardProps {
   totaux: { brut: number; net: number; ch: number; mass: number };
   history?: PayrollSnapshot[];
   onSaveSnapshot?: () => void;
+  onReopenMonth?: (mois: number, annee: number) => void;
 }
 
 const SMIG = 64281;
 
-export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: DashboardProps) {
+export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot, onReopenMonth }: DashboardProps) {
   const barData = allPaies.map((e) => ({
     name: e.prenom.split(" ")[0],
     Brut: e.paie.brut,
@@ -251,6 +252,49 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: Da
               <Legend wrapperStyle={{ color: "hsl(213, 14%, 49%)", fontSize: 11 }} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Mois clôturés avec possibilité de réouverture */}
+      {history.length > 0 && onReopenMonth && (
+        <div className="bg-card rounded-lg p-4 md:p-5 mt-4">
+          <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">📅 Mois clôturés</div>
+          <div className="space-y-2">
+            {history.map((h) => {
+              // Check if next month is closed
+              const nextMois = h.mois === 11 ? 0 : h.mois + 1;
+              const nextAnnee = h.mois === 11 ? h.annee + 1 : h.annee;
+              const nextIsClosed = history.some((x) => x.mois === nextMois && x.annee === nextAnnee);
+              const canReopen = !nextIsClosed;
+
+              return (
+                <div key={`${h.annee}-${h.mois}`} className="flex items-center justify-between py-2.5 px-3 rounded-lg border border-border">
+                  <div>
+                    <div className="text-foreground text-xs font-bold">{MOIS[h.mois]} {h.annee}</div>
+                    <div className="text-muted-foreground text-[10px]">
+                      {h.nbEmployees} employés · Masse : {fmt(h.totaux.mass)} F · Net : {fmt(h.totaux.net)} F
+                    </div>
+                  </div>
+                  <button
+                    disabled={!canReopen}
+                    onClick={() => {
+                      if (canReopen && confirm(`Rouvrir ${MOIS[h.mois]} ${h.annee} ? Les données de clôture seront supprimées.`)) {
+                        onReopenMonth(h.mois, h.annee);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer transition-colors ${
+                      canReopen
+                        ? "bg-senpaie-yellow/20 text-senpaie-yellow hover:bg-senpaie-yellow/30"
+                        : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                    }`}
+                    title={canReopen ? "Rouvrir ce mois" : `Impossible : ${MOIS[nextMois]} ${nextAnnee} est déjà clôturé`}
+                  >
+                    {canReopen ? "🔓 Rouvrir" : "🔒 Verrouillé"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

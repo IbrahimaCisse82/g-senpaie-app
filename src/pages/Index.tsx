@@ -26,7 +26,7 @@ const Index = () => {
   const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
   const { params, saveParams, resetParams } = usePayrollParams(user?.id);
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
-  const { history, saveSnapshot } = usePayrollHistory(user?.id);
+  const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id);
   const isMobile = useIsMobile();
   const { theme, toggleTheme } = useTheme();
 
@@ -75,6 +75,11 @@ const Index = () => {
     const now = new Date();
     await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length);
     showToast("💾 Mois clôturé et sauvegardé");
+  };
+
+  const handleReopenMonth = async (mois: number, annee: number) => {
+    await deleteSnapshot(mois, annee);
+    showToast(`🔓 ${MOIS[mois]} ${annee} rouvert`);
   };
 
   const handleTabChange = (id: TabId) => {
@@ -163,6 +168,7 @@ const Index = () => {
                 totaux={totaux}
                 history={history}
                 onSaveSnapshot={handleSaveSnapshot}
+                onReopenMonth={handleReopenMonth}
               />
             )}
             {tab === "employes" && (
