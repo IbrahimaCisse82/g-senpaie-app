@@ -248,12 +248,57 @@ export function RapportCotisationsModal({ employees, params, entreprise, onClose
 
   const periodeLabel = `${MOIS[moisDebut]} ${anneeDebut} → ${MOIS[moisFin]} ${anneeFin}`;
 
-  const openPDF = () => {
-    const html = genererRapportHTML(rows, totals, entreprise, employees.length, periodeLabel);
-    const win = window.open("", "_blank");
-    if (!win) { alert("Veuillez autoriser les popups pour ce site."); return; }
-    win.document.write(html);
-    win.document.close();
+  const [generating, setGenerating] = useState(false);
+
+  const downloadPDF = async () => {
+    setGenerating(true);
+    try {
+      const html = genererRapportHTML(rows, totals, entreprise, employees.length, periodeLabel);
+      // Render HTML in a hidden iframe to capture it
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;height:900px;border:none";
+      document.body.appendChild(iframe);
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error("Cannot access iframe");
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      await new Promise((r) => setTimeout(r, 500));
+
+      const { default: html2canvas } = await import("html2canvas");
+      const { default: jsPDF } = await import("jspdf");
+
+      const page = iframeDoc.querySelector(".page") as HTMLElement;
+      if (!page) throw new Error("Page element not found");
+
+      const canvas = await html2canvas(page, { scale: 2, useCORS: true, logging: false });
+      document.body.removeChild(iframe);
+
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, pdfW, pdfH);
+
+      const pdfBlob = pdf.output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `rapport_cotisations_${rows[0]?.annee || ""}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (e) {
+      console.error("Erreur PDF:", e);
+      // Fallback: open in new tab
+      const html = genererRapportHTML(rows, totals, entreprise, employees.length, periodeLabel);
+      const win = window.open("", "_blank");
+      if (win) { win.document.write(html); win.document.close(); }
+      else alert("Erreur lors de la génération du PDF.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const headers = ["Période", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "CFCE", "IPM", "Masse"];
@@ -295,9 +340,9 @@ export function RapportCotisationsModal({ employees, params, entreprise, onClose
             className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">
             📥 CSV
           </button>
-          <button onClick={openPDF} disabled={!isValid}
+          <button onClick={downloadPDF} disabled={!isValid || generating}
             className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">
-            ⬇️ PDF
+            {generating ? "⏳ Génération..." : "⬇️ PDF"}
           </button>
         </div>
       </div>
