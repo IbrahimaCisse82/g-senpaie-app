@@ -97,6 +97,7 @@ export type Database = {
           created_at: string
           date_entree: string
           date_naissance: string | null
+          email: string
           enfants: number
           femmes: number
           fonction: string
@@ -137,6 +138,7 @@ export type Database = {
           created_at?: string
           date_entree: string
           date_naissance?: string | null
+          email?: string
           enfants?: number
           femmes?: number
           fonction?: string
@@ -177,6 +179,7 @@ export type Database = {
           created_at?: string
           date_entree?: string
           date_naissance?: string | null
+          email?: string
           enfants?: number
           femmes?: number
           fonction?: string
