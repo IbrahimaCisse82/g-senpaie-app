@@ -19,7 +19,7 @@ export const DEFAULT_EMPLOYEES: Employee[] = [
   {
     matricule: "IF0002", prenom: "HELENE AIDA", nom: "MALACK", sexe: "F",
     dateNaissance: "1977-02-27", lieuNaissance: "PIKINE", nationalite: "Sénégalaise",
-    adresse: "Sicap Liberté 3, N#1889, Dakar", telephone: "(221) 77 564 38 77",
+    adresse: "Sicap Liberté 3, N#1889, Dakar", telephone: "(221) 77 564 38 77", email: "",
     situationFamille: "Marié(e)", femmes: 0, enfants: 3,
     fonction: "SECRETAIRE MEDICALE", convention: "COMMERCE", categorie: "7_ème B",
     statut: "agents de maîtrise", contrat: "CDI", dateEntree: "2009-06-01",
