@@ -168,6 +168,7 @@ const Index = () => {
                 totaux={totaux}
                 history={history}
                 onSaveSnapshot={handleSaveSnapshot}
+                onReopenMonth={handleReopenMonth}
               />
             )}
             {tab === "employes" && (
