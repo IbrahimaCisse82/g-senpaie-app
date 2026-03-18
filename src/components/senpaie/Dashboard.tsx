@@ -10,6 +10,7 @@ interface DashboardProps {
   totaux: { brut: number; net: number; ch: number; mass: number };
   history?: PayrollSnapshot[];
   onSaveSnapshot?: () => void;
+  onReopenMonth?: (mois: number, annee: number) => void;
 }
 
 const SMIG = 64281;
