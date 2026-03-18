@@ -26,7 +26,7 @@ const Index = () => {
   const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
   const { params, saveParams, resetParams } = usePayrollParams(user?.id);
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
-  const { history, saveSnapshot } = usePayrollHistory(user?.id);
+  const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id);
   const isMobile = useIsMobile();
   const { theme, toggleTheme } = useTheme();
 
