@@ -26,6 +26,7 @@ function dbToEmployee(row: Record<string, unknown> & { [k: string]: unknown }): 
     nationalite: (row.nationalite as string) || "Sénégalaise",
     adresse: (row.adresse as string) || "",
     telephone: (row.telephone as string) || "",
+    email: (row.email as string) || "",
     situationFamille: (row.situation_famille as string) || "Célibataire",
     femmes: Number(row.femmes) || 0,
     enfants: Number(row.enfants) || 0,
