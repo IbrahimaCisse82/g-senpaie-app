@@ -7,7 +7,7 @@ export const DEFAULT_EMPLOYEES: Employee[] = [
   {
     matricule: "IF0001", prenom: "DIEGANE", nom: "BOB", sexe: "M",
     dateNaissance: "1971-12-19", lieuNaissance: "DIOFIOR", nationalite: "Sénégalaise",
-    adresse: "Grand Yoff, Maka 2, Dakar", telephone: "(221) 77 249 73 98",
+    adresse: "Grand Yoff, Maka 2, Dakar", telephone: "(221) 77 249 73 98", email: "",
     situationFamille: "Marié(e)", femmes: 1, enfants: 5,
     fonction: "COMMIS", convention: "COMMERCE", categorie: "3_ème",
     statut: "employés", contrat: "CDI", dateEntree: "2009-01-01",
@@ -19,7 +19,7 @@ export const DEFAULT_EMPLOYEES: Employee[] = [
   {
     matricule: "IF0002", prenom: "HELENE AIDA", nom: "MALACK", sexe: "F",
     dateNaissance: "1977-02-27", lieuNaissance: "PIKINE", nationalite: "Sénégalaise",
-    adresse: "Sicap Liberté 3, N#1889, Dakar", telephone: "(221) 77 564 38 77",
+    adresse: "Sicap Liberté 3, N#1889, Dakar", telephone: "(221) 77 564 38 77", email: "",
     situationFamille: "Marié(e)", femmes: 0, enfants: 3,
     fonction: "SECRETAIRE MEDICALE", convention: "COMMERCE", categorie: "7_ème B",
     statut: "agents de maîtrise", contrat: "CDI", dateEntree: "2009-06-01",
@@ -383,7 +383,7 @@ export const DEFAULT_CONVENTIONS: Convention[] = [
 export const EMPTY_EMPLOYEE: Employee = {
   matricule: "", prenom: "", nom: "", sexe: "M",
   dateNaissance: "", lieuNaissance: "", nationalite: "Sénégalaise",
-  adresse: "", telephone: "", situationFamille: "Célibataire",
+  adresse: "", telephone: "", email: "", situationFamille: "Célibataire",
   femmes: 0, enfants: 0, fonction: "", convention: "COMMERCE",
   categorie: "", statut: "employés", contrat: "CDI",
   dateEntree: "", salaireBase: 0, sursalaire: 0,
