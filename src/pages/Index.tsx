@@ -77,6 +77,11 @@ const Index = () => {
     showToast("💾 Mois clôturé et sauvegardé");
   };
 
+  const handleReopenMonth = async (mois: number, annee: number) => {
+    await deleteSnapshot(mois, annee);
+    showToast(`🔓 ${MOIS[mois]} ${annee} rouvert`);
+  };
+
   const handleTabChange = (id: TabId) => {
     setTab(id);
     if (isMobile) setSidebarOpen(false);
