@@ -15,7 +15,7 @@ interface DashboardProps {
 
 const SMIG = 64281;
 
-export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot }: DashboardProps) {
+export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot, onReopenMonth }: DashboardProps) {
   const barData = allPaies.map((e) => ({
     name: e.prenom.split(" ")[0],
     Brut: e.paie.brut,
