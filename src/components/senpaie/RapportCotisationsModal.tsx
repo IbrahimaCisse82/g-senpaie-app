@@ -340,9 +340,9 @@ export function RapportCotisationsModal({ employees, params, entreprise, onClose
             className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px] cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">
             📥 CSV
           </button>
-          <button onClick={openPDF} disabled={!isValid}
+          <button onClick={downloadPDF} disabled={!isValid || generating}
             className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">
-            ⬇️ PDF
+            {generating ? "⏳ Génération..." : "⬇️ PDF"}
           </button>
         </div>
       </div>
