@@ -13,6 +13,7 @@ export interface Employee {
   nationalite: string;
   adresse: string;
   telephone: string;
+  email: string;
   situationFamille: string;
   femmes: number;
   enfants: number;

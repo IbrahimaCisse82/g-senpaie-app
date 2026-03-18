@@ -383,7 +383,7 @@ export const DEFAULT_CONVENTIONS: Convention[] = [
 export const EMPTY_EMPLOYEE: Employee = {
   matricule: "", prenom: "", nom: "", sexe: "M",
   dateNaissance: "", lieuNaissance: "", nationalite: "Sénégalaise",
-  adresse: "", telephone: "", situationFamille: "Célibataire",
+  adresse: "", telephone: "", email: "", situationFamille: "Célibataire",
   femmes: 0, enfants: 0, fonction: "", convention: "COMMERCE",
   categorie: "", statut: "employés", contrat: "CDI",
   dateEntree: "", salaireBase: 0, sursalaire: 0,

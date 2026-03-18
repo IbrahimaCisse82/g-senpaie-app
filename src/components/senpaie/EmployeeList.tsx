@@ -274,6 +274,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
             { label: "Lieu de naissance", key: "lieuNaissance" as const },
             { label: "Nationalité", key: "nationalite" as const },
             { label: "Téléphone", key: "telephone" as const },
+            { label: "Email", key: "email" as const },
             { label: "Adresse", key: "adresse" as const },
           ]).map((f) => (
             <Field key={f.key} label={f.label}>

@@ -67,6 +67,7 @@ function employeeToDb(emp: Employee, userId: string) {
     nationalite: emp.nationalite,
     adresse: emp.adresse,
     telephone: emp.telephone,
+    email: emp.email,
     situation_famille: emp.situationFamille,
     femmes: emp.femmes,
     enfants: emp.enfants,
