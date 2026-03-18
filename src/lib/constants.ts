@@ -7,7 +7,7 @@ export const DEFAULT_EMPLOYEES: Employee[] = [
   {
     matricule: "IF0001", prenom: "DIEGANE", nom: "BOB", sexe: "M",
     dateNaissance: "1971-12-19", lieuNaissance: "DIOFIOR", nationalite: "Sénégalaise",
-    adresse: "Grand Yoff, Maka 2, Dakar", telephone: "(221) 77 249 73 98",
+    adresse: "Grand Yoff, Maka 2, Dakar", telephone: "(221) 77 249 73 98", email: "",
     situationFamille: "Marié(e)", femmes: 1, enfants: 5,
     fonction: "COMMIS", convention: "COMMERCE", categorie: "3_ème",
     statut: "employés", contrat: "CDI", dateEntree: "2009-01-01",
