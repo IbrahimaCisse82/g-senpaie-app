@@ -1,14 +1,17 @@
 import { useState } from "react";
 import type { PayrollParams } from "@/lib/payroll";
 import { Field, inputClass } from "./Modal";
+import { BulletinTemplateSelector } from "./BulletinTemplateSelector";
 
 interface ParametresProps {
   params: PayrollParams;
   onSave: (p: PayrollParams) => void;
   onReset: () => void;
+  bulletinTemplateId: string;
+  onBulletinTemplateChange: (id: string) => void;
 }
 
-export function Parametres({ params, onSave, onReset }: ParametresProps) {
+export function Parametres({ params, onSave, onReset, bulletinTemplateId, onBulletinTemplateChange }: ParametresProps) {
   const [local, setLocal] = useState<PayrollParams>(() => JSON.parse(JSON.stringify(params)));
   const setP = (key: keyof PayrollParams, field: string, value: string) => {
     setLocal((prev) => ({
@@ -30,6 +33,11 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
           <button onClick={onReset} className="px-4 py-2 bg-transparent border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px] cursor-pointer">↺ Réinitialiser</button>
           <button onClick={() => onSave(local)} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none">💾 Enregistrer</button>
         </div>
+      </div>
+
+      {/* Bulletin Templates */}
+      <div className="mb-6">
+        <BulletinTemplateSelector selectedId={bulletinTemplateId} onSelect={onBulletinTemplateChange} />
       </div>
 
       <div className="bg-card rounded-lg mb-5 overflow-hidden border border-border">

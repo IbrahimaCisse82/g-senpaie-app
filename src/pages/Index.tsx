@@ -38,6 +38,13 @@ const Index = () => {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
+  const [bulletinTemplateId, setBulletinTemplateId] = useState(() => localStorage.getItem("gsenpaie_bulletin_template") || "classique");
+
+  const handleTemplateChange = (id: string) => {
+    setBulletinTemplateId(id);
+    localStorage.setItem("gsenpaie_bulletin_template", id);
+    showToast("✅ Modèle de bulletin mis à jour");
+  };
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
@@ -196,7 +203,7 @@ const Index = () => {
                 onUploadLogo={uploadLogo}
               />
             )}
-            {tab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} />}
+            {tab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
           </>
         )}
       </main>
@@ -206,7 +213,7 @@ const Index = () => {
           <EmployeeForm initial={showForm === "new" ? null : showForm as Employee} onSave={handleSaveEmp} onClose={() => setShowForm(null)} existingMats={employees.map((e) => e.matricule)} conventions={conventions} />
         </Modal>
       )}
-      {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} onClose={() => setShowBulletin(null)} />}
+      {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onClose={() => setShowBulletin(null)} />}
       {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
       {showDel && (
         <Modal title="⚠️ Confirmation de suppression" onClose={() => setShowDel(null)} width={420}>
