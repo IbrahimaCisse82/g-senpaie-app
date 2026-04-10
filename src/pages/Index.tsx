@@ -38,6 +38,13 @@ const Index = () => {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
+  const [bulletinTemplateId, setBulletinTemplateId] = useState(() => localStorage.getItem("gsenpaie_bulletin_template") || "classique");
+
+  const handleTemplateChange = (id: string) => {
+    setBulletinTemplateId(id);
+    localStorage.setItem("gsenpaie_bulletin_template", id);
+    showToast("✅ Modèle de bulletin mis à jour");
+  };
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
