@@ -214,6 +214,7 @@ export type Database = {
       entreprises: {
         Row: {
           adresse: string | null
+          bulletin_template: string
           created_at: string
           email: string | null
           id: string
@@ -227,6 +228,7 @@ export type Database = {
         }
         Insert: {
           adresse?: string | null
+          bulletin_template?: string
           created_at?: string
           email?: string | null
           id?: string
@@ -240,6 +242,7 @@ export type Database = {
         }
         Update: {
           adresse?: string | null
+          bulletin_template?: string
           created_at?: string
           email?: string | null
           id?: string
