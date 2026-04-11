@@ -55,6 +55,7 @@ export const DEFAULT_ENTREPRISE: Entreprise = {
   email: "",
   ninea: "",
   rccm: "",
+  bulletinTemplate: "classique",
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
