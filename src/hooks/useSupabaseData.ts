@@ -149,6 +149,7 @@ export function useEntreprise(userId: string | undefined) {
           nom: data.nom, logo: data.logo || "", adresse: data.adresse || "",
           telephone: data.telephone || "", email: data.email || "",
           ninea: data.ninea || "", rccm: data.rccm || "",
+          bulletinTemplate: (data as any).bulletin_template || "classique",
         });
       }
       setLoading(false);
@@ -171,12 +172,14 @@ export function useEntreprise(userId: string | undefined) {
 
   const saveEntreprise = useCallback(async (ent: Entreprise) => {
     if (!userId) return;
-    const row = { user_id: userId, ...ent };
+    const { bulletinTemplate, ...rest } = ent;
+    const dbRow = { ...rest, bulletin_template: bulletinTemplate };
+    const row = { user_id: userId, ...dbRow };
     const { data: existing, error: fetchErr } = await supabase.from("entreprises").select("id").eq("user_id", userId).maybeSingle();
     if (fetchErr) { handleError("Vérification entreprise", fetchErr); return; }
 
     const { error } = existing
-      ? await supabase.from("entreprises").update(ent).eq("user_id", userId)
+      ? await supabase.from("entreprises").update(dbRow).eq("user_id", userId)
       : await supabase.from("entreprises").insert(row);
     if (error) { handleError("Sauvegarde entreprise", error); return; }
     setEntreprise(ent);

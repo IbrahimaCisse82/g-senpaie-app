@@ -1,0 +1,1 @@
+ALTER TABLE public.entreprises ADD COLUMN bulletin_template text NOT NULL DEFAULT 'classique';

@@ -131,6 +131,7 @@ export interface Entreprise {
   email: string;
   ninea: string;
   rccm: string;
+  bulletinTemplate: string;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

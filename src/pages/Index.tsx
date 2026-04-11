@@ -38,11 +38,11 @@ const Index = () => {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
-  const [bulletinTemplateId, setBulletinTemplateId] = useState(() => localStorage.getItem("gsenpaie_bulletin_template") || "classique");
+  const bulletinTemplateId = entreprise.bulletinTemplate || "classique";
 
-  const handleTemplateChange = (id: string) => {
-    setBulletinTemplateId(id);
-    localStorage.setItem("gsenpaie_bulletin_template", id);
+  const handleTemplateChange = async (id: string) => {
+    const updated = { ...entreprise, bulletinTemplate: id };
+    await saveEntreprise(updated);
     showToast("✅ Modèle de bulletin mis à jour");
   };
 
