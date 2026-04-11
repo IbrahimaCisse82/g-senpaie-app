@@ -131,7 +131,7 @@ function TemplatePreviewModal({ template, isDefault, onSetDefault, onClose }: {
     avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0,
   };
 
-  const sampleEnt = { nom: "GROW HUB SARL", logo: "", adresse: "Dakar, Sénégal", telephone: "33 800 00 00", email: "contact@growhub.sn", ninea: "12345678", rccm: "SN-DKR-2020-B-1234" };
+  const sampleEnt = { nom: "GROW HUB SARL", logo: "", adresse: "Dakar, Sénégal", telephone: "33 800 00 00", email: "contact@growhub.sn", ninea: "12345678", rccm: "SN-DKR-2020-B-1234", bulletinTemplate: "classique" };
 
   const html = template.generate(sampleEmp, sampleResult, new Date().getMonth(), new Date().getFullYear(), 8, sampleEnt);
 
