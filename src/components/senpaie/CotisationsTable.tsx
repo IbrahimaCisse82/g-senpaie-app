@@ -1,5 +1,6 @@
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
+import * as XLSX from "xlsx";
 
 interface CotisationsTableProps {
   allPaies: (Employee & { paie: PayrollResult })[];
@@ -82,6 +83,37 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
   URL.revokeObjectURL(url);
 }
 
+function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
+  const headers = ["Employé", "Matricule", "Statut", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Masse", "Net"];
+  const rows = allPaies.map((emp) => [
+    `${emp.prenom} ${emp.nom}`, emp.matricule, emp.statut,
+    Math.round(emp.paie.brut), Math.round(emp.paie.ir), Math.round(emp.paie.trimf),
+    Math.round(emp.paie.ipresRG_s + emp.paie.ipresRG_p),
+    Math.round(emp.paie.ipresRC_s + emp.paie.ipresRC_p),
+    Math.round(emp.paie.css_af + emp.paie.css_at),
+    Math.round(emp.paie.ipm_s + emp.paie.ipm_p),
+    Math.round(emp.paie.totalRet), Math.round(emp.paie.chargesPat),
+    Math.round(emp.paie.masse), Math.round(emp.paie.net),
+  ]);
+  const totRow = [
+    "TOTAUX", "", "",
+    Math.round(totaux.brut),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ir, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.trimf, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ipresRG_s + e.paie.ipresRG_p, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ipresRC_s + e.paie.ipresRC_p, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.css_af + e.paie.css_at, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ipm_s + e.paie.ipm_p, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.totalRet, 0)),
+    Math.round(totaux.ch), Math.round(totaux.mass), Math.round(totaux.net),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows, totRow]);
+  ws["!cols"] = headers.map(() => ({ wch: 14 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cotisations");
+  XLSX.writeFile(wb, `cotisations_${MOIS[new Date().getMonth()]}_${new Date().getFullYear()}.xlsx`);
+}
+
 export function CotisationsTable({ allPaies, totaux, onOpenRapport }: CotisationsTableProps) {
   const headers = ["Employé", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Net"];
 
@@ -109,6 +141,12 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap"
           >
             📥 Exporter CSV
+          </button>
+          <button
+            onClick={() => exportXLSX(allPaies, totaux)}
+            className="px-4 py-2 bg-senpaie-yellow text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap"
+          >
+            📊 Exporter Excel
           </button>
         </div>
       </div>
