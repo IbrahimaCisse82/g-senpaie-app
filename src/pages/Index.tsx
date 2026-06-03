@@ -19,6 +19,7 @@ import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
 import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
 import { Modal } from "@/components/senpaie/Modal";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -66,6 +67,11 @@ const Index = () => {
   };
 
   const handleSaveEmp = async (emp: Employee) => {
+    const parsed = employeeSchema.safeParse(emp);
+    if (!parsed.success) {
+      showToast("⚠️ " + formatZodError(parsed.error).split("\n")[0]);
+      return;
+    }
     const isNew = !employees.some((e) => e.matricule === emp.matricule);
     await saveEmployee(emp, isNew);
     setShowForm(null);
@@ -199,7 +205,15 @@ const Index = () => {
             {tab === "entreprise" && (
               <EntreprisePage
                 entreprise={entreprise}
-                onSave={async (d) => { await saveEntreprise(d); showToast("✅ Entreprise enregistrée"); }}
+                onSave={async (d) => {
+                  const parsed = entrepriseSchema.safeParse(d);
+                  if (!parsed.success) {
+                    showToast("⚠️ " + formatZodError(parsed.error).split("\n")[0]);
+                    return;
+                  }
+                  await saveEntreprise(d);
+                  showToast("✅ Entreprise enregistrée");
+                }}
                 onUploadLogo={uploadLogo}
               />
             )}
