@@ -52,6 +52,8 @@ function dbToEmployee(row: Record<string, unknown> & { [k: string]: unknown }): 
     retCooperative: Number(row.ret_cooperative) || 0,
     fraisMedicaux: Number(row.frais_medicaux) || 0,
     indKilometrique: Number(row.ind_kilometrique) || 0,
+    dateSortie: (row.date_sortie as string) || "",
+    motifSortie: (row.motif_sortie as string) || "",
   };
 }
 
@@ -93,6 +95,8 @@ function employeeToDb(emp: Employee, userId: string) {
     ret_cooperative: emp.retCooperative,
     frais_medicaux: emp.fraisMedicaux,
     ind_kilometrique: emp.indKilometrique,
+    date_sortie: emp.dateSortie || null,
+    motif_sortie: emp.motifSortie || null,
   };
 }
 

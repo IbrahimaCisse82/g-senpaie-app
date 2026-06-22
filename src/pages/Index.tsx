@@ -17,6 +17,11 @@ import { RapportCotisationsModal } from "@/components/senpaie/RapportCotisations
 import { TendancesPage } from "@/components/senpaie/TendancesPage";
 import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
 import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
+import { DeclarationsPage } from "@/components/senpaie/DeclarationsPage";
+import { CongesPage } from "@/components/senpaie/CongesPage";
+import { SortiesPage } from "@/components/senpaie/SortiesPage";
+import { ContratsPage } from "@/components/senpaie/ContratsPage";
+import { EquipePage } from "@/components/senpaie/EquipePage";
 import { Modal } from "@/components/senpaie/Modal";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
@@ -192,6 +197,11 @@ const Index = () => {
             {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {tab === "simulateur" && <Simulateur params={params} />}
+            {tab === "conges" && <CongesPage userId={user.id} employees={employees} />}
+            {tab === "contrats" && <ContratsPage userId={user.id} employees={employees} entreprise={entreprise} />}
+            {tab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
+            {tab === "sorties" && <SortiesPage userId={user.id} employees={employees} params={params} entreprise={entreprise} />}
+            {tab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} />}
             {tab === "conventions" && (
               <ConventionsPage
                 conventions={conventions}

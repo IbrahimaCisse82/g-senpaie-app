@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      attestations_log: {
+        Row: {
+          created_at: string
+          id: string
+          matricule: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matricule: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matricule?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conges: {
+        Row: {
+          created_at: string
+          date_debut: string
+          date_fin: string
+          id: string
+          jours: number
+          matricule: string
+          motif: string | null
+          statut: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_debut: string
+          date_fin: string
+          id?: string
+          jours?: number
+          matricule: string
+          motif?: string | null
+          statut?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_debut?: string
+          date_fin?: string
+          id?: string
+          jours?: number
+          matricule?: string
+          motif?: string | null
+          statut?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contrats: {
+        Row: {
+          clauses_particulieres: string | null
+          created_at: string
+          date_debut: string
+          date_fin: string | null
+          id: string
+          lieu_travail: string | null
+          matricule: string
+          periode_essai_mois: number | null
+          remuneration: number | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clauses_particulieres?: string | null
+          created_at?: string
+          date_debut: string
+          date_fin?: string | null
+          id?: string
+          lieu_travail?: string | null
+          matricule: string
+          periode_essai_mois?: number | null
+          remuneration?: number | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clauses_particulieres?: string | null
+          created_at?: string
+          date_debut?: string
+          date_fin?: string | null
+          id?: string
+          lieu_travail?: string | null
+          matricule?: string
+          periode_essai_mois?: number | null
+          remuneration?: number | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       convention_categories: {
         Row: {
           code: string
@@ -97,6 +208,7 @@ export type Database = {
           created_at: string
           date_entree: string
           date_naissance: string | null
+          date_sortie: string | null
           email: string
           enfants: number
           femmes: number
@@ -112,6 +224,7 @@ export type Database = {
           ind_kilometrique: number
           lieu_naissance: string | null
           matricule: string
+          motif_sortie: string | null
           nationalite: string | null
           nb_paniers: number
           nom: string
@@ -138,6 +251,7 @@ export type Database = {
           created_at?: string
           date_entree: string
           date_naissance?: string | null
+          date_sortie?: string | null
           email?: string
           enfants?: number
           femmes?: number
@@ -153,6 +267,7 @@ export type Database = {
           ind_kilometrique?: number
           lieu_naissance?: string | null
           matricule: string
+          motif_sortie?: string | null
           nationalite?: string | null
           nb_paniers?: number
           nom: string
@@ -179,6 +294,7 @@ export type Database = {
           created_at?: string
           date_entree?: string
           date_naissance?: string | null
+          date_sortie?: string | null
           email?: string
           enfants?: number
           femmes?: number
@@ -194,6 +310,7 @@ export type Database = {
           ind_kilometrique?: number
           lieu_naissance?: string | null
           matricule?: string
+          motif_sortie?: string | null
           nationalite?: string | null
           nb_paniers?: number
           nom?: string
@@ -262,6 +379,7 @@ export type Database = {
           created_at: string
           data: Json
           id: string
+          jours_absence: number | null
           mois: number
           updated_at: string
           user_id: string
@@ -271,6 +389,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          jours_absence?: number | null
           mois: number
           updated_at?: string
           user_id: string
@@ -280,6 +399,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          jours_absence?: number | null
           mois?: number
           updated_at?: string
           user_id?: string
@@ -337,15 +457,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "drh" | "comptable" | "manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -472,6 +619,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "drh", "comptable", "manager"],
+    },
   },
 } as const
