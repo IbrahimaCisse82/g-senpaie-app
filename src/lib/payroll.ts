@@ -40,6 +40,9 @@ export interface Employee {
   retCooperative: number;
   fraisMedicaux: number;
   indKilometrique: number;
+  // Sortie
+  dateSortie?: string;
+  motifSortie?: string;
 }
 
 export interface PayrollParams {
