@@ -391,6 +391,7 @@ export const EMPTY_EMPLOYEE: Employee = {
   heuresAbsence: 0, heuresAbsMaladie: 0, tauxMaladie: 0, nbPaniers: 0,
   hs115: 0, hs140: 0, hs160: 0, hs200: 0,
   avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, indKilometrique: 0,
+  dateSortie: "", motifSortie: "",
 };
 
 export const STATUT_COLORS: Record<string, string> = {
@@ -403,15 +404,20 @@ export const STATUT_COLORS: Record<string, string> = {
   "prestataires": "primary",
 };
 
-export type TabId = "dashboard" | "employes" | "cotisations" | "tendances" | "simulateur" | "conventions" | "entreprise" | "parametres";
+export type TabId = "dashboard" | "employes" | "cotisations" | "tendances" | "simulateur" | "conges" | "contrats" | "declarations" | "sorties" | "equipe" | "conventions" | "entreprise" | "parametres";
 
 export const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "dashboard",    icon: "◈",  label: "Tableau de bord" },
   { id: "employes",     icon: "◎",  label: "Employés" },
+  { id: "conges",       icon: "🌴", label: "Congés & absences" },
+  { id: "contrats",     icon: "📝", label: "Contrats" },
   { id: "cotisations",  icon: "◉",  label: "Cotisations" },
+  { id: "declarations", icon: "📑", label: "Déclarations" },
+  { id: "sorties",      icon: "🚪", label: "Sorties & STC" },
   { id: "tendances",    icon: "∿",  label: "Tendances" },
   { id: "simulateur",   icon: "⊕",  label: "Simulateur" },
   { id: "conventions",  icon: "📋", label: "Conventions" },
+  { id: "equipe",       icon: "👥", label: "Équipe" },
   { id: "entreprise",   icon: "🏢", label: "Entreprise" },
   { id: "parametres",   icon: "⚙",  label: "Paramètres" },
 ];
