@@ -57,9 +57,10 @@ function dbToEmployee(row: Record<string, unknown> & { [k: string]: unknown }): 
   };
 }
 
-function employeeToDb(emp: Employee, userId: string) {
+function employeeToDb(emp: Employee, userId: string, entrepriseId: string) {
   return {
     user_id: userId,
+    entreprise_id: entrepriseId,
     matricule: emp.matricule,
     prenom: emp.prenom,
     nom: emp.nom,
@@ -103,36 +104,36 @@ function employeeToDb(emp: Employee, userId: string) {
 // ══════════════════════════════════════════════════════════════
 // useEmployees
 // ══════════════════════════════════════════════════════════════
-export function useEmployees(userId: string | undefined) {
+export function useEmployees(userId: string | undefined, entrepriseId: string | null) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEmployees = useCallback(async () => {
-    if (!userId) return;
-    const { data, error } = await supabase.from("employees").select("*").eq("user_id", userId);
+    if (!entrepriseId) return;
+    const { data, error } = await supabase.from("employees").select("*").eq("entreprise_id" as never, entrepriseId as never);
     if (error) { handleError("Chargement des employés", error); setLoading(false); return; }
     if (data) setEmployees(data.map(dbToEmployee));
     setLoading(false);
-  }, [userId]);
+  }, [entrepriseId]);
 
   useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
 
   const saveEmployee = useCallback(async (emp: Employee, isNew: boolean) => {
-    if (!userId) return;
-    const row = employeeToDb(emp, userId);
+    if (!userId || !entrepriseId) return;
+    const row = employeeToDb(emp, userId, entrepriseId);
     const { error } = isNew
       ? await supabase.from("employees").insert(row)
-      : await supabase.from("employees").update(row).eq("user_id", userId).eq("matricule", emp.matricule);
+      : await supabase.from("employees").update(row).eq("entreprise_id" as never, entrepriseId as never).eq("matricule", emp.matricule);
     if (error) { handleError("Sauvegarde employé", error); return; }
     await fetchEmployees();
-  }, [userId, fetchEmployees]);
+  }, [userId, entrepriseId, fetchEmployees]);
 
   const deleteEmployee = useCallback(async (matricule: string) => {
-    if (!userId) return;
-    const { error } = await supabase.from("employees").delete().eq("user_id", userId).eq("matricule", matricule);
+    if (!entrepriseId) return;
+    const { error } = await supabase.from("employees").delete().eq("entreprise_id" as never, entrepriseId as never).eq("matricule", matricule);
     if (error) { handleError("Suppression employé", error); return; }
     await fetchEmployees();
-  }, [userId, fetchEmployees]);
+  }, [entrepriseId, fetchEmployees]);
 
   return { employees, loading, saveEmployee, deleteEmployee, refetch: fetchEmployees };
 }
@@ -140,13 +141,13 @@ export function useEmployees(userId: string | undefined) {
 // ══════════════════════════════════════════════════════════════
 // useEntreprise (with Storage for logo)
 // ══════════════════════════════════════════════════════════════
-export function useEntreprise(userId: string | undefined) {
+export function useEntreprise(userId: string | undefined, entrepriseId: string | null) {
   const [entreprise, setEntreprise] = useState<Entreprise>(DEFAULT_ENTREPRISE);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
-    supabase.from("entreprises").select("*").eq("user_id", userId).maybeSingle().then(({ data, error }) => {
+    if (!entrepriseId) return;
+    supabase.from("entreprises").select("*").eq("id", entrepriseId).maybeSingle().then(({ data, error }) => {
       if (error) { handleError("Chargement entreprise", error); setLoading(false); return; }
       if (data) {
         setEntreprise({
@@ -158,12 +159,12 @@ export function useEntreprise(userId: string | undefined) {
       }
       setLoading(false);
     });
-  }, [userId]);
+  }, [entrepriseId]);
 
   const uploadLogo = useCallback(async (file: File): Promise<string | null> => {
-    if (!userId) return null;
+    if (!entrepriseId) return null;
     const ext = file.name.split(".").pop() || "png";
-    const path = `${userId}/logo.${ext}`;
+    const path = `${entrepriseId}/logo.${ext}`;
 
     await supabase.storage.from("logos").remove([path]);
 
@@ -172,22 +173,16 @@ export function useEntreprise(userId: string | undefined) {
 
     const { data: urlData } = supabase.storage.from("logos").getPublicUrl(path);
     return urlData.publicUrl + `?t=${Date.now()}`;
-  }, [userId]);
+  }, [entrepriseId]);
 
   const saveEntreprise = useCallback(async (ent: Entreprise) => {
-    if (!userId) return;
+    if (!userId || !entrepriseId) return;
     const { bulletinTemplate, ...rest } = ent;
     const dbRow = { ...rest, bulletin_template: bulletinTemplate };
-    const row = { user_id: userId, ...dbRow };
-    const { data: existing, error: fetchErr } = await supabase.from("entreprises").select("id").eq("user_id", userId).maybeSingle();
-    if (fetchErr) { handleError("Vérification entreprise", fetchErr); return; }
-
-    const { error } = existing
-      ? await supabase.from("entreprises").update(dbRow).eq("user_id", userId)
-      : await supabase.from("entreprises").insert(row);
+    const { error } = await supabase.from("entreprises").update(dbRow).eq("id", entrepriseId);
     if (error) { handleError("Sauvegarde entreprise", error); return; }
     setEntreprise(ent);
-  }, [userId]);
+  }, [userId, entrepriseId]);
 
   return { entreprise, loading, saveEntreprise, uploadLogo };
 }
@@ -195,37 +190,37 @@ export function useEntreprise(userId: string | undefined) {
 // ══════════════════════════════════════════════════════════════
 // usePayrollParams
 // ══════════════════════════════════════════════════════════════
-export function usePayrollParams(userId: string | undefined) {
+export function usePayrollParams(userId: string | undefined, entrepriseId: string | null) {
   const [params, setParams] = useState<PayrollParams>(DEFAULT_PARAMS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
-    supabase.from("payroll_params").select("*").eq("user_id", userId).maybeSingle().then(({ data, error }) => {
+    if (!entrepriseId) return;
+    supabase.from("payroll_params").select("*").eq("entreprise_id" as never, entrepriseId as never).maybeSingle().then(({ data, error }) => {
       if (error) { handleError("Chargement paramètres", error); setLoading(false); return; }
       if (data?.params) setParams(data.params as unknown as PayrollParams);
       setLoading(false);
     });
-  }, [userId]);
+  }, [entrepriseId]);
 
   const saveParams = useCallback(async (p: PayrollParams) => {
-    if (!userId) return;
-    const { data: existing, error: fetchErr } = await supabase.from("payroll_params").select("id").eq("user_id", userId).maybeSingle();
+    if (!userId || !entrepriseId) return;
+    const { data: existing, error: fetchErr } = await supabase.from("payroll_params").select("id").eq("entreprise_id" as never, entrepriseId as never).maybeSingle();
     if (fetchErr) { handleError("Vérification paramètres", fetchErr); return; }
 
     const { error } = existing
-      ? await supabase.from("payroll_params").update({ params: JSON.parse(JSON.stringify(p)) }).eq("user_id", userId)
-      : await supabase.from("payroll_params").insert([{ user_id: userId, params: JSON.parse(JSON.stringify(p)) }]);
+      ? await supabase.from("payroll_params").update({ params: JSON.parse(JSON.stringify(p)) }).eq("entreprise_id" as never, entrepriseId as never)
+      : await supabase.from("payroll_params").insert([{ user_id: userId, entreprise_id: entrepriseId, params: JSON.parse(JSON.stringify(p)) } as never]);
     if (error) { handleError("Sauvegarde paramètres", error); return; }
     setParams(p);
-  }, [userId]);
+  }, [userId, entrepriseId]);
 
   const resetParams = useCallback(async () => {
-    if (!userId) return;
-    const { error } = await supabase.from("payroll_params").update({ params: JSON.parse(JSON.stringify(DEFAULT_PARAMS)) }).eq("user_id", userId);
+    if (!entrepriseId) return;
+    const { error } = await supabase.from("payroll_params").update({ params: JSON.parse(JSON.stringify(DEFAULT_PARAMS)) }).eq("entreprise_id" as never, entrepriseId as never);
     if (error) { handleError("Réinitialisation paramètres", error); return; }
     setParams(DEFAULT_PARAMS);
-  }, [userId]);
+  }, [entrepriseId]);
 
   return { params, loading, saveParams, resetParams };
 }
@@ -254,19 +249,19 @@ function dbToCategory(row: Record<string, unknown>): ConventionCategory {
   };
 }
 
-export function useConventions(userId: string | undefined) {
+export function useConventions(userId: string | undefined, entrepriseId: string | null) {
   const [conventions, setConventions] = useState<Convention[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
   const fetchConventions = useCallback(async () => {
-    if (!userId) return;
+    if (!entrepriseId) return;
     const { data: convRows, error: convErr } = await supabase
-      .from("conventions").select("*").eq("user_id", userId).order("nom");
+      .from("conventions").select("*").eq("entreprise_id" as never, entrepriseId as never).order("nom");
     if (convErr) { handleError("Chargement conventions", convErr); setLoading(false); return; }
 
     const { data: catRows, error: catErr } = await supabase
-      .from("convention_categories").select("*");
+      .from("convention_categories").select("*").eq("entreprise_id" as never, entrepriseId as never);
     if (catErr) { handleError("Chargement catégories", catErr); setLoading(false); return; }
 
     const catsMap = new Map<string, ConventionCategory[]>();
@@ -283,46 +278,47 @@ export function useConventions(userId: string | undefined) {
     setConventions(result);
     setLoading(false);
     setInitialized(true);
-  }, [userId]);
+  }, [entrepriseId]);
 
   const seedDefaults = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !entrepriseId) return;
     for (const cc of DEFAULT_CONVENTIONS) {
       const { data: inserted, error } = await supabase
         .from("conventions")
-        .insert({ user_id: userId, nom: cc.nom, secteur: cc.secteur, date_signature: cc.dateSignature, description: cc.description })
+        .insert({ user_id: userId, entreprise_id: entrepriseId, nom: cc.nom, secteur: cc.secteur, date_signature: cc.dateSignature, description: cc.description } as never)
         .select("id")
         .single();
       if (error || !inserted) continue;
 
       const catRows = cc.categories.map((cat) => ({
         convention_id: inserted.id,
+        entreprise_id: entrepriseId,
         code: cat.code,
         libelle: cat.libelle,
         statut: cat.statut,
         salaire_minima: cat.salaireMinima,
       }));
       if (catRows.length > 0) {
-        await supabase.from("convention_categories").insert(catRows);
+        await supabase.from("convention_categories").insert(catRows as never);
       }
     }
     await fetchConventions();
-  }, [userId, fetchConventions]);
+  }, [userId, entrepriseId, fetchConventions]);
 
   useEffect(() => { fetchConventions(); }, [fetchConventions]);
 
   useEffect(() => {
-    if (initialized && conventions.length === 0 && userId) {
+    if (initialized && conventions.length === 0 && userId && entrepriseId) {
       seedDefaults();
     }
-  }, [initialized, conventions.length, userId, seedDefaults]);
+  }, [initialized, conventions.length, userId, entrepriseId, seedDefaults]);
 
   const saveConvention = useCallback(async (cc: Convention, isNew: boolean) => {
-    if (!userId) return;
+    if (!userId || !entrepriseId) return;
     if (isNew) {
       const { data, error } = await supabase
         .from("conventions")
-        .insert({ user_id: userId, nom: cc.nom, secteur: cc.secteur, date_signature: cc.dateSignature, description: cc.description })
+        .insert({ user_id: userId, entreprise_id: entrepriseId, nom: cc.nom, secteur: cc.secteur, date_signature: cc.dateSignature, description: cc.description } as never)
         .select("id")
         .single();
       if (error || !data) { handleError("Sauvegarde convention", error); return; }
@@ -334,21 +330,20 @@ export function useConventions(userId: string | undefined) {
       if (error) { handleError("Modification convention", error); return; }
     }
     await fetchConventions();
-  }, [userId, fetchConventions]);
+  }, [userId, entrepriseId, fetchConventions]);
 
   const deleteConvention = useCallback(async (id: string) => {
-    if (!userId) return;
     const { error } = await supabase.from("conventions").delete().eq("id", id);
     if (error) { handleError("Suppression convention", error); return; }
     await fetchConventions();
-  }, [userId, fetchConventions]);
+  }, [fetchConventions]);
 
   const saveCategory = useCallback(async (conventionId: string, cat: ConventionCategory, isNew: boolean) => {
-    if (!userId) return;
+    if (!entrepriseId) return;
     if (isNew) {
       const { error } = await supabase.from("convention_categories").insert({
-        convention_id: conventionId, code: cat.code, libelle: cat.libelle, statut: cat.statut, salaire_minima: cat.salaireMinima,
-      });
+        convention_id: conventionId, entreprise_id: entrepriseId, code: cat.code, libelle: cat.libelle, statut: cat.statut, salaire_minima: cat.salaireMinima,
+      } as never);
       if (error) { handleError("Ajout catégorie", error); return; }
     } else {
       const { error } = await supabase.from("convention_categories").update({
@@ -357,7 +352,7 @@ export function useConventions(userId: string | undefined) {
       if (error) { handleError("Modification catégorie", error); return; }
     }
     await fetchConventions();
-  }, [userId, fetchConventions]);
+  }, [entrepriseId, fetchConventions]);
 
   const deleteCategory = useCallback(async (id: string) => {
     const { error } = await supabase.from("convention_categories").delete().eq("id", id);
@@ -379,16 +374,16 @@ export interface PayrollSnapshot {
   savedAt: string;
 }
 
-export function usePayrollHistory(userId: string | undefined) {
+export function usePayrollHistory(userId: string | undefined, entrepriseId: string | null) {
   const [history, setHistory] = useState<PayrollSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchHistory = useCallback(async () => {
-    if (!userId) return;
+    if (!entrepriseId) return;
     const { data, error } = await supabase
       .from("payroll_history")
       .select("*")
-      .eq("user_id", userId)
+      .eq("entreprise_id" as never, entrepriseId as never)
       .order("annee", { ascending: false })
       .order("mois", { ascending: false });
     if (error) { handleError("Chargement historique", error); setLoading(false); return; }
@@ -405,19 +400,19 @@ export function usePayrollHistory(userId: string | undefined) {
       }));
     }
     setLoading(false);
-  }, [userId]);
+  }, [entrepriseId]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
   const saveSnapshot = useCallback(async (mois: number, annee: number, totaux: { brut: number; net: number; ch: number; mass: number }, nbEmployees: number) => {
-    if (!userId) return;
+    if (!userId || !entrepriseId) return;
     const payload = { totaux, nbEmployees };
 
     // Upsert
     const { data: existing } = await supabase
       .from("payroll_history")
       .select("id")
-      .eq("user_id", userId)
+      .eq("entreprise_id" as never, entrepriseId as never)
       .eq("mois", mois)
       .eq("annee", annee)
       .maybeSingle();
@@ -425,23 +420,23 @@ export function usePayrollHistory(userId: string | undefined) {
     const jsonPayload = JSON.parse(JSON.stringify(payload));
     const { error } = existing
       ? await supabase.from("payroll_history").update({ data: jsonPayload }).eq("id", existing.id)
-      : await supabase.from("payroll_history").insert([{ user_id: userId, mois, annee, data: jsonPayload }]);
+      : await supabase.from("payroll_history").insert([{ user_id: userId, entreprise_id: entrepriseId, mois, annee, data: jsonPayload } as never]);
 
     if (error) { handleError("Sauvegarde historique", error); return; }
     await fetchHistory();
-  }, [userId, fetchHistory]);
+  }, [userId, entrepriseId, fetchHistory]);
 
   const deleteSnapshot = useCallback(async (mois: number, annee: number) => {
-    if (!userId) return;
+    if (!entrepriseId) return;
     const { error } = await supabase
       .from("payroll_history")
       .delete()
-      .eq("user_id", userId)
+      .eq("entreprise_id" as never, entrepriseId as never)
       .eq("mois", mois)
       .eq("annee", annee);
     if (error) { handleError("Réouverture du mois", error); return; }
     await fetchHistory();
-  }, [userId, fetchHistory]);
+  }, [entrepriseId, fetchHistory]);
 
   return { history, loading, saveSnapshot, deleteSnapshot, refetch: fetchHistory };
 }
