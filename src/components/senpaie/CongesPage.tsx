@@ -6,6 +6,7 @@ import { Modal, Field, inputClass } from "./Modal";
 
 interface Props {
   userId: string;
+  entrepriseId: string | null;
   employees: Employee[];
 }
 
@@ -22,8 +23,8 @@ const STATUT_LABEL: Record<Conge["statut"], string> = {
   refuse: "❌ Refusé",
 };
 
-export function CongesPage({ userId, employees }: Props) {
-  const { conges, save, remove, loading } = useConges(userId);
+export function CongesPage({ userId, entrepriseId, employees }: Props) {
+  const { conges, save, remove, loading } = useConges(userId, entrepriseId);
   const [showForm, setShowForm] = useState<Conge | "new" | null>(null);
   const [filterMat, setFilterMat] = useState("");
 
