@@ -1,61 +1,124 @@
-import { useRoles } from "@/hooks/useRH";
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { ROLE_LABEL, type AppRole } from "@/hooks/useEntrepriseContext";
 
-interface Props { userId: string; userEmail: string; }
+interface Props {
+  userId: string;
+  userEmail: string;
+  entrepriseId: string | null;
+  role: AppRole | null;
+}
 
-export function EquipePage({ userId, userEmail }: Props) {
-  const { roles, loading } = useRoles(userId);
+interface Member { user_id: string; role: AppRole; joined_at: string; }
+interface Invitation { id: string; email: string; role: AppRole; token: string; expires_at: string; accepted_at: string | null; }
+
+export function EquipePage({ userId, userEmail, entrepriseId, role }: Props) {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<Invitation[]>([]);
+  const [email, setEmail] = useState("");
+  const [newRole, setNewRole] = useState<AppRole>("drh");
+  const [loading, setLoading] = useState(true);
+  const isAdmin = role === "admin";
+
+  const load = useCallback(async () => {
+    if (!entrepriseId) return;
+    const { data: m } = await supabase.from("entreprise_members" as never).select("user_id, role, joined_at").eq("entreprise_id", entrepriseId) as { data: Member[] | null };
+    const { data: i } = await supabase.from("entreprise_invitations" as never).select("id, email, role, token, expires_at, accepted_at").eq("entreprise_id", entrepriseId).is("accepted_at", null) as { data: Invitation[] | null };
+    setMembers(m || []);
+    setInvites(i || []);
+    setLoading(false);
+  }, [entrepriseId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const invite = async () => {
+    if (!entrepriseId || !email) return;
+    const { error } = await supabase.from("entreprise_invitations" as never).insert({
+      entreprise_id: entrepriseId, email: email.toLowerCase().trim(), role: newRole, invited_by: userId,
+    } as never);
+    if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Invitation créée", description: "Copiez le lien depuis la liste ci-dessous." });
+    setEmail("");
+    await load();
+  };
+
+  const revoke = async (id: string) => {
+    await supabase.from("entreprise_invitations" as never).delete().eq("id", id);
+    await load();
+  };
+
+  const removeMember = async (uid: string) => {
+    if (uid === userId) { toast({ title: "Action impossible", description: "Vous ne pouvez pas vous retirer vous-même." }); return; }
+    await supabase.from("entreprise_members" as never).delete().eq("entreprise_id", entrepriseId!).eq("user_id", uid);
+    await load();
+  };
+
+  const copyLink = (token: string) => {
+    const url = `${window.location.origin}/invitation?token=${token}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Lien copié", description: url });
+  };
 
   return (
     <div>
       <div className="mb-5">
         <h1 className="text-foreground text-xl font-extrabold mb-1">Équipe & rôles</h1>
-        <div className="text-muted-foreground text-[11px]">Gestion des accès et permissions multi-utilisateurs (infrastructure prête, partage entreprise à venir)</div>
+        <div className="text-muted-foreground text-[11px]">Gestion des accès multi-utilisateurs de votre entreprise</div>
       </div>
 
       <div className="bg-card border border-border rounded-lg p-5 mb-4">
-        <div className="text-primary text-[12px] font-bold mb-3">👤 Utilisateur connecté</div>
-        <div className="text-foreground text-[13px]"><b>{userEmail}</b></div>
-        <div className="mt-3">
-          <div className="text-muted-foreground text-[11px] mb-1.5 uppercase tracking-wider">Rôles attribués</div>
-          {loading ? (
-            <div className="text-muted-foreground text-[11px]">Chargement…</div>
-          ) : roles.length === 0 ? (
-            <div className="text-muted-foreground text-[11px] italic">Aucun rôle attribué — vous êtes propriétaire de votre espace par défaut.</div>
-          ) : (
-            <div className="flex gap-2 flex-wrap">
-              {roles.map((r) => (
-                <span key={r} className="px-3 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full uppercase">{r}</span>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="text-primary text-[12px] font-bold mb-3">👤 Vous</div>
+        <div className="text-foreground text-[13px]"><b>{userEmail}</b> — <span className="text-primary">{role ? ROLE_LABEL[role] : "—"}</span></div>
       </div>
 
-      <div className="bg-card border border-border rounded-lg p-5">
-        <div className="text-primary text-[12px] font-bold mb-3">📋 Rôles disponibles</div>
-        <div className="grid sm:grid-cols-2 gap-3 text-[12px]">
-          <div className="p-3 bg-background border border-border rounded-lg">
-            <div className="text-foreground font-bold mb-1">👑 Admin</div>
-            <div className="text-muted-foreground">Accès complet à toutes les fonctionnalités, paramètres et facturation.</div>
+      {isAdmin && (
+        <div className="bg-card border border-border rounded-lg p-5 mb-4">
+          <div className="text-primary text-[12px] font-bold mb-3">➕ Inviter un collaborateur</div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" className="flex-1 px-3 py-2 bg-background border border-border rounded text-[12px] text-foreground" />
+            <select value={newRole} onChange={(e) => setNewRole(e.target.value as AppRole)} className="px-3 py-2 bg-background border border-border rounded text-[12px] text-foreground">
+              <option value="admin">Admin</option>
+              <option value="drh">DRH</option>
+              <option value="comptable">Comptable</option>
+              <option value="manager">Manager</option>
+            </select>
+            <button onClick={invite} className="px-4 py-2 bg-primary text-primary-foreground rounded text-[12px] font-bold">Créer l'invitation</button>
           </div>
-          <div className="p-3 bg-background border border-border rounded-lg">
-            <div className="text-foreground font-bold mb-1">🧑‍💼 DRH</div>
-            <div className="text-muted-foreground">Gestion des employés, congés, contrats, attestations, paie complète.</div>
-          </div>
-          <div className="p-3 bg-background border border-border rounded-lg">
-            <div className="text-foreground font-bold mb-1">💼 Comptable</div>
-            <div className="text-muted-foreground">Lecture paie, accès aux déclarations IPRES/CSS, livre de paie, DADS.</div>
-          </div>
-          <div className="p-3 bg-background border border-border rounded-lg">
-            <div className="text-foreground font-bold mb-1">👥 Manager</div>
-            <div className="text-muted-foreground">Lecture seule des employés de son équipe et validation des congés.</div>
-          </div>
+          <div className="text-muted-foreground text-[10px] mt-2">L'invité doit cliquer sur le lien et se créer un compte avec le même email.</div>
         </div>
+      )}
+
+      <div className="bg-card border border-border rounded-lg p-5 mb-4">
+        <div className="text-primary text-[12px] font-bold mb-3">👥 Membres ({members.length})</div>
+        {loading ? <div className="text-muted-foreground text-[11px]">Chargement…</div> : (
+          <div className="space-y-2">
+            {members.map((m) => (
+              <div key={m.user_id} className="flex items-center justify-between p-2 bg-background border border-border rounded text-[12px]">
+                <div className="flex-1 truncate"><span className="text-foreground font-mono">{m.user_id === userId ? "vous" : m.user_id.slice(0, 8) + "…"}</span></div>
+                <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase mr-2">{ROLE_LABEL[m.role]}</span>
+                {isAdmin && m.user_id !== userId && <button onClick={() => removeMember(m.user_id)} className="text-destructive text-[11px]">Retirer</button>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="mt-4 bg-senpaie-yellow/10 border border-senpaie-yellow rounded-lg p-4 text-senpaie-yellow text-[11px]">
-        🚧 <b>Bientôt :</b> invitation de collaborateurs par email avec partage d'entreprise. L'infrastructure de rôles est en place (table <code>user_roles</code> + fonction sécurisée <code>has_role</code>), prête à être branchée sur l'UI d'invitation.
-      </div>
+      {isAdmin && invites.length > 0 && (
+        <div className="bg-card border border-border rounded-lg p-5">
+          <div className="text-primary text-[12px] font-bold mb-3">✉️ Invitations en attente ({invites.length})</div>
+          <div className="space-y-2">
+            {invites.map((i) => (
+              <div key={i.id} className="flex flex-wrap items-center justify-between gap-2 p-2 bg-background border border-border rounded text-[12px]">
+                <div className="text-foreground truncate flex-1">{i.email}</div>
+                <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase">{ROLE_LABEL[i.role]}</span>
+                <button onClick={() => copyLink(i.token)} className="text-primary text-[11px] font-bold">📋 Copier le lien</button>
+                <button onClick={() => revoke(i.id)} className="text-destructive text-[11px]">Révoquer</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
