@@ -8,6 +8,7 @@ import { Modal, Field, inputClass } from "./Modal";
 
 interface Props {
   userId: string;
+  entrepriseId: string | null;
   employees: Employee[];
   params: PayrollParams;
   entreprise: Entreprise;
@@ -15,8 +16,8 @@ interface Props {
 
 type AttestType = "travail" | "salaire" | "presence";
 
-export function SortiesPage({ userId, employees, params, entreprise }: Props) {
-  const { conges } = useConges(userId);
+export function SortiesPage({ userId, entrepriseId, employees, params, entreprise }: Props) {
+  const { conges } = useConges(userId, entrepriseId);
   const [showSTC, setShowSTC] = useState<Employee | null>(null);
   const [showAttest, setShowAttest] = useState<{ emp: Employee; type: AttestType } | null>(null);
 

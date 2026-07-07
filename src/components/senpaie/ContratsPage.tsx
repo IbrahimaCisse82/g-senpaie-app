@@ -7,12 +7,13 @@ import { Modal, Field, inputClass } from "./Modal";
 
 interface Props {
   userId: string;
+  entrepriseId: string | null;
   employees: Employee[];
   entreprise: Entreprise;
 }
 
-export function ContratsPage({ userId, employees, entreprise }: Props) {
-  const { contrats, save, remove } = useContrats(userId);
+export function ContratsPage({ userId, entrepriseId, employees, entreprise }: Props) {
+  const { contrats, save, remove } = useContrats(userId, entrepriseId);
   const [showForm, setShowForm] = useState<Contrat | "new" | null>(null);
 
   const exportContratPdf = async (c: Contrat) => {

@@ -5,6 +5,7 @@ import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
+import { useEntrepriseCtx, ROLE_LABEL } from "@/hooks/useEntrepriseContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
@@ -28,11 +29,12 @@ import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validati
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { employees, saveEmployee, deleteEmployee, loading: empLoading } = useEmployees(user?.id);
-  const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
-  const { params, saveParams, resetParams } = usePayrollParams(user?.id);
-  const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
-  const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id);
+  const { entrepriseId, role, loading: entLoading } = useEntrepriseCtx();
+  const { employees, saveEmployee, deleteEmployee, loading: empLoading } = useEmployees(user?.id, entrepriseId);
+  const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id, entrepriseId);
+  const { params, saveParams, resetParams } = usePayrollParams(user?.id, entrepriseId);
+  const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id, entrepriseId);
+  const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id, entrepriseId);
   const isMobile = useIsMobile();
   const { theme, toggleTheme } = useTheme();
 
@@ -54,7 +56,7 @@ const Index = () => {
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
-  if (authLoading) return (
+  if (authLoading || entLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-primary text-lg font-bold animate-pulse font-mono">Chargement…</div>
     </div>
@@ -197,11 +199,11 @@ const Index = () => {
             {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {tab === "simulateur" && <Simulateur params={params} />}
-            {tab === "conges" && <CongesPage userId={user.id} employees={employees} />}
-            {tab === "contrats" && <ContratsPage userId={user.id} employees={employees} entreprise={entreprise} />}
+            {tab === "conges" && <CongesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} />}
+            {tab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
             {tab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
-            {tab === "sorties" && <SortiesPage userId={user.id} employees={employees} params={params} entreprise={entreprise} />}
-            {tab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} />}
+            {tab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
+            {tab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}
             {tab === "conventions" && (
               <ConventionsPage
                 conventions={conventions}

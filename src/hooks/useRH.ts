@@ -22,14 +22,14 @@ export interface Conge {
   motif: string;
 }
 
-export function useConges(userId: string | undefined) {
+export function useConges(userId: string | undefined, entrepriseId: string | null) {
   const [conges, setConges] = useState<Conge[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!userId) return;
+    if (!entrepriseId) return;
     const { data, error } = await supabase
-      .from("conges").select("*").eq("user_id", userId).order("date_debut", { ascending: false });
+      .from("conges").select("*").eq("entreprise_id" as never, entrepriseId as never).order("date_debut", { ascending: false });
     if (error) { handleError("Chargement congés", error); setLoading(false); return; }
     setConges((data || []).map((r) => ({
       id: r.id,
@@ -42,14 +42,15 @@ export function useConges(userId: string | undefined) {
       motif: r.motif || "",
     })));
     setLoading(false);
-  }, [userId]);
+  }, [entrepriseId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const save = useCallback(async (c: Omit<Conge, "id"> & { id?: string }) => {
-    if (!userId) return;
+    if (!userId || !entrepriseId) return;
     const row = {
       user_id: userId,
+      entreprise_id: entrepriseId,
       matricule: c.matricule,
       type: c.type,
       date_debut: c.dateDebut,
@@ -60,10 +61,10 @@ export function useConges(userId: string | undefined) {
     };
     const { error } = c.id
       ? await supabase.from("conges").update(row).eq("id", c.id)
-      : await supabase.from("conges").insert(row);
+      : await supabase.from("conges").insert(row as never);
     if (error) { handleError("Sauvegarde congé", error); return; }
     await fetchAll();
-  }, [userId, fetchAll]);
+  }, [userId, entrepriseId, fetchAll]);
 
   const remove = useCallback(async (id: string) => {
     const { error } = await supabase.from("conges").delete().eq("id", id);
@@ -89,14 +90,14 @@ export interface Contrat {
   clausesParticulieres: string;
 }
 
-export function useContrats(userId: string | undefined) {
+export function useContrats(userId: string | undefined, entrepriseId: string | null) {
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!userId) return;
+    if (!entrepriseId) return;
     const { data, error } = await supabase
-      .from("contrats").select("*").eq("user_id", userId).order("date_debut", { ascending: false });
+      .from("contrats").select("*").eq("entreprise_id" as never, entrepriseId as never).order("date_debut", { ascending: false });
     if (error) { handleError("Chargement contrats", error); setLoading(false); return; }
     setContrats((data || []).map((r) => ({
       id: r.id,
@@ -110,14 +111,15 @@ export function useContrats(userId: string | undefined) {
       clausesParticulieres: r.clauses_particulieres || "",
     })));
     setLoading(false);
-  }, [userId]);
+  }, [entrepriseId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const save = useCallback(async (c: Omit<Contrat, "id"> & { id?: string }) => {
-    if (!userId) return;
+    if (!userId || !entrepriseId) return;
     const row = {
       user_id: userId,
+      entreprise_id: entrepriseId,
       matricule: c.matricule,
       type: c.type,
       date_debut: c.dateDebut,
@@ -129,10 +131,10 @@ export function useContrats(userId: string | undefined) {
     };
     const { error } = c.id
       ? await supabase.from("contrats").update(row).eq("id", c.id)
-      : await supabase.from("contrats").insert(row);
+      : await supabase.from("contrats").insert(row as never);
     if (error) { handleError("Sauvegarde contrat", error); return; }
     await fetchAll();
-  }, [userId, fetchAll]);
+  }, [userId, entrepriseId, fetchAll]);
 
   const remove = useCallback(async (id: string) => {
     const { error } = await supabase.from("contrats").delete().eq("id", id);
@@ -168,6 +170,6 @@ export function useRoles(userId: string | undefined) {
 // ══════════════════════════════════════════════════════════════
 // Attestations log
 // ══════════════════════════════════════════════════════════════
-export async function logAttestation(userId: string, matricule: string, type: string) {
-  await supabase.from("attestations_log").insert({ user_id: userId, matricule, type });
+export async function logAttestation(userId: string, entrepriseId: string, matricule: string, type: string) {
+  await supabase.from("attestations_log").insert({ user_id: userId, entreprise_id: entrepriseId, matricule, type } as never);
 }
