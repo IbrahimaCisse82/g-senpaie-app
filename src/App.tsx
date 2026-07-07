@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { EntrepriseProvider } from "@/hooks/useEntrepriseContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const Index = lazy(() => import("./pages/Index"));
@@ -14,6 +15,7 @@ const CGU = lazy(() => import("./pages/CGU"));
 const Confidentialite = lazy(() => import("./pages/Confidentialite"));
 const ProtectionDonnees = lazy(() => import("./pages/ProtectionDonnees"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Invitation = lazy(() => import("./pages/Invitation"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -21,6 +23,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <EntrepriseProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -39,12 +42,14 @@ const App = () => (
             <Route path="/confidentialite" element={<Confidentialite />} />
             <Route path="/protection-donnees" element={<ProtectionDonnees />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/invitation" element={<Invitation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
           </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
+      </EntrepriseProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
