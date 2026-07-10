@@ -194,7 +194,7 @@ const Index = () => {
           </div>
         ) : (
           <>
-            {tab === "dashboard" && (
+            {activeTab === "dashboard" && (
               <Dashboard
                 allPaies={allPaies}
                 totaux={totaux}
@@ -203,20 +203,20 @@ const Index = () => {
                 onReopenMonth={handleReopenMonth}
               />
             )}
-            {tab === "employes" && (
+            {activeTab === "employes" && (
               <EmployeeList employees={filtered} search={search} onSearchChange={setSearch}
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
                 onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
             )}
-            {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
-            {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
-            {tab === "simulateur" && <Simulateur params={params} />}
-            {tab === "conges" && <CongesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} />}
-            {tab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
-            {tab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
-            {tab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
-            {tab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}
-            {tab === "conventions" && (
+            {activeTab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
+            {activeTab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
+            {activeTab === "simulateur" && <Simulateur params={params} />}
+            {activeTab === "conges" && <CongesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} />}
+            {activeTab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
+            {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
+            {activeTab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
+            {activeTab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}
+            {activeTab === "conventions" && (
               <ConventionsPage
                 conventions={conventions}
                 onSaveConvention={saveConvention}
@@ -226,7 +226,7 @@ const Index = () => {
                 showToast={showToast}
               />
             )}
-            {tab === "entreprise" && (
+            {activeTab === "entreprise" && (
               <EntreprisePage
                 entreprise={entreprise}
                 onSave={async (d) => {
@@ -241,7 +241,7 @@ const Index = () => {
                 onUploadLogo={uploadLogo}
               />
             )}
-            {tab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
+            {activeTab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
           </>
         )}
       </main>
