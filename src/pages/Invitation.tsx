@@ -22,24 +22,17 @@ export default function Invitation() {
       return;
     }
     (async () => {
-      const { data: inv } = await supabase.from("entreprise_invitations" as never)
-        .select("id, entreprise_id, email, role, expires_at, accepted_at")
-        .eq("token", token).maybeSingle() as { data: { id: string; entreprise_id: string; email: string; role: string; expires_at: string; accepted_at: string | null } | null };
-
-      if (!inv || inv.accepted_at) { setStatus("invalid"); return; }
-      if (new Date(inv.expires_at) < new Date()) { setStatus("expired"); return; }
-      if (user.email?.toLowerCase() !== inv.email.toLowerCase()) {
-        setStatus("wrong_email");
-        setMsg(`Cette invitation est pour ${inv.email}, vous êtes connecté en tant que ${user.email}.`);
+      const { data, error } = await supabase.functions.invoke("accept-invitation", { body: { token } });
+      const res = data as { ok?: boolean; error?: string; expected?: string } | null;
+      if (error || !res?.ok) {
+        const code = res?.error;
+        if (code === "expired") setStatus("expired");
+        else if (code === "wrong_email") {
+          setStatus("wrong_email");
+          setMsg(`Cette invitation est pour ${res?.expected}, vous êtes connecté en tant que ${user.email}.`);
+        } else { setStatus("invalid"); setMsg(code || error?.message || ""); }
         return;
       }
-
-      const { error: memErr } = await supabase.from("entreprise_members" as never).insert({
-        entreprise_id: inv.entreprise_id, user_id: user.id, role: inv.role, invited_by: null,
-      } as never);
-      if (memErr && !memErr.message.includes("duplicate")) { setStatus("invalid"); setMsg(memErr.message); return; }
-
-      await supabase.from("entreprise_invitations" as never).update({ accepted_at: new Date().toISOString() } as never).eq("id", inv.id);
       sessionStorage.removeItem("pending_invitation");
       await refetch();
       setStatus("ok");
