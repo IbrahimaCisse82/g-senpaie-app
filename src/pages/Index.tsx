@@ -5,7 +5,7 @@ import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
-import { useEntrepriseCtx, ROLE_LABEL } from "@/hooks/useEntrepriseContext";
+import { useEntrepriseCtx, ROLE_LABEL, type AppRole } from "@/hooks/useEntrepriseContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
@@ -47,6 +47,17 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
   const bulletinTemplateId = entreprise.bulletinTemplate || "classique";
+
+  // Role-based nav gating
+  const ALLOWED_TABS: Record<AppRole, TabId[]> = {
+    admin: NAV_ITEMS.map((n) => n.id),
+    drh: NAV_ITEMS.map((n) => n.id),
+    comptable: ["dashboard", "cotisations", "declarations", "tendances", "entreprise"],
+    manager: ["dashboard", "employes", "conges"],
+  };
+  const allowedTabs = role ? ALLOWED_TABS[role] : NAV_ITEMS.map((n) => n.id);
+  const navItems = NAV_ITEMS.filter((n) => allowedTabs.includes(n.id));
+  const activeTab: TabId = allowedTabs.includes(tab) ? tab : "dashboard";
 
   const handleTemplateChange = async (id: string) => {
     const updated = { ...entreprise, bulletinTemplate: id };
@@ -114,10 +125,10 @@ const Index = () => {
         <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
       </div>
       <nav className="flex-1 py-2.5 overflow-y-auto">
-        {NAV_ITEMS.map((n) => (
+        {navItems.map((n) => (
           <button key={n.id} onClick={() => handleTabChange(n.id)}
             className={`w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all ${
-              tab === n.id
+              activeTab === n.id
                 ? "bg-primary/10 text-primary border-l-[3px] border-l-primary"
                 : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary"
             }`}>
@@ -132,6 +143,7 @@ const Index = () => {
           {theme === "dark" ? "☀️ Mode clair" : "🌙 Mode sombre"}
         </button>
         <div className="text-muted-foreground text-[10px] truncate">{user.email}</div>
+        {role && <div className="text-primary text-[10px] font-bold uppercase">{ROLE_LABEL[role]}</div>}
         <button onClick={signOut} className="w-full px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer hover:bg-destructive/10 transition-colors">
           🚪 Déconnexion
         </button>
