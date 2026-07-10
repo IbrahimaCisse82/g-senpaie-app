@@ -34,11 +34,18 @@ export function EquipePage({ userId, userEmail, entrepriseId, role }: Props) {
 
   const invite = async () => {
     if (!entrepriseId || !email) return;
-    const { error } = await supabase.from("entreprise_invitations" as never).insert({
-      entreprise_id: entrepriseId, email: email.toLowerCase().trim(), role: newRole, invited_by: userId,
-    } as never);
-    if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Invitation créée", description: "Copiez le lien depuis la liste ci-dessous." });
+    const { data, error } = await supabase.functions.invoke("invite-member", {
+      body: { entrepriseId, email: email.toLowerCase().trim(), role: newRole },
+    });
+    if (error || (data as { error?: string })?.error) {
+      toast({ title: "Erreur", description: error?.message || (data as { error?: string })?.error, variant: "destructive" });
+      return;
+    }
+    const sent = (data as { emailSent?: boolean })?.emailSent;
+    toast({
+      title: sent ? "Invitation envoyée ✉️" : "Invitation créée",
+      description: sent ? `Email envoyé à ${email}.` : "Copiez le lien depuis la liste ci-dessous.",
+    });
     setEmail("");
     await load();
   };
