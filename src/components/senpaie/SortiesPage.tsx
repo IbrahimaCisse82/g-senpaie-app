@@ -36,6 +36,7 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
   useEffect(() => { loadLogs(); }, [entrepriseId]);
 
   const empByMat = useMemo(() => Object.fromEntries(employees.map((e) => [e.matricule, e])), [employees]);
+  const [showDetails, setShowDetails] = useState<Employee | null>(null);
 
   const typeLabel: Record<string, string> = {
     travail: "🏢 Travail", salaire: "💰 Salaire", presence: "📍 Présence", stc: "📤 STC",
@@ -115,7 +116,15 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
                   return (
                     <tr key={l.id} className="border-b border-border">
                       <td className="py-1.5 px-2">{new Date(l.created_at).toLocaleString("fr-FR")}</td>
-                      <td className="py-1.5 px-2">{e ? `${e.nom} ${e.prenom}` : l.matricule}</td>
+                      <td className="py-1.5 px-2">
+                        {e ? (
+                          <button onClick={() => setShowDetails(e)} className="text-primary hover:underline font-bold cursor-pointer bg-transparent border-none p-0">
+                            {e.nom} {e.prenom}
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground">{l.matricule} (supprimé)</span>
+                        )}
+                      </td>
                       <td className="py-1.5 px-2">{typeLabel[l.type] || l.type}</td>
                     </tr>
                   );
@@ -145,6 +154,26 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
           onClose={() => setShowAttest(null)}
           onGenerated={async () => { if (entrepriseId) { await logAttestation(userId, entrepriseId, showAttest.emp.matricule, showAttest.type); loadLogs(); } }}
         />
+      )}
+      {showDetails && (
+        <Modal title={`Fiche — ${showDetails.prenom} ${showDetails.nom}`} onClose={() => setShowDetails(null)} width={520}>
+          <div className="space-y-2 text-[12px] mb-4">
+            <div className="flex justify-between"><span className="text-muted-foreground">Matricule</span><span className="text-foreground font-bold">{showDetails.matricule}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Fonction</span><span className="text-foreground">{showDetails.fonction}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Contrat</span><span className="text-foreground">{showDetails.contrat}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Date d'entrée</span><span className="text-foreground">{showDetails.dateEntree}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Statut</span><span className={showDetails.dateSortie ? "text-destructive" : "text-primary"}>{showDetails.dateSortie ? `Sorti(e) le ${showDetails.dateSortie}` : "Actif"}</span></div>
+          </div>
+          <div className="border-t border-border pt-3">
+            <div className="text-muted-foreground text-[11px] mb-2 uppercase font-bold">Actions rapides</div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowAttest({ emp: e, type: "travail" }); }} className="px-3 py-1.5 bg-background border border-border rounded-lg text-[11px] hover:border-primary">🏢 Travail</button>
+              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowAttest({ emp: e, type: "salaire" }); }} className="px-3 py-1.5 bg-background border border-border rounded-lg text-[11px] hover:border-primary">💰 Salaire</button>
+              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowAttest({ emp: e, type: "presence" }); }} className="px-3 py-1.5 bg-background border border-border rounded-lg text-[11px] hover:border-primary">📍 Présence</button>
+              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowSTC(e); }} className="px-3 py-1.5 bg-destructive text-foreground rounded-lg text-[11px] font-bold">📤 STC</button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
