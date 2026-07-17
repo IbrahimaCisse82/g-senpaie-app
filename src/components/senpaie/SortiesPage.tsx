@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Employee, PayrollParams, Entreprise } from "@/lib/payroll";
 import { calculerPaie, fmt } from "@/lib/payroll";
 import { calculerSTC } from "@/lib/legal";
-import { useConges } from "@/hooks/useRH";
+import { useConges, logAttestation } from "@/hooks/useRH";
 import { exportHtmlToPdf } from "@/lib/pdfExport";
 import { Modal, Field, inputClass } from "./Modal";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   userId: string;
@@ -20,6 +21,25 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
   const { conges } = useConges(userId, entrepriseId);
   const [showSTC, setShowSTC] = useState<Employee | null>(null);
   const [showAttest, setShowAttest] = useState<{ emp: Employee; type: AttestType } | null>(null);
+  const [logs, setLogs] = useState<{ id: string; matricule: string; type: string; created_at: string }[]>([]);
+
+  const loadLogs = async () => {
+    if (!entrepriseId) return;
+    const { data } = await supabase
+      .from("attestations_log")
+      .select("id, matricule, type, created_at")
+      .eq("entreprise_id", entrepriseId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setLogs((data as typeof logs) || []);
+  };
+  useEffect(() => { loadLogs(); }, [entrepriseId]);
+
+  const empByMat = useMemo(() => Object.fromEntries(employees.map((e) => [e.matricule, e])), [employees]);
+
+  const typeLabel: Record<string, string> = {
+    travail: "🏢 Travail", salaire: "💰 Salaire", presence: "📍 Présence", stc: "📤 STC",
+  };
 
   const sortieEmps = employees.filter((e) => e.dateSortie);
   const actifs = employees.filter((e) => !e.dateSortie);
@@ -77,6 +97,35 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
         <div className="px-4 py-3 border-b border-border text-muted-foreground text-[12px] font-bold">📊 Récap : {actifs.length} actif(s) · {sortieEmps.length} sortie(s)</div>
       </div>
 
+      <div className="bg-card border border-border rounded-lg mt-5">
+        <div className="px-4 py-3 border-b border-border text-primary text-[12px] font-bold">📚 Historique des attestations générées</div>
+        <div className="p-4 overflow-x-auto">
+          {logs.length === 0 ? (
+            <div className="text-muted-foreground text-[11px]">Aucune attestation générée pour le moment.</div>
+          ) : (
+            <table className="w-full text-[11px]">
+              <thead><tr className="text-muted-foreground">
+                <th className="py-2 px-2 text-left border-b border-border">Date</th>
+                <th className="py-2 px-2 text-left border-b border-border">Employé</th>
+                <th className="py-2 px-2 text-left border-b border-border">Type</th>
+              </tr></thead>
+              <tbody>
+                {logs.map((l) => {
+                  const e = empByMat[l.matricule];
+                  return (
+                    <tr key={l.id} className="border-b border-border">
+                      <td className="py-1.5 px-2">{new Date(l.created_at).toLocaleString("fr-FR")}</td>
+                      <td className="py-1.5 px-2">{e ? `${e.nom} ${e.prenom}` : l.matricule}</td>
+                      <td className="py-1.5 px-2">{typeLabel[l.type] || l.type}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
       {showSTC && (
         <STCModal
           emp={showSTC}
@@ -84,6 +133,7 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
           entreprise={entreprise}
           joursCongesPris={conges.filter((c) => c.matricule === showSTC.matricule && c.type === "paye" && c.statut === "valide").reduce((s, c) => s + c.jours, 0)}
           onClose={() => setShowSTC(null)}
+          onGenerated={async () => { if (entrepriseId) { await logAttestation(userId, entrepriseId, showSTC.matricule, "stc"); loadLogs(); } }}
         />
       )}
       {showAttest && (
@@ -93,14 +143,15 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
           params={params}
           entreprise={entreprise}
           onClose={() => setShowAttest(null)}
+          onGenerated={async () => { if (entrepriseId) { await logAttestation(userId, entrepriseId, showAttest.emp.matricule, showAttest.type); loadLogs(); } }}
         />
       )}
     </div>
   );
 }
 
-function STCModal({ emp, params, entreprise, joursCongesPris, onClose }: {
-  emp: Employee; params: PayrollParams; entreprise: Entreprise; joursCongesPris: number; onClose: () => void;
+function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerated }: {
+  emp: Employee; params: PayrollParams; entreprise: Entreprise; joursCongesPris: number; onClose: () => void; onGenerated: () => void;
 }) {
   const [motif, setMotif] = useState<"licenciement" | "demission" | "retraite" | "fin_cdd">("licenciement");
   const [dateFin, setDateFin] = useState(emp.dateSortie || new Date().toISOString().slice(0, 10));
@@ -135,6 +186,7 @@ function STCModal({ emp, params, entreprise, joursCongesPris, onClose }: {
       </div>
     </div>`;
     await exportHtmlToPdf(html, `STC_${emp.matricule}.pdf`);
+    onGenerated();
   };
 
   return (
@@ -172,8 +224,8 @@ function Line({ l, v }: { l: string; v: string }) {
   return <div className="flex justify-between"><span className="text-muted-foreground">{l}</span><span className="text-foreground">{v}</span></div>;
 }
 
-function AttestationModal({ emp, type, params, entreprise, onClose }: {
-  emp: Employee; type: AttestType; params: PayrollParams; entreprise: Entreprise; onClose: () => void;
+function AttestationModal({ emp, type, params, entreprise, onClose, onGenerated }: {
+  emp: Employee; type: AttestType; params: PayrollParams; entreprise: Entreprise; onClose: () => void; onGenerated: () => void;
 }) {
   const paie = calculerPaie(emp, params);
   const today = new Date().toLocaleDateString("fr-FR");
@@ -204,6 +256,7 @@ function AttestationModal({ emp, type, params, entreprise, onClose }: {
       </div>
     </div>`;
     await exportHtmlToPdf(html, `attestation_${type}_${emp.matricule}.pdf`);
+    onGenerated();
   };
 
   return (
