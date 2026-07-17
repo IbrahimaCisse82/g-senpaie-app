@@ -179,6 +179,48 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
     exportRowsToCsv([header, ...body], `dads_${annee}.csv`);
   };
 
+  // ── DADS XML (format structuré importable)
+  const exportDADSXml = () => {
+    const esc = (s: string) => String(s ?? "").replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c] as string));
+    const totalBrut = Math.round(dadsRows.reduce((s, r) => s + r.brutAnnuel, 0));
+    const totalIR = Math.round(dadsRows.reduce((s, r) => s + r.irAnnuel, 0));
+    const totalIpres = Math.round(dadsRows.reduce((s, r) => s + r.ipresAnnuel, 0));
+    const totalCss = Math.round(dadsRows.reduce((s, r) => s + r.cssAnnuel, 0));
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<DADS annee="${annee}">
+  <Employeur>
+    <RaisonSociale>${esc(entreprise.nom || "")}</RaisonSociale>
+    <NINEA>${esc(entreprise.ninea || "")}</NINEA>
+    <RCCM>${esc(entreprise.rccm || "")}</RCCM>
+    <Adresse>${esc(entreprise.adresse || "")}</Adresse>
+  </Employeur>
+  <Salaries nb="${dadsRows.length}">
+${dadsRows.map((r) => `    <Salarie>
+      <Matricule>${esc(r.emp.matricule)}</Matricule>
+      <Nom>${esc(r.emp.nom)}</Nom>
+      <Prenom>${esc(r.emp.prenom)}</Prenom>
+      <DateEntree>${esc(r.emp.dateEntree)}</DateEntree>
+      <DateSortie>${esc(r.emp.dateSortie || "")}</DateSortie>
+      <SalaireBrutAnnuel>${Math.round(r.brutAnnuel)}</SalaireBrutAnnuel>
+      <IRAnnuel>${Math.round(r.irAnnuel)}</IRAnnuel>
+      <IpresSalarie>${Math.round(r.ipresAnnuel)}</IpresSalarie>
+      <CssPatronal>${Math.round(r.cssAnnuel)}</CssPatronal>
+    </Salarie>`).join("\n")}
+  </Salaries>
+  <Totaux>
+    <BrutAnnuel>${totalBrut}</BrutAnnuel>
+    <IRAnnuel>${totalIR}</IRAnnuel>
+    <IpresSalarie>${totalIpres}</IpresSalarie>
+    <CssPatronal>${totalCss}</CssPatronal>
+  </Totaux>
+</DADS>`;
+    const blob = new Blob([xml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `dads_${annee}.xml`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <div className="mb-5">
@@ -220,7 +262,12 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
           </>
         )}
         {tab === "livre" && <button onClick={exportLivrePaie} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px]">⬇️ PDF Livre de Paie</button>}
-        {tab === "dads" && <button onClick={exportDADS} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px]">📥 Excel DADS</button>}
+        {tab === "dads" && (
+          <>
+            <button onClick={exportDADS} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px]">📥 CSV DADS</button>
+            <button onClick={exportDADSXml} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px]">⬇️ XML DADS</button>
+          </>
+        )}
       </div>
 
       {tab === "ipres" && <IpresPreview rows={rows} totaux={totaux} />}
