@@ -129,39 +129,79 @@ function ContratForm({ initial, employees, onClose, onSave }: {
 
 function buildContratHtml(emp: Employee, c: Contrat, ent: Entreprise): string {
   const today = new Date().toLocaleDateString("fr-FR");
-  const finText = c.type === "CDD" && c.dateFin ? `jusqu'au <b>${c.dateFin}</b>` : "à durée indéterminée";
-  return `<div class="page" style="font-family:Georgia,serif;padding:40px 50px;color:#111;background:#fff;width:694px;">
-    <h1 style="text-align:center;text-decoration:underline;font-size:18px;letter-spacing:2px;margin:0 0 8px;">CONTRAT DE TRAVAIL — ${c.type}</h1>
-    <div style="text-align:center;font-size:10px;color:#666;margin-bottom:25px;">Régi par le Code du Travail de la République du Sénégal (loi n°97-17) et la Convention collective applicable</div>
+  const dureeText = c.type === "CDD" && c.dateFin
+    ? `déterminée, jusqu'au <b>${c.dateFin}</b>`
+    : "indéterminée";
+  const salaireBase = emp.salaireBase || 0;
+  const sursalaire = emp.sursalaire || 0;
+  const autres = Math.max(0, (c.remuneration || 0) - salaireBase - sursalaire);
+  const total = c.remuneration || (salaireBase + sursalaire);
+  const rep = (ent as Entreprise & { representant?: string; qualiteRepresentant?: string }).representant || "son représentant légal";
+  const qualite = (ent as Entreprise & { qualiteRepresentant?: string }).qualiteRepresentant || "Directeur";
 
-    <div style="font-size:12px;margin-bottom:18px;">
-      <b>ENTRE LES SOUSSIGNÉS :</b><br/><br/>
-      <b>${ent.nom || "—"}</b>${ent.ninea ? ", NINEA " + ent.ninea : ""}${ent.rccm ? ", RCCM " + ent.rccm : ""}, dont le siège social est situé à ${ent.adresse || "—"},<br/>
-      Représentée par son représentant légal, ci-après dénommée <b>« L'EMPLOYEUR »</b>,
-      <br/><br/><b>D'UNE PART,</b><br/><br/>
-      Et <b>${emp.prenom} ${emp.nom}</b>, né(e) le ${emp.dateNaissance || "—"} à ${emp.lieuNaissance || "—"}, de nationalité ${emp.nationalite || "—"}, demeurant ${emp.adresse || "—"},<br/>
-      Ci-après dénommé(e) <b>« LE SALARIÉ »</b>,
-      <br/><br/><b>D'AUTRE PART,</b><br/>
-      <br/><b>IL A ÉTÉ CONVENU CE QUI SUIT :</b>
+  return `<div class="page" style="font-family:'Times New Roman',Georgia,serif;padding:45px 55px;color:#000;background:#fff;width:694px;">
+    <h1 style="text-align:center;font-size:16px;font-weight:bold;margin:0;">CONTRAT DE TRAVAIL</h1>
+    <h2 style="text-align:center;font-size:14px;font-weight:bold;margin:4px 0 2px;">À DURÉE ${c.type === "CDD" ? "DÉTERMINÉE" : "INDÉTERMINÉE"}</h2>
+    <div style="text-align:center;font-size:10px;font-style:italic;margin-bottom:22px;">(${c.type})</div>
+
+    <div style="font-size:12px;line-height:1.6;">
+      <p style="text-align:center;"><b>ENTRE LES SOUSSIGNÉS</b></p>
+      <p>L'entreprise <b>${ent.nom || "................................."}</b>${ent.ninea ? `, NINEA ${ent.ninea}` : ""}${ent.rccm ? `, RCCM ${ent.rccm}` : ""}, dont le siège se trouve à <b>${ent.adresse || "................................."}</b>, représentée aux fins des présentes par M. <b>${rep}</b>, en sa qualité de <b>${qualite}</b>.</p>
+      <p>Ci-après désigné « <b>L'Employeur</b> », <b>D'UNE PART,</b></p>
+      <p style="text-align:center;"><b>ET</b></p>
+      <p>
+        Nom et prénoms du travailleur : <b>${emp.nom} ${emp.prenom}</b><br/>
+        Date et lieu de naissance : <b>${emp.dateNaissance || "—"}${emp.lieuNaissance ? " à " + emp.lieuNaissance : ""}</b><br/>
+        Nationalité : <b>${emp.nationalite || "—"}</b><br/>
+        Situation de famille : <b>${emp.situationFamille || "—"}</b><br/>
+        Adresse complète : <b>${emp.adresse || "—"}</b><br/>
+        Profession : <b>${emp.fonction || "—"}</b><br/>
+        Date de l'engagement : <b>${c.dateDebut}</b><br/>
+        Classification professionnelle : <b>${emp.categorie || "—"}</b><br/>
+        Convention collective : <b>${emp.convention || "—"}</b><br/>
+        Durée de travail : <b>173,33 heures / mois (40h/semaine)</b>
+      </p>
+      <p>Ci-après dénommé(e) « <b>Le Travailleur</b> », <b>D'AUTRE PART,</b></p>
+      <p><b>Il a été convenu et arrêté ce qui suit :</b></p>
+
+      <p><b><u>Article 1</u> : OBJET DU CONTRAT</b><br/>
+      Le présent contrat a pour objet de définir les droits et les obligations des contractants pendant la durée des fonctions que le travailleur exercera au service de l'entreprise au regard de la législation sociale sénégalaise (loi n° 97-17 du 1<sup>er</sup> décembre 1997 portant Code du travail), de la Convention collective et des règlements qui en découlent.</p>
+
+      <p><b><u>Article 2</u> : DURÉE DU CONTRAT</b><br/>
+      Le présent contrat est conclu pour une durée <b>${dureeText}</b>.<br/>
+      Il prend effet à compter du <b>${c.dateDebut}</b>${c.periodeEssaiMois ? `, sous réserve d'une période d'essai de <b>${c.periodeEssaiMois} mois</b>` : ""}.</p>
+
+      <p><b><u>Article 3</u> : DESCRIPTION DU POSTE ET LIEU D'EMPLOI</b><br/>
+      Le travailleur <b>${emp.prenom} ${emp.nom}</b>, qui accepte, exercera les fonctions de <b>${emp.fonction}</b>. Celles-ci sont susceptibles d'évolution eu égard au développement du service et concerneront tous les aspects s'attachant directement ou indirectement aux spécifications du poste et correspondant aux capacités du travailleur. Le lieu d'emploi est <b>${c.lieuTravail}</b>.</p>
+
+      <p><b><u>Article 4</u> : CONDITIONS DE SERVICE</b><br/>
+      Pendant la durée de validité du présent contrat, <b>${emp.prenom} ${emp.nom}</b> s'engage à consacrer toute son activité professionnelle à son employeur, selon les directives qui lui seront données par écrit ou verbalement. Il respectera scrupuleusement les obligations relatives au secret professionnel. Le travailleur déclare n'être lié à aucun autre employeur et être libre de tout engagement pouvant porter préjudice à la bonne marche du service.</p>
+
+      <p><b><u>Article 5</u> : RÉMUNÉRATION</b><br/>
+      Le salaire brut mensuel est ainsi décomposé :</p>
+      <ul style="margin:4px 0 4px 20px;">
+        <li>Salaire de base : <b>${fmt(salaireBase)} FCFA</b></li>
+        <li>Sursalaire : <b>${fmt(sursalaire)} FCFA</b></li>
+        <li>Indemnité de transport : <b>26 000 FCFA</b></li>
+        <li>Autres : <b>${fmt(autres)} FCFA</b></li>
+      </ul>
+      <p>Soit un total de <b>${fmt(total)} FCFA</b>, payable mensuellement à terme échu.</p>
+
+      ${c.clausesParticulieres ? `<p><b><u>Article 6</u> : CLAUSES PARTICULIÈRES</b><br/>${c.clausesParticulieres.replace(/\n/g, "<br/>")}</p>` : ""}
+
+      <p><b><u>Article ${c.clausesParticulieres ? 7 : 6}</u> : LITIGES – CONTESTATIONS</b><br/>
+      Toutes contestations, tous litiges relatifs à l'interprétation ou à l'exécution du présent contrat doivent faire l'objet d'un règlement amiable. Au cas où un tel règlement ne peut être obtenu à propos du différend, compétence est donnée aux juridictions sociales de Dakar.</p>
+
+      <p style="margin-top:20px;">Fait en <b>quatre (4) exemplaires</b> à Dakar, le <b>${today}</b>.</p>
     </div>
 
-    <div style="font-size:12px;line-height:1.7;">
-      <p><b>Article 1 — Engagement</b><br/>L'Employeur engage le Salarié à compter du <b>${c.dateDebut}</b>, ${finText}, en qualité de <b>${emp.fonction}</b>.</p>
-      <p><b>Article 2 — Période d'essai</b><br/>Le présent contrat est conclu avec une période d'essai de <b>${c.periodeEssaiMois} mois</b>, durant laquelle chacune des parties pourra rompre le contrat sans préavis ni indemnité.</p>
-      <p><b>Article 3 — Lieu de travail</b><br/>Le Salarié exercera ses fonctions à <b>${c.lieuTravail}</b>.</p>
-      <p><b>Article 4 — Rémunération</b><br/>Le Salarié percevra une rémunération brute mensuelle de <b>${fmt(c.remuneration)} FCFA</b>, payable mensuellement, à terme échu.</p>
-      <p><b>Article 5 — Durée du travail</b><br/>La durée du travail est fixée conformément au Code du Travail (40h/semaine, soit 173,33h/mois).</p>
-      <p><b>Article 6 — Congés payés</b><br/>Le Salarié bénéficiera de congés payés à raison de 2 jours ouvrables par mois de service effectif.</p>
-      <p><b>Article 7 — Cotisations sociales</b><br/>Le Salarié sera affilié à l'IPRES et à la CSS, conformément à la réglementation en vigueur.</p>
-      ${c.clausesParticulieres ? `<p><b>Article 8 — Clauses particulières</b><br/>${c.clausesParticulieres.replace(/\n/g, "<br/>")}</p>` : ""}
-      <p><b>Article ${c.clausesParticulieres ? 9 : 8} — Convention collective applicable</b><br/>Le présent contrat est régi par la Convention collective <b>${emp.convention || "—"}</b>${emp.categorie ? `, catégorie ${emp.categorie}` : ""}.</p>
-    </div>
-
-    <div style="margin-top:50px;font-size:12px;">Fait en double exemplaire à ${ent.adresse || "Dakar"}, le ${today}.</div>
-    <table style="width:100%;margin-top:50px;font-size:12px;"><tr>
-      <td style="width:50%;"><b>L'EMPLOYEUR</b><br/><br/><br/><br/>Signature & cachet</td>
-      <td style="width:50%;"><b>LE SALARIÉ</b><br/><br/><br/><br/>« Lu et approuvé »</td>
-    </tr></table>
+    <table style="width:100%;margin-top:40px;font-size:11px;text-align:center;">
+      <tr>
+        <td style="width:33%;"><b>Le Travailleur</b><br/><span style="font-size:10px;font-style:italic;">(Signature précédée de la mention manuscrite<br/>« Lu et approuvé »)</span><br/><br/><br/><br/>_________________</td>
+        <td style="width:33%;"><b>L'Inspecteur du Travail</b><br/><br/><br/><br/><br/>_________________</td>
+        <td style="width:33%;"><b>L'Employeur</b><br/><span style="font-size:10px;font-style:italic;">(Signature & cachet)</span><br/><br/><br/><br/>_________________</td>
+      </tr>
+    </table>
   </div>`;
 }
 
