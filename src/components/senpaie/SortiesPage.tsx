@@ -22,6 +22,11 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
   const [showSTC, setShowSTC] = useState<Employee | null>(null);
   const [showAttest, setShowAttest] = useState<{ emp: Employee; type: AttestType } | null>(null);
   const [logs, setLogs] = useState<{ id: string; matricule: string; type: string; created_at: string }[]>([]);
+  const [filterType, setFilterType] = useState<"all" | "travail" | "salaire" | "presence" | "stc">("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+  const [showSuggest, setShowSuggest] = useState(false);
 
   const loadLogs = async () => {
     if (!entrepriseId) return;
@@ -36,7 +41,7 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
   useEffect(() => { loadLogs(); }, [entrepriseId]);
 
   const empByMat = useMemo(() => Object.fromEntries(employees.map((e) => [e.matricule, e])), [employees]);
-  const [showDetails, setShowDetails] = useState<Employee | null>(null);
+  const [showDetails, setShowDetails] = useState<{ emp: Employee; type?: string; date?: string } | null>(null);
 
   const typeLabel: Record<string, string> = {
     travail: "🏢 Travail", salaire: "💰 Salaire", presence: "📍 Présence", stc: "📤 STC",
@@ -44,6 +49,29 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
 
   const sortieEmps = employees.filter((e) => e.dateSortie);
   const actifs = employees.filter((e) => !e.dateSortie);
+
+  const filteredLogs = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return logs.filter((l) => {
+      if (filterType !== "all" && l.type !== filterType) return false;
+      if (dateFrom && l.created_at < dateFrom) return false;
+      if (dateTo && l.created_at > dateTo + "T23:59:59") return false;
+      if (s) {
+        const e = empByMat[l.matricule];
+        const name = e ? `${e.nom} ${e.prenom} ${e.matricule}`.toLowerCase() : l.matricule.toLowerCase();
+        if (!name.includes(s)) return false;
+      }
+      return true;
+    });
+  }, [logs, filterType, dateFrom, dateTo, search, empByMat]);
+
+  const suggestions = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return [];
+    return employees
+      .filter((e) => `${e.nom} ${e.prenom} ${e.matricule}`.toLowerCase().includes(s))
+      .slice(0, 6);
+  }, [search, employees]);
 
   return (
     <div>
@@ -100,8 +128,54 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
 
       <div className="bg-card border border-border rounded-lg mt-5">
         <div className="px-4 py-3 border-b border-border text-primary text-[12px] font-bold">📚 Historique des attestations générées</div>
+        <div className="p-4 border-b border-border grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="relative md:col-span-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setShowSuggest(true); }}
+              onFocus={() => setShowSuggest(true)}
+              onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+              placeholder="🔍 Rechercher par nom ou matricule…"
+              className={inputClass}
+            />
+            {showSuggest && suggestions.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                {suggestions.map((e) => (
+                  <button
+                    key={e.matricule}
+                    onMouseDown={(ev) => { ev.preventDefault(); setSearch(`${e.nom} ${e.prenom}`); setShowSuggest(false); }}
+                    className="w-full text-left px-3 py-2 text-[12px] hover:bg-background border-b border-border last:border-b-0"
+                  >
+                    <span className="text-foreground font-bold">{e.nom} {e.prenom}</span>
+                    <span className="text-muted-foreground ml-2">· {e.matricule}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)} className={inputClass}>
+            <option value="all">Tous les types</option>
+            <option value="travail">🏢 Travail</option>
+            <option value="salaire">💰 Salaire</option>
+            <option value="presence">📍 Présence</option>
+            <option value="stc">📤 STC</option>
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={inputClass} title="Du" />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={inputClass} title="Au" />
+          </div>
+          {(filterType !== "all" || dateFrom || dateTo || search) && (
+            <button
+              onClick={() => { setFilterType("all"); setDateFrom(""); setDateTo(""); setSearch(""); }}
+              className="md:col-span-4 text-[11px] text-muted-foreground hover:text-foreground text-left"
+            >
+              ✕ Réinitialiser les filtres · {filteredLogs.length} résultat(s)
+            </button>
+          )}
+        </div>
         <div className="p-4 overflow-x-auto">
-          {logs.length === 0 ? (
+          {filteredLogs.length === 0 ? (
             <div className="text-muted-foreground text-[11px]">Aucune attestation générée pour le moment.</div>
           ) : (
             <table className="w-full text-[11px]">
@@ -111,16 +185,18 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
                 <th className="py-2 px-2 text-left border-b border-border">Type</th>
               </tr></thead>
               <tbody>
-                {logs.map((l) => {
+                {filteredLogs.map((l) => {
                   const e = empByMat[l.matricule];
                   return (
-                    <tr key={l.id} className="border-b border-border">
+                    <tr
+                      key={l.id}
+                      onClick={() => { if (e) setShowDetails({ emp: e, type: l.type, date: l.created_at }); }}
+                      className={`border-b border-border ${e ? "cursor-pointer hover:bg-background" : ""}`}
+                    >
                       <td className="py-1.5 px-2">{new Date(l.created_at).toLocaleString("fr-FR")}</td>
                       <td className="py-1.5 px-2">
                         {e ? (
-                          <button onClick={() => setShowDetails(e)} className="text-primary hover:underline font-bold cursor-pointer bg-transparent border-none p-0">
-                            {e.nom} {e.prenom}
-                          </button>
+                          <span className="text-primary font-bold">{e.nom} {e.prenom}</span>
                         ) : (
                           <span className="text-muted-foreground">{l.matricule} (supprimé)</span>
                         )}
@@ -156,21 +232,44 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
         />
       )}
       {showDetails && (
-        <Modal title={`Fiche — ${showDetails.prenom} ${showDetails.nom}`} onClose={() => setShowDetails(null)} width={520}>
+        <Modal title={`Fiche — ${showDetails.emp.prenom} ${showDetails.emp.nom}`} onClose={() => setShowDetails(null)} width={520}>
           <div className="space-y-2 text-[12px] mb-4">
-            <div className="flex justify-between"><span className="text-muted-foreground">Matricule</span><span className="text-foreground font-bold">{showDetails.matricule}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Fonction</span><span className="text-foreground">{showDetails.fonction}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Contrat</span><span className="text-foreground">{showDetails.contrat}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Date d'entrée</span><span className="text-foreground">{showDetails.dateEntree}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Statut</span><span className={showDetails.dateSortie ? "text-destructive" : "text-primary"}>{showDetails.dateSortie ? `Sorti(e) le ${showDetails.dateSortie}` : "Actif"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Matricule</span><span className="text-foreground font-bold">{showDetails.emp.matricule}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Fonction</span><span className="text-foreground">{showDetails.emp.fonction}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Contrat</span><span className="text-foreground">{showDetails.emp.contrat}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Date d'entrée</span><span className="text-foreground">{showDetails.emp.dateEntree}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Statut</span><span className={showDetails.emp.dateSortie ? "text-destructive" : "text-primary"}>{showDetails.emp.dateSortie ? `Sorti(e) le ${showDetails.emp.dateSortie}` : "Actif"}</span></div>
+            {showDetails.type && (
+              <div className="flex justify-between border-t border-border pt-2 mt-2">
+                <span className="text-muted-foreground">Dernière attestation</span>
+                <span className="text-foreground font-bold">{typeLabel[showDetails.type] || showDetails.type}</span>
+              </div>
+            )}
+            {showDetails.date && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Générée le</span>
+                <span className="text-foreground">{new Date(showDetails.date).toLocaleString("fr-FR")}</span>
+              </div>
+            )}
           </div>
           <div className="border-t border-border pt-3">
             <div className="text-muted-foreground text-[11px] mb-2 uppercase font-bold">Actions rapides</div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowAttest({ emp: e, type: "travail" }); }} className="px-3 py-1.5 bg-background border border-border rounded-lg text-[11px] hover:border-primary">🏢 Travail</button>
-              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowAttest({ emp: e, type: "salaire" }); }} className="px-3 py-1.5 bg-background border border-border rounded-lg text-[11px] hover:border-primary">💰 Salaire</button>
-              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowAttest({ emp: e, type: "presence" }); }} className="px-3 py-1.5 bg-background border border-border rounded-lg text-[11px] hover:border-primary">📍 Présence</button>
-              <button onClick={() => { const e = showDetails; setShowDetails(null); setShowSTC(e); }} className="px-3 py-1.5 bg-destructive text-foreground rounded-lg text-[11px] font-bold">📤 STC</button>
+              {(["travail", "salaire", "presence"] as AttestType[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => { const e = showDetails.emp; setShowDetails(null); setShowAttest({ emp: e, type: t }); }}
+                  className={`px-3 py-1.5 border rounded-lg text-[11px] hover:border-primary ${showDetails.type === t ? "border-primary bg-primary/10 text-primary font-bold" : "bg-background border-border"}`}
+                >
+                  {typeLabel[t]}
+                </button>
+              ))}
+              <button
+                onClick={() => { const e = showDetails.emp; setShowDetails(null); setShowSTC(e); }}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold ${showDetails.type === "stc" ? "bg-destructive text-foreground ring-2 ring-destructive/50" : "bg-destructive text-foreground"}`}
+              >
+                📤 STC
+              </button>
             </div>
           </div>
         </Modal>
