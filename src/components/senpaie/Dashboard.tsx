@@ -4,18 +4,21 @@ import { StatCard } from "./StatCard";
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
 import type { PayrollSnapshot } from "@/hooks/useSupabaseData";
+import type { Conge, Contrat } from "@/hooks/useRH";
 
 interface DashboardProps {
   allPaies: (Employee & { paie: PayrollResult })[];
   totaux: { brut: number; net: number; ch: number; mass: number };
   history?: PayrollSnapshot[];
+  conges?: Conge[];
+  contrats?: Contrat[];
   onSaveSnapshot?: () => void;
   onReopenMonth?: (mois: number, annee: number) => void;
 }
 
 const SMIG = 64281;
 
-export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot, onReopenMonth }: DashboardProps) {
+export function Dashboard({ allPaies, totaux, history = [], conges = [], contrats = [], onSaveSnapshot, onReopenMonth }: DashboardProps) {
   const barData = allPaies.map((e) => ({
     name: e.prenom.split(" ")[0],
     Brut: e.paie.brut,
@@ -46,8 +49,50 @@ export function Dashboard({ allPaies, totaux, history = [], onSaveSnapshot, onRe
     if (chargesRatio > 0.30) {
       list.push({ type: "info", message: `📈 Ratio charges patronales/brut élevé : ${(chargesRatio * 100).toFixed(1)}%` });
     }
+
+    // Échéances contractuelles (calculées dynamiquement)
+    const today = new Date();
+    const in60 = new Date(today.getTime() + 60 * 86400000);
+    const nameOf = (mat: string) => {
+      const e = allPaies.find((x) => x.matricule === mat);
+      return e ? `${e.prenom} ${e.nom}` : mat;
+    };
+
+    const cddSoon = contrats.filter(
+      (c) => c.type === "CDD" && c.dateFin && new Date(c.dateFin) >= today && new Date(c.dateFin) <= in60
+    );
+    if (cddSoon.length > 0) {
+      list.push({
+        type: "warning",
+        message: `📝 ${cddSoon.length} CDD arrive${cddSoon.length > 1 ? "nt" : ""} à échéance sous 60 jours : ${cddSoon.map((c) => `${nameOf(c.matricule)} (${c.dateFin})`).join(", ")}`,
+      });
+    }
+
+    const essais = contrats
+      .map((c) => {
+        const mois = c.periodeEssaiMois || 0;
+        if (!c.dateDebut || mois <= 0) return null;
+        const fin = new Date(c.dateDebut);
+        fin.setMonth(fin.getMonth() + mois);
+        return fin >= today && fin <= in60 ? { c, fin } : null;
+      })
+      .filter(Boolean) as { c: Contrat; fin: Date }[];
+    if (essais.length > 0) {
+      list.push({
+        type: "info",
+        message: `⏳ ${essais.length} période${essais.length > 1 ? "s" : ""} d'essai se termine${essais.length > 1 ? "nt" : ""} sous 60 jours : ${essais.map((x) => `${nameOf(x.c.matricule)} (${x.fin.toISOString().slice(0, 10)})`).join(", ")}`,
+      });
+    }
+
+    const congesAValider = conges.filter((c) => c.statut === "demande");
+    if (congesAValider.length > 0) {
+      list.push({
+        type: "warning",
+        message: `🌴 ${congesAValider.length} demande${congesAValider.length > 1 ? "s" : ""} de congé en attente de validation`,
+      });
+    }
     return list;
-  }, [allPaies, totaux]);
+  }, [allPaies, totaux, conges, contrats]);
 
   // KPIs
   const kpis = useMemo(() => {
