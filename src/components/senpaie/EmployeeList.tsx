@@ -15,12 +15,13 @@ interface EmployeeListProps {
   onEdit: (emp: Employee) => void;
   onDelete: (matricule: string) => void;
   onBulletin: (emp: Employee) => void;
+  canWrite?: boolean;
 }
 
 type SortKey = "nom" | "net" | "brut" | "anciennete";
 type SortDir = "asc" | "desc";
 
-export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin }: EmployeeListProps) {
+export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin, canWrite = true }: EmployeeListProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterStatut, setFilterStatut] = useState("");
   const [filterContrat, setFilterContrat] = useState("");
