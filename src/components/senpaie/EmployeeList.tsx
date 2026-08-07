@@ -4,6 +4,9 @@ import { fmt, getAnciennete } from "@/lib/payroll";
 import { Modal, Field, inputClass } from "./Modal";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
 
+/** SMIG mensuel de référence Sénégal (FCFA) */
+const SMIG_MENSUEL = 64281;
+
 interface EmployeeListProps {
   employees: (Employee & { paie: PayrollResult })[];
   search: string;
