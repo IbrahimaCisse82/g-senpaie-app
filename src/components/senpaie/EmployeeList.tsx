@@ -244,6 +244,15 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
     if (!form.fonction.trim()) e.fonction = "Requis";
     if (!form.dateEntree) e.dateEntree = "Requis";
     if (!(form.salaireBase > 0)) e.salaireBase = "Doit être > 0";
+    // Contrôle SMIG + minimum conventionnel (bloquant)
+    const sb = +form.salaireBase || 0;
+    if (sb > 0 && sb < SMIG_MENSUEL) {
+      e.salaireBase = `Sous le SMIG (${SMIG_MENSUEL.toLocaleString("fr-FR")} FCFA)`;
+    }
+    const cat = availableCats.find((c) => c.code === form.categorie);
+    if (cat && sb > 0 && sb < cat.salaireMinima) {
+      e.salaireBase = `Sous le minimum conventionnel ${form.convention} · ${cat.code} (${cat.salaireMinima.toLocaleString("fr-FR")} FCFA)`;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
