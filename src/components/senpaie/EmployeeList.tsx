@@ -71,9 +71,11 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
           <h1 className="text-foreground text-xl font-extrabold mb-1">Gestion des Employés</h1>
           <div className="text-muted-foreground text-[11px]">{displayed.length} employé{displayed.length > 1 ? "s" : ""} affiché{displayed.length > 1 ? "s" : ""} sur {employees.length}</div>
         </div>
-        <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
-          + Nouvel Employé
-        </button>
+        {canWrite && (
+          <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
+            + Nouvel Employé
+          </button>
+        )}
       </div>
 
       {/* Search + Filter bar */}
