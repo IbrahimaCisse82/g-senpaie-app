@@ -18,7 +18,12 @@ export const entrepriseSchema = z.object({
   nom: z.string().trim().min(1, "Nom de l'entreprise requis").max(200),
   logo: z.string().optional().default(""),
   ninea: z.string().trim().regex(/^\d{9}$/, "NINEA = 9 chiffres").optional().or(z.literal("")),
-  rccm: z.string().trim().max(50).optional().default(""),
+  rccm: z
+    .string()
+    .trim()
+    .regex(/^SN-[A-Z]{3}-\d{4}-[A-Z]-\d{5}$/, "RCCM au format SN-DKR-AAAA-B-XXXXX")
+    .optional()
+    .or(z.literal("")),
   adresse: z.string().trim().max(300).optional().default(""),
   telephone: z.string().trim().max(30).optional().default(""),
   email: z.string().trim().email("Email invalide").max(150).optional().or(z.literal("")),
