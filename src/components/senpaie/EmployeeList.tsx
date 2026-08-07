@@ -4,6 +4,9 @@ import { fmt, getAnciennete } from "@/lib/payroll";
 import { Modal, Field, inputClass } from "./Modal";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
 
+/** SMIG mensuel de référence Sénégal (FCFA) */
+const SMIG_MENSUEL = 64281;
+
 interface EmployeeListProps {
   employees: (Employee & { paie: PayrollResult })[];
   search: string;
@@ -12,12 +15,13 @@ interface EmployeeListProps {
   onEdit: (emp: Employee) => void;
   onDelete: (matricule: string) => void;
   onBulletin: (emp: Employee) => void;
+  canWrite?: boolean;
 }
 
 type SortKey = "nom" | "net" | "brut" | "anciennete";
 type SortDir = "asc" | "desc";
 
-export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin }: EmployeeListProps) {
+export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin, canWrite = true }: EmployeeListProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterStatut, setFilterStatut] = useState("");
   const [filterContrat, setFilterContrat] = useState("");
@@ -67,9 +71,11 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
           <h1 className="text-foreground text-xl font-extrabold mb-1">Gestion des Employés</h1>
           <div className="text-muted-foreground text-[11px]">{displayed.length} employé{displayed.length > 1 ? "s" : ""} affiché{displayed.length > 1 ? "s" : ""} sur {employees.length}</div>
         </div>
-        <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
-          + Nouvel Employé
-        </button>
+        {canWrite && (
+          <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
+            + Nouvel Employé
+          </button>
+        )}
       </div>
 
       {/* Search + Filter bar */}
@@ -170,8 +176,8 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <button onClick={(e) => { e.stopPropagation(); onBulletin(emp); }} className="px-2.5 py-1.5 bg-senpaie-blue text-background rounded-lg text-[11px] font-bold cursor-pointer border-none" title="Bulletin de paie">📄</button>
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer" title="Modifier">✏️</button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer" title="Supprimer">🗑</button>
+                  {canWrite && <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer" title="Modifier">✏️</button>}
+                  {canWrite && <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer" title="Supprimer">🗑</button>}
                 </div>
                 <span className="text-muted-foreground hidden sm:inline">{expanded === emp.matricule ? "▲" : "▼"}</span>
               </div>
@@ -244,6 +250,15 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
     if (!form.fonction.trim()) e.fonction = "Requis";
     if (!form.dateEntree) e.dateEntree = "Requis";
     if (!(form.salaireBase > 0)) e.salaireBase = "Doit être > 0";
+    // Contrôle SMIG + minimum conventionnel (bloquant)
+    const sb = +form.salaireBase || 0;
+    if (sb > 0 && sb < SMIG_MENSUEL) {
+      e.salaireBase = `Sous le SMIG (${SMIG_MENSUEL.toLocaleString("fr-FR")} FCFA)`;
+    }
+    const cat = availableCats.find((c) => c.code === form.categorie);
+    if (cat && sb > 0 && sb < cat.salaireMinima) {
+      e.salaireBase = `Sous le minimum conventionnel ${form.convention} · ${cat.code} (${cat.salaireMinima.toLocaleString("fr-FR")} FCFA)`;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };

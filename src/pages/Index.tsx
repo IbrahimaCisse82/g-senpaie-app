@@ -6,6 +6,7 @@ import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
 import { useEntrepriseCtx, ROLE_LABEL, type AppRole } from "@/hooks/useEntrepriseContext";
+import { useConges, useContrats } from "@/hooks/useRH";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
@@ -35,6 +36,8 @@ const Index = () => {
   const { params, saveParams, resetParams } = usePayrollParams(user?.id, entrepriseId);
   const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id, entrepriseId);
   const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id, entrepriseId);
+  const { conges } = useConges(user?.id, entrepriseId);
+  const { contrats } = useContrats(user?.id, entrepriseId);
   const isMobile = useIsMobile();
   const { theme, toggleTheme } = useTheme();
 
@@ -49,15 +52,18 @@ const Index = () => {
   const bulletinTemplateId = entreprise.bulletinTemplate || "classique";
 
   // Role-based nav gating
+  // Matrice d'habilitations (CDC §1). « equipe » = Admin uniquement.
   const ALLOWED_TABS: Record<AppRole, TabId[]> = {
     admin: NAV_ITEMS.map((n) => n.id),
-    drh: NAV_ITEMS.map((n) => n.id),
-    comptable: ["dashboard", "cotisations", "declarations", "tendances", "entreprise"],
+    drh: NAV_ITEMS.filter((n) => n.id !== "equipe").map((n) => n.id),
+    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances"],
     manager: ["dashboard", "employes", "conges"],
   };
   const allowedTabs = role ? ALLOWED_TABS[role] : NAV_ITEMS.map((n) => n.id);
   const navItems = NAV_ITEMS.filter((n) => allowedTabs.includes(n.id));
   const activeTab: TabId = allowedTabs.includes(tab) ? tab : "dashboard";
+  // Écriture employés : Admin & DRH uniquement (aligné sur les politiques RLS)
+  const canWriteEmployees = role === "admin" || role === "drh";
 
   const handleTemplateChange = async (id: string) => {
     const updated = { ...entreprise, bulletinTemplate: id };
@@ -199,6 +205,8 @@ const Index = () => {
                 allPaies={allPaies}
                 totaux={totaux}
                 history={history}
+                conges={conges}
+                contrats={contrats}
                 onSaveSnapshot={handleSaveSnapshot}
                 onReopenMonth={handleReopenMonth}
               />
@@ -206,7 +214,8 @@ const Index = () => {
             {activeTab === "employes" && (
               <EmployeeList employees={filtered} search={search} onSearchChange={setSearch}
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
-                onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
+                onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)}
+                canWrite={canWriteEmployees} />
             )}
             {activeTab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {activeTab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
