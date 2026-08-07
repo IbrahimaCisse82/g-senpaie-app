@@ -96,9 +96,17 @@ describe("calculerPaie - Plafond IPRES RCC (cadres)", () => {
 });
 
 describe("calculerPaie - TRIMF", () => {
-  it("applique le TRIMF minimal de 75 F/mois sur bas salaire", () => {
-    const r = calculerPaie(baseEmp({ salaireBase: 64281, dateEntree: "2024-01-01" }), DEFAULT_PARAMS, refDate);
+  it("applique le TRIMF minimal (900 F/an) sous 600 000 F de brut annuel", () => {
+    const r = calculerPaie(baseEmp({ salaireBase: 40000, dateEntree: "2024-01-01" }), DEFAULT_PARAMS, refDate);
     expect(Math.round(r.trimf)).toBe(75); // 900 / 12
+  });
+  it("applique la tranche 3 600 F/an au SMIG (1 part)", () => {
+    const r = calculerPaie(baseEmp({ salaireBase: 64281, dateEntree: "2024-01-01" }), DEFAULT_PARAMS, refDate);
+    expect(Math.round(r.trimf)).toBe(300); // 3 600 / 12
+  });
+  it("plafonne le nombre de parts TRIMF à 5", () => {
+    const r = calculerPaie(baseEmp({ salaireBase: 64281, femmes: 9, dateEntree: "2024-01-01" }), DEFAULT_PARAMS, refDate);
+    expect(r.partsTRIMFCap).toBe(5);
   });
 });
 
