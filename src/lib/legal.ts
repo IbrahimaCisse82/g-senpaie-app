@@ -110,3 +110,57 @@ export function joursOuvrables(debut: string, fin: string): number {
   }
   return count;
 }
+
+/** Durée légale journalière retenue pour la conversion jours → heures (40h/semaine, 5 j). */
+export const HEURES_PAR_JOUR = 8;
+
+/**
+ * Jours ouvrables d'un congé tombant à l'intérieur d'un mois donné (intersection période × mois).
+ */
+export function joursOuvrablesDansMois(debut: string, fin: string, mois: number, annee: number): number {
+  const debutMois = new Date(annee, mois, 1);
+  const finMois = new Date(annee, mois + 1, 0);
+  const d = new Date(debut) > debutMois ? new Date(debut) : debutMois;
+  const f = new Date(fin) < finMois ? new Date(fin) : finMois;
+  if (d > f) return 0;
+  return joursOuvrables(
+    d.toISOString().slice(0, 10),
+    f.toISOString().slice(0, 10),
+  );
+}
+
+export interface AbsenceMensuelle {
+  joursNonPayes: number;
+  joursMaladie: number;
+  heuresAbsence: number;
+  heuresAbsMaladie: number;
+}
+
+/**
+ * Répercussion des congés validés sur la paie du mois :
+ *  - « sans_solde » → retenue pour absence (heuresAbsence)
+ *  - « maladie » → indemnisation maladie (heuresAbsMaladie)
+ *  - congés payés & maternité → aucun impact (rémunérés)
+ */
+export function absencesDuMois(
+  conges: { matricule: string; type: string; statut: string; dateDebut: string; dateFin: string }[],
+  matricule: string,
+  mois: number,
+  annee: number,
+): AbsenceMensuelle {
+  let joursNonPayes = 0;
+  let joursMaladie = 0;
+  for (const c of conges) {
+    if (c.matricule !== matricule || c.statut !== "valide") continue;
+    const j = joursOuvrablesDansMois(c.dateDebut, c.dateFin, mois, annee);
+    if (j <= 0) continue;
+    if (c.type === "sans_solde") joursNonPayes += j;
+    else if (c.type === "maladie") joursMaladie += j;
+  }
+  return {
+    joursNonPayes,
+    joursMaladie,
+    heuresAbsence: joursNonPayes * HEURES_PAR_JOUR,
+    heuresAbsMaladie: joursMaladie * HEURES_PAR_JOUR,
+  };
+}
