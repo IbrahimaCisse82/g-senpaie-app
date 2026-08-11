@@ -220,7 +220,16 @@ const Index = () => {
             {activeTab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {activeTab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {activeTab === "simulateur" && <Simulateur params={params} />}
-            {activeTab === "conges" && <CongesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} />}
+            {activeTab === "conges" && (
+              <CongesPage
+                userId={user.id}
+                entrepriseId={entrepriseId}
+                employees={employees}
+                canWrite={role !== "comptable"}
+                onApplyAbsences={canWriteEmployees ? async (emp) => { await saveEmployee(emp, false); } : undefined}
+                showToast={showToast}
+              />
+            )}
             {activeTab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
             {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
             {activeTab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
