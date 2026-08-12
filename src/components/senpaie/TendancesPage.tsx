@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, pct, MOIS } from "@/lib/payroll";
@@ -51,6 +51,35 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
     }));
   }, [history]);
 
+  // ── Mode comparaison entre deux périodes clôturées ──
+  const periodes = useMemo(
+    () => history.map((h, i) => ({ key: String(i), label: `${MOIS[h.mois]} ${h.annee}`, snap: h })),
+    [history],
+  );
+  const [cmpA, setCmpA] = useState("1");
+  const [cmpB, setCmpB] = useState("0");
+  useEffect(() => {
+    if (periodes.length >= 2) { setCmpA("1"); setCmpB("0"); }
+  }, [periodes.length]);
+
+  const comparaison = useMemo(() => {
+    const a = periodes[Number(cmpA)];
+    const b = periodes[Number(cmpB)];
+    if (!a || !b) return null;
+    const lignes = ([
+      ["Employés", a.snap.nbEmployees, b.snap.nbEmployees, false],
+      ["Brut Total", a.snap.totaux.brut, b.snap.totaux.brut, true],
+      ["Net Total", a.snap.totaux.net, b.snap.totaux.net, true],
+      ["Charges Patronales", a.snap.totaux.ch, b.snap.totaux.ch, true],
+      ["Masse Salariale", a.snap.totaux.mass, b.snap.totaux.mass, true],
+    ] as [string, number, number, boolean][]).map(([label, va, vb, money]) => ({
+      label, va, vb, money,
+      delta: vb - va,
+      variation: va === 0 ? 0 : (vb - va) / va,
+    }));
+    return { a, b, lignes };
+  }, [periodes, cmpA, cmpB]);
+
   return (
     <div>
       <h1 className="text-foreground text-xl font-extrabold mb-4">Analyse des Tendances</h1>
@@ -80,6 +109,58 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
           </div>
         ))}
       </div>
+
+      {/* Mode comparaison */}
+      {periodes.length >= 2 && comparaison && (
+        <div className="bg-card rounded-lg p-4 md:p-5 mb-4">
+          <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Mode comparaison — deux périodes clôturées</div>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <select
+              aria-label="Période de référence"
+              value={cmpA}
+              onChange={(e) => setCmpA(e.target.value)}
+              className="bg-background border border-border text-foreground rounded-lg px-3 py-2 text-xs"
+            >
+              {periodes.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+            <span className="text-muted-foreground text-xs">vs</span>
+            <select
+              aria-label="Période comparée"
+              value={cmpB}
+              onChange={(e) => setCmpB(e.target.value)}
+              className="bg-background border border-border text-foreground rounded-lg px-3 py-2 text-xs"
+            >
+              {periodes.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="bg-background">
+                  {["Indicateur", comparaison.a.label, comparaison.b.label, "Écart", "Variation"].map((h, i) => (
+                    <th key={h} className={`py-2.5 px-3 text-muted-foreground font-semibold border-b border-border whitespace-nowrap ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {comparaison.lignes.map((l, i) => (
+                  <tr key={l.label} className={i % 2 === 0 ? "bg-card" : "bg-senpaie-alt-row"}>
+                    <td className="py-2 px-3 text-foreground font-bold">{l.label}</td>
+                    <td className="py-2 px-3 text-right text-muted-foreground">{l.money ? `${fmt(l.va)} F` : l.va}</td>
+                    <td className="py-2 px-3 text-right text-foreground">{l.money ? `${fmt(l.vb)} F` : l.vb}</td>
+                    <td className={`py-2 px-3 text-right font-bold ${l.delta > 0 ? "text-destructive" : l.delta < 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {l.delta > 0 ? "+" : ""}{l.money ? `${fmt(l.delta)} F` : l.delta}
+                    </td>
+                    <td className={`py-2 px-3 text-right font-bold ${l.delta > 0 ? "text-destructive" : l.delta < 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {l.delta > 0 ? "+" : ""}{pct(l.variation)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Monthly history table */}
       {historyTable.length > 0 && (
