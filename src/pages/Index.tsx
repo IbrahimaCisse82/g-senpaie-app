@@ -108,6 +108,15 @@ const Index = () => {
     showToast("🗑 Employé supprimé");
   };
 
+  const handleImportEmps = async (emps: Employee[]) => {
+    for (const emp of emps) {
+      const parsed = employeeSchema.safeParse(emp);
+      if (!parsed.success) continue;
+      await saveEmployee(emp, true);
+    }
+    showToast(`✅ ${emps.length} employé(s) importé(s)`);
+  };
+
   const handleSaveSnapshot = async () => {
     const now = new Date();
     await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length);
@@ -215,7 +224,8 @@ const Index = () => {
               <EmployeeList employees={filtered} search={search} onSearchChange={setSearch}
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
                 onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)}
-                canWrite={canWriteEmployees} />
+                canWrite={canWriteEmployees}
+                onImport={canWriteEmployees ? handleImportEmps : undefined} />
             )}
             {activeTab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {activeTab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
