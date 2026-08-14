@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import type { Employee } from "@/lib/payroll";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
 
@@ -49,7 +48,8 @@ const toDate = (v: unknown): string => {
 };
 
 /** Génère et télécharge le fichier modèle d'import */
-export function downloadImportTemplate() {
+export async function downloadImportTemplate() {
+  const XLSX = await import("xlsx");
   const headers = IMPORT_COLUMNS.map((c) => c.header);
   const example = [
     "EMP001", "Fatou", "Diop", "F", "1992-04-15", "770000000", "fatou.diop@exemple.sn",
@@ -63,7 +63,8 @@ export function downloadImportTemplate() {
 }
 
 /** Exporte la liste des employés au format Excel */
-export function exportEmployeesXlsx(employees: Employee[]) {
+export async function exportEmployeesXlsx(employees: Employee[]) {
+  const XLSX = await import("xlsx");
   const rows = employees.map((e) =>
     Object.fromEntries(IMPORT_COLUMNS.map((c) => [c.header, e[c.key] ?? ""])),
   );
@@ -76,6 +77,7 @@ export function exportEmployeesXlsx(employees: Employee[]) {
 
 /** Parse un fichier Excel/CSV en employés, avec contrôles de cohérence */
 export async function parseEmployeeFile(file: File, existingMats: string[] = []): Promise<ImportResult> {
+  const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
   const sheet = wb.Sheets[wb.SheetNames[0]];

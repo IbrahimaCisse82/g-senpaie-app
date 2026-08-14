@@ -1,6 +1,5 @@
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
-import * as XLSX from "xlsx";
 
 interface CotisationsTableProps {
   allPaies: (Employee & { paie: PayrollResult })[];
@@ -83,7 +82,8 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
   URL.revokeObjectURL(url);
 }
 
-function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
+async function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
+  const XLSX = await import("xlsx");
   const headers = ["Employé", "Matricule", "Statut", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Masse", "Net"];
   const rows = allPaies.map((emp) => [
     `${emp.prenom} ${emp.nom}`, emp.matricule, emp.statut,
@@ -143,7 +143,7 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
             📥 Exporter CSV
           </button>
           <button
-            onClick={() => exportXLSX(allPaies, totaux)}
+            onClick={() => void exportXLSX(allPaies, totaux)}
             className="px-4 py-2 bg-senpaie-yellow text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap"
           >
             📊 Exporter Excel
