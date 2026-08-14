@@ -208,7 +208,7 @@ const Index = () => {
             <div className="text-primary animate-pulse">Chargement des données…</div>
           </div>
         ) : (
-          <>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-primary animate-pulse">Chargement du module…</div></div>}>
             {activeTab === "dashboard" && (
               <Dashboard
                 allPaies={allPaies}
@@ -270,7 +270,7 @@ const Index = () => {
               />
             )}
             {activeTab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
-          </>
+          </Suspense>
         )}
       </main>
 
@@ -279,8 +279,10 @@ const Index = () => {
           <EmployeeForm initial={showForm === "new" ? null : showForm as Employee} onSave={handleSaveEmp} onClose={() => setShowForm(null)} existingMats={employees.map((e) => e.matricule)} conventions={conventions} />
         </Modal>
       )}
-      {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onClose={() => setShowBulletin(null)} />}
-      {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
+      <Suspense fallback={null}>
+        {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onClose={() => setShowBulletin(null)} />}
+        {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
+      </Suspense>
       {showDel && (
         <Modal title="⚠️ Confirmation de suppression" onClose={() => setShowDel(null)} width={420}>
           <p className="text-foreground mb-5">
