@@ -8,7 +8,6 @@ interface CotisationsTableProps {
 }
 
 function exportCSV(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
-  const XLSX = await import("xlsx");
   const headers = ["Employé", "Matricule", "Statut", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Masse", "Net"];
   const rows = allPaies.map((emp) => [
     `${emp.prenom} ${emp.nom}`,
@@ -84,6 +83,7 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
 }
 
 async function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
+  const XLSX = await import("xlsx");
   const headers = ["Employé", "Matricule", "Statut", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Masse", "Net"];
   const rows = allPaies.map((emp) => [
     `${emp.prenom} ${emp.nom}`, emp.matricule, emp.statut,
