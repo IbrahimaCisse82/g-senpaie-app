@@ -5,11 +5,11 @@ import { DEFAULT_PARAMS, DEFAULT_ENTREPRISE, DEFAULT_CONVENTIONS } from "@/lib/c
 import { toast } from "@/hooks/use-toast";
 
 // ── Error handler ──
-function handleError(context: string, error: any) {
+function handleError(context: string, error: unknown) {
   console.error(`[${context}]`, error);
   toast({
     title: "Erreur",
-    description: `${context} : ${error?.message || "Erreur inconnue"}`,
+    description: `${context} : ${(error as { message?: string } | null)?.message || "Erreur inconnue"}`,
     variant: "destructive",
   });
 }
@@ -154,7 +154,7 @@ export function useEntreprise(userId: string | undefined, entrepriseId: string |
           nom: data.nom, logo: data.logo || "", adresse: data.adresse || "",
           telephone: data.telephone || "", email: data.email || "",
           ninea: data.ninea || "", rccm: data.rccm || "",
-          bulletinTemplate: (data as any).bulletin_template || "classique",
+          bulletinTemplate: (data as { bulletin_template?: string }).bulletin_template || "classique",
         });
       }
       setLoading(false);

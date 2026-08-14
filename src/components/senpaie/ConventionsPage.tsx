@@ -205,12 +205,12 @@ function ConventionDetail({ cc, catSearch, setCatSearch, filteredCats, setCatFor
   catSearch: string;
   setCatSearch: (s: string) => void;
   filteredCats: ConventionCategory[];
-  setCatForm: (f: any) => void;
-  setShowCatForm: (v: any) => void;
-  setCcForm: (f: any) => void;
-  setShowCCForm: (v: any) => void;
-  setShowDelCC: (v: any) => void;
-  setShowDelCat: (v: any) => void;
+  setCatForm: (f: { code: string; libelle: string; statut: string; salaireMinima: number }) => void;
+  setShowCatForm: (v: ConventionCategory | "new" | null) => void;
+  setCcForm: (f: { nom: string; secteur: string; dateSignature: string; description: string }) => void;
+  setShowCCForm: (v: Convention | "new" | null) => void;
+  setShowDelCC: (v: Convention | null) => void;
+  setShowDelCat: (v: ConventionCategory | null) => void;
 }) {
   return (
     <div>

@@ -283,7 +283,7 @@ interface EmpFormProps {
 export function EmployeeForm({ initial, onSave, onClose, existingMats, conventions }: EmpFormProps) {
   const [form, setForm] = useState<Employee>({ ...EMPTY_EMPLOYEE, ...initial });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const set = (k: keyof Employee, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof Employee, v: string | number) => setForm((f) => ({ ...f, [k]: v }));
 
   const selectedCC = conventions.find((c) => c.nom === form.convention);
   const availableCats = selectedCC ? selectedCC.categories : [];
