@@ -92,12 +92,12 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
           <div className="text-muted-foreground text-[11px]">{displayed.length} employé{displayed.length > 1 ? "s" : ""} affiché{displayed.length > 1 ? "s" : ""} sur {employees.length}</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => exportEmployeesXlsx(employees)} className="px-3 py-2.5 bg-transparent border border-border text-muted-foreground rounded-lg font-bold text-[11px] cursor-pointer hover:text-foreground whitespace-nowrap">
+          <button onClick={() => void exportEmployeesXlsx(employees)} className="px-3 py-2.5 bg-transparent border border-border text-muted-foreground rounded-lg font-bold text-[11px] cursor-pointer hover:text-foreground whitespace-nowrap">
             ⬇ Exporter Excel
           </button>
           {canWrite && onImport && (
             <>
-              <button onClick={downloadImportTemplate} className="px-3 py-2.5 bg-transparent border border-border text-muted-foreground rounded-lg font-bold text-[11px] cursor-pointer hover:text-foreground whitespace-nowrap">
+              <button onClick={() => void downloadImportTemplate()} className="px-3 py-2.5 bg-transparent border border-border text-muted-foreground rounded-lg font-bold text-[11px] cursor-pointer hover:text-foreground whitespace-nowrap">
                 📄 Modèle
               </button>
               <button onClick={() => fileRef.current?.click()} disabled={importing} className="px-3 py-2.5 bg-secondary border border-border text-foreground rounded-lg font-bold text-[11px] cursor-pointer whitespace-nowrap disabled:opacity-50">
