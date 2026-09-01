@@ -1,98 +1,46 @@
-# Sprint 5bis — Multi-tenant réel
+# Plan V2 — G-SENPAIE : rendre l'application plus attractive
 
-## Objectif
-Passer d'un modèle mono-utilisateur (chaque `user_id` = son propre espace) à un modèle **entreprise partagée** où plusieurs utilisateurs (Admin, DRH, Comptable, Manager) accèdent aux mêmes données selon leur rôle.
+Objectif : passer d'un outil de paie fonctionnel (100% métier) à une plateforme RH agréable, moderne et différenciante, sans casser l'existant.
 
-## 1. Schéma DB (migration unique)
+## 1. Expérience utilisateur & design
 
-### Nouvelles tables
-- **`entreprise_members`** : lien N-N entre `auth.users` et `entreprises`
-  - `entreprise_id`, `user_id`, `role` (enum `app_role`), `invited_by`, `joined_at`
-  - Unique(entreprise_id, user_id)
-- **`entreprise_invitations`** : invitations en attente
-  - `entreprise_id`, `email`, `role`, `token` (uuid), `invited_by`, `expires_at`, `accepted_at`
+- **Onboarding guidé** : assistant en 3 étapes à la première connexion (créer l'entreprise → ajouter le 1er employé → générer le 1er bulletin) avec checklist de progression dans le Dashboard.
+- **Mode démo** : bouton « Explorer avec des données d'exemple » générant un jeu de données réaliste sénégalais (supprimable en 1 clic) — sans violer la règle « nouveaux comptes = formulaires vides ».
+- **Refonte visuelle ciblée** : animations micro-interactions (Framer Motion), transitions de pages, squelettes de chargement partout, états vides illustrés et actionnables.
+- **Notifications in-app** : centre de notifications (cloche) regroupant alertes CDD/essai, congés en attente, clôtures, avec badge non-lus.
 
-### Ajout `entreprise_id` sur toutes les tables métier
-`employees`, `conges`, `contrats`, `payroll_history`, `payroll_params`, `conventions`, `convention_categories`, `attestations_log`
-- Backfill : pour chaque ligne, `entreprise_id = (SELECT id FROM entreprises WHERE user_id = table.user_id LIMIT 1)`
-- Créer une entreprise par défaut pour les users qui n'en ont pas
-- Créer une ligne `entreprise_members` (role=admin) pour chaque propriétaire actuel
-- Puis `NOT NULL` sur `entreprise_id`
+## 2. Fonctionnalités à forte valeur
 
-### Fonctions security definer
-- `current_entreprise_id()` : retourne la 1ʳᵉ entreprise du user courant (ou celle sélectionnée via app_metadata)
-- `is_member_of(_entreprise_id, _role?)` : vérifie appartenance + rôle optionnel
-- Refonte de `has_role` pour scoper par entreprise
+- **Assistant IA de paie** (Lovable AI, sans clé) : chat intégré répondant en français aux questions (« combien coûte un salarié à 300 000 FCFA brut ? », « explique la retenue IR de ce bulletin ») + génération de textes (contrats, attestations) pré-remplis.
+- **Portail employé (self-service)** : accès en lecture seule par employé (lien d'invitation + compte) pour consulter/télécharger ses bulletins, demander des congés, voir son solde. Validation des demandes par Admin/DRH.
+- **Pret & avances sur salaire** : module d'avances avec échéancier de retenue automatique intégré au moteur de paie (déduction étalée sur N mois, plafond légal).
+- **Rappels automatiques par email** : fin de période d'essai, fin de CDD à J-30/J-7, congés en attente de validation (Edge Function planifiée).
 
-### RLS refondue
-Chaque table métier :
-- SELECT : `is_member_of(entreprise_id)` (tout membre lit)
-- INSERT/UPDATE/DELETE : `is_member_of(entreprise_id, 'admin')` OR `is_member_of(entreprise_id, 'drh')`
-- `payroll_history` en lecture aussi pour `comptable`
-- `manager` : lecture employés + validation congés uniquement
+## 3. Pilotage & reporting
 
-`entreprise_members` : lecture par membres de la même entreprise, écriture par admin uniquement.
-`entreprise_invitations` : lecture/écriture admin uniquement, plus un accès par token pour l'acceptation.
+- **Dashboard enrichi** : comparateur N vs N-1, projection de masse salariale annuelle, coût complet employeur par employé, répartition par convention/département.
+- **Rapports planifiés** : envoi mensuel automatique du livre de paie + synthèse cotisations par email à la clôture.
 
-## 2. Backend — Edge Functions
+## 4. Technique & qualité
 
-- **`invite-member`** : admin envoie invitation → crée row `entreprise_invitations` + envoie email avec lien `/invitation?token=...`. Utilise `LOVABLE_API_KEY` via le queue email existant (ou fallback simple si pas encore configuré).
-- **`accept-invitation`** : appelée par la page `/invitation`, valide token + expires_at, crée `entreprise_members`, marque `accepted_at`.
+- **PWA** : installable sur mobile, mode hors-ligne en lecture (cache des derniers bulletins), icône et manifest.
+- **Performance** : pagination serveur des listes longues, prefetch des routes au survol.
+- **Internationalisation de base** : extraction des libellés (i18next) pour préparer Wolof/Anglais ultérieurement.
+- **Emails** : finaliser l'envoi des bulletins (domaine `g-senpaie.online`) — prérequis déjà identifié.
 
-## 3. Frontend
+## Découpage en lots (ordre proposé)
 
-### Contexte entreprise
-- Nouveau hook `useEntreprise()` : charge l'entreprise courante + rôle du user (via `entreprise_members`).
-- Toutes les requêtes existantes utilisent désormais `entreprise_id` (plus `user_id`) via helper.
-
-### `EquipePage` refonte
-- Liste des membres actuels (avec rôle, badge)
-- Formulaire invitation (email + rôle)
-- Liste invitations en attente (avec bouton renvoyer / révoquer)
-- Visible seulement si role = admin
-
-### Nouvelle page `/invitation`
-- Récupère token depuis URL
-- Si user non connecté → redirige vers `/auth` avec paramètre pour revenir
-- Sinon appelle `accept-invitation` et redirige vers `/`
-
-### Gating UI par rôle
-Dans `Index.tsx`, les onglets sont filtrés selon le rôle :
-- `comptable` : Dashboard, Déclarations, Paie (lecture)
-- `manager` : Dashboard, Employés (lecture), Congés
-- `drh`/`admin` : tout
-
-## 4. Mapping code
-`useSupabaseData.ts` et `useRH.ts` :
-- Ajouter `entreprise_id` sur tous les inserts (via `useEntreprise()`).
-- Retirer le filtre `user_id` (RLS s'en charge).
-
-## 5. Tests
-- Migration idempotente vérifiée
-- Test manuel Playwright : invitation → acceptation → visibilité partagée.
+| Lot | Contenu | Valeur |
+|-----|---------|--------|
+| V2.1 | Onboarding, mode démo, notifications in-app, micro-animations | Adoption immédiate |
+| V2.2 | Assistant IA de paie + génération de documents | Différenciation forte |
+| V2.3 | Portail employé self-service + demandes de congés | Argument commercial majeur |
+| V2.4 | Avances/prêts + rappels email automatiques | Complétude métier RH |
+| V2.5 | Dashboard enrichi, rapports planifiés, PWA, perf | Fidélisation |
 
 ## Détails techniques
 
-```text
-Ordre migration :
-1. CREATE TABLE entreprise_members + grants + RLS
-2. CREATE TABLE entreprise_invitations + grants + RLS
-3. ALTER tables métier: ADD COLUMN entreprise_id UUID
-4. Backfill (DO block)
-5. NOT NULL + FK
-6. DROP anciennes policies user_id
-7. CREATE nouvelles policies is_member_of
-8. Fonctions helper security definer
-```
-
-## Hors scope (livré plus tard)
-- Sélecteur multi-entreprises (un user dans plusieurs entreprises) — infra prête mais UI mono pour l'instant
-- Email queue custom pour invitations si pas encore setup → fallback simple avec `supabase.auth.admin.inviteUserByEmail`
-
-## Livrables
-- 1 migration SQL
-- 2 edge functions (`invite-member`, `accept-invitation`)
-- 1 hook `useEntreprise`
-- Page `/invitation`
-- Refonte `EquipePage`, `Index.tsx` (gating)
-- Adaptation `useSupabaseData`, `useRH`
+- Nouvelles tables : `notifications`, `demandes_conges` (statut en_attente/validee/refusee), `avances_pret` + `echeances_avance`, liens `employees.user_id` pour le portail — chacune avec GRANT + RLS multi-tenant (`entreprise_id`) et rôles Admin/DRH.
+- Rôles : ajout du rôle `employe` (lecture seule de ses propres données) dans `app_role`, `has_role` existant réutilisé.
+- Edge Functions : `notify-reminders` (cron), `send-payslip-email` (domaine g-senpaie.online), `ai-assistant` (Lovable AI Gateway).
+- Aucune régression sur les 38 tests existants ; nouveaux tests pour avances et droits portail.
