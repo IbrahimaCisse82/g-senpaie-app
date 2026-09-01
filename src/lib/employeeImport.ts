@@ -38,8 +38,9 @@ const txt = (v: unknown): string => String(v ?? "").trim();
 const toDate = (v: unknown): string => {
   if (v == null || v === "") return "";
   if (typeof v === "number") {
-    const d = XLSX.SSF.parse_date_code(v);
-    if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+    // Date sérielle Excel (époque 1899-12-30) → AAAA-MM-JJ
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   }
   const s = txt(v);
   const fr = s.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
