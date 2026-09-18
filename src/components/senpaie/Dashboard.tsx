@@ -93,11 +93,11 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
   const statutColors = ["hsl(160, 84%, 39%)", "hsl(217, 92%, 68%)", "hsl(45, 97%, 56%)", "hsl(255, 92%, 76%)", "hsl(0, 91%, 71%)"];
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-1">
         <h1 className="text-foreground text-xl font-extrabold">Tableau de Bord</h1>
         {onSaveSnapshot && (
-          <button onClick={onSaveSnapshot} className="px-4 py-2 bg-senpaie-blue text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
+          <button onClick={onSaveSnapshot} className="px-4 py-2 bg-senpaie-blue text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap transition-transform duration-200 hover:scale-105">
             💾 Clôturer le mois
           </button>
         )}
@@ -111,11 +111,13 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
         )}
       </div>
 
+      {headerSlot}
+
       {/* Alerts */}
       {alerts.length > 0 && (
         <div className="space-y-2 mb-4">
           {alerts.map((a, i) => (
-            <div key={i} className={`rounded-lg px-4 py-2.5 text-[12px] font-medium border ${
+            <div key={a.id} style={{ animationDelay: `${i * 60}ms` }} className={`animate-fade-in rounded-lg px-4 py-2.5 text-[12px] font-medium border ${
               a.type === "danger" ? "bg-destructive/10 border-destructive text-destructive"
                 : a.type === "warning" ? "bg-senpaie-yellow/10 border-senpaie-yellow text-senpaie-yellow"
                 : "bg-senpaie-blue/10 border-senpaie-blue text-senpaie-blue"
@@ -123,6 +125,7 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
           ))}
         </div>
       )}
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <StatCard icon="💼" label="Masse Salariale" value={`${fmt(totaux.mass)} F`} sub="Charges incluses" color="primary" />
