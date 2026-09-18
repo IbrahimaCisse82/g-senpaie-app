@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { StatCard } from "./StatCard";
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
 import type { PayrollSnapshot } from "@/hooks/useSupabaseData";
 import type { Conge, Contrat } from "@/hooks/useRH";
+import { buildAlerts } from "@/lib/alerts";
 
 interface DashboardProps {
   allPaies: (Employee & { paie: PayrollResult })[];
@@ -14,11 +15,11 @@ interface DashboardProps {
   contrats?: Contrat[];
   onSaveSnapshot?: () => void;
   onReopenMonth?: (mois: number, annee: number) => void;
+  headerSlot?: ReactNode;
 }
 
-const SMIG = 64281;
+export function Dashboard({ allPaies, totaux, history = [], conges = [], contrats = [], onSaveSnapshot, onReopenMonth, headerSlot }: DashboardProps) {
 
-export function Dashboard({ allPaies, totaux, history = [], conges = [], contrats = [], onSaveSnapshot, onReopenMonth }: DashboardProps) {
   const barData = allPaies.map((e) => ({
     name: e.prenom.split(" ")[0],
     Brut: e.paie.brut,
