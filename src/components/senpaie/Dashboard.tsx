@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { StatCard } from "./StatCard";
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
 import type { PayrollSnapshot } from "@/hooks/useSupabaseData";
 import type { Conge, Contrat } from "@/hooks/useRH";
+import { buildAlerts } from "@/lib/alerts";
 
 interface DashboardProps {
   allPaies: (Employee & { paie: PayrollResult })[];
@@ -14,11 +15,11 @@ interface DashboardProps {
   contrats?: Contrat[];
   onSaveSnapshot?: () => void;
   onReopenMonth?: (mois: number, annee: number) => void;
+  headerSlot?: ReactNode;
 }
 
-const SMIG = 64281;
+export function Dashboard({ allPaies, totaux, history = [], conges = [], contrats = [], onSaveSnapshot, onReopenMonth, headerSlot }: DashboardProps) {
 
-export function Dashboard({ allPaies, totaux, history = [], conges = [], contrats = [], onSaveSnapshot, onReopenMonth }: DashboardProps) {
   const barData = allPaies.map((e) => ({
     name: e.prenom.split(" ")[0],
     Brut: e.paie.brut,
@@ -34,65 +35,12 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
     { name: "IPM+CFCE", value: allPaies.reduce((s, e) => s + e.paie.ipm_s + e.paie.ipm_p + e.paie.cfce, 0), color: "hsl(255, 92%, 76%)" },
   ];
 
-  // Alerts
-  const alerts = useMemo(() => {
-    const list: { type: "warning" | "danger" | "info"; message: string }[] = [];
-    const belowSmig = allPaies.filter((e) => e.salaireBase < SMIG);
-    if (belowSmig.length > 0) {
-      list.push({ type: "danger", message: `⚠️ ${belowSmig.length} employé${belowSmig.length > 1 ? "s" : ""} sous le SMIG (${fmt(SMIG)} F) : ${belowSmig.map((e) => e.prenom).join(", ")}` });
-    }
-    const atIpresCeiling = allPaies.filter((e) => e.paie.brut >= 432000);
-    if (atIpresCeiling.length > 0) {
-      list.push({ type: "warning", message: `📊 ${atIpresCeiling.length} employé${atIpresCeiling.length > 1 ? "s" : ""} au plafond IPRES RG (432 000 F)` });
-    }
-    const chargesRatio = totaux.ch / Math.max(totaux.brut, 1);
-    if (chargesRatio > 0.30) {
-      list.push({ type: "info", message: `📈 Ratio charges patronales/brut élevé : ${(chargesRatio * 100).toFixed(1)}%` });
-    }
+  // Alerts (source unique partagée avec le centre de notifications)
+  const alerts = useMemo(
+    () => buildAlerts(allPaies, totaux, conges, contrats),
+    [allPaies, totaux, conges, contrats]
+  );
 
-    // Échéances contractuelles (calculées dynamiquement)
-    const today = new Date();
-    const in60 = new Date(today.getTime() + 60 * 86400000);
-    const nameOf = (mat: string) => {
-      const e = allPaies.find((x) => x.matricule === mat);
-      return e ? `${e.prenom} ${e.nom}` : mat;
-    };
-
-    const cddSoon = contrats.filter(
-      (c) => c.type === "CDD" && c.dateFin && new Date(c.dateFin) >= today && new Date(c.dateFin) <= in60
-    );
-    if (cddSoon.length > 0) {
-      list.push({
-        type: "warning",
-        message: `📝 ${cddSoon.length} CDD arrive${cddSoon.length > 1 ? "nt" : ""} à échéance sous 60 jours : ${cddSoon.map((c) => `${nameOf(c.matricule)} (${c.dateFin})`).join(", ")}`,
-      });
-    }
-
-    const essais = contrats
-      .map((c) => {
-        const mois = c.periodeEssaiMois || 0;
-        if (!c.dateDebut || mois <= 0) return null;
-        const fin = new Date(c.dateDebut);
-        fin.setMonth(fin.getMonth() + mois);
-        return fin >= today && fin <= in60 ? { c, fin } : null;
-      })
-      .filter(Boolean) as { c: Contrat; fin: Date }[];
-    if (essais.length > 0) {
-      list.push({
-        type: "info",
-        message: `⏳ ${essais.length} période${essais.length > 1 ? "s" : ""} d'essai se termine${essais.length > 1 ? "nt" : ""} sous 60 jours : ${essais.map((x) => `${nameOf(x.c.matricule)} (${x.fin.toISOString().slice(0, 10)})`).join(", ")}`,
-      });
-    }
-
-    const congesAValider = conges.filter((c) => c.statut === "demande");
-    if (congesAValider.length > 0) {
-      list.push({
-        type: "warning",
-        message: `🌴 ${congesAValider.length} demande${congesAValider.length > 1 ? "s" : ""} de congé en attente de validation`,
-      });
-    }
-    return list;
-  }, [allPaies, totaux, conges, contrats]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -145,11 +93,11 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
   const statutColors = ["hsl(160, 84%, 39%)", "hsl(217, 92%, 68%)", "hsl(45, 97%, 56%)", "hsl(255, 92%, 76%)", "hsl(0, 91%, 71%)"];
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-1">
         <h1 className="text-foreground text-xl font-extrabold">Tableau de Bord</h1>
         {onSaveSnapshot && (
-          <button onClick={onSaveSnapshot} className="px-4 py-2 bg-senpaie-blue text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap">
+          <button onClick={onSaveSnapshot} className="px-4 py-2 bg-senpaie-blue text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap transition-transform duration-200 hover:scale-105">
             💾 Clôturer le mois
           </button>
         )}
@@ -163,11 +111,13 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
         )}
       </div>
 
+      {headerSlot}
+
       {/* Alerts */}
       {alerts.length > 0 && (
         <div className="space-y-2 mb-4">
           {alerts.map((a, i) => (
-            <div key={i} className={`rounded-lg px-4 py-2.5 text-[12px] font-medium border ${
+            <div key={a.id} style={{ animationDelay: `${i * 60}ms` }} className={`animate-fade-in rounded-lg px-4 py-2.5 text-[12px] font-medium border ${
               a.type === "danger" ? "bg-destructive/10 border-destructive text-destructive"
                 : a.type === "warning" ? "bg-senpaie-yellow/10 border-senpaie-yellow text-senpaie-yellow"
                 : "bg-senpaie-blue/10 border-senpaie-blue text-senpaie-blue"
@@ -175,6 +125,7 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
           ))}
         </div>
       )}
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <StatCard icon="💼" label="Masse Salariale" value={`${fmt(totaux.mass)} F`} sub="Charges incluses" color="primary" />
