@@ -168,9 +168,12 @@ const Index = () => {
 
   const sidebarContent = (
     <>
-      <div className="px-5 pt-5 pb-4 border-b border-border">
-        <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
-        <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+      <div className="px-5 pt-5 pb-4 border-b border-border flex items-start justify-between gap-2">
+        <div>
+          <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
+          <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+        </div>
+        {!isMobile && <NotificationCenter alerts={alerts} />}
       </div>
       <nav className="flex-1 py-2.5 overflow-y-auto">
         {navItems.map((n) => (
