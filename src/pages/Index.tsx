@@ -53,6 +53,7 @@ const Index = () => {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const bulletinTemplateId = entreprise.bulletinTemplate || "classique";
 
   // Role-based nav gating
