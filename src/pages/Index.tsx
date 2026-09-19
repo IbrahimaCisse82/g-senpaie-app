@@ -25,8 +25,12 @@ const SortiesPage = lazy(() => import("@/components/senpaie/SortiesPage").then((
 const ContratsPage = lazy(() => import("@/components/senpaie/ContratsPage").then((m) => ({ default: m.ContratsPage })));
 const EquipePage = lazy(() => import("@/components/senpaie/EquipePage").then((m) => ({ default: m.EquipePage })));
 import { Modal } from "@/components/senpaie/Modal";
+import { OnboardingChecklist } from "@/components/senpaie/OnboardingChecklist";
+import { NotificationCenter } from "@/components/senpaie/NotificationCenter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
+import { buildAlerts } from "@/lib/alerts";
+import { DEMO_EMPLOYEES, isDemoEmployee } from "@/lib/demoData";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
