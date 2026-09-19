@@ -95,6 +95,34 @@ const Index = () => {
     mass: allPaies.reduce((s, e) => s + e.paie.masse, 0),
   };
 
+  const alerts = buildAlerts(allPaies, totaux, conges, contrats);
+  const hasDemo = employees.some((e) => isDemoEmployee(e.matricule));
+
+  const handleLoadDemo = async () => {
+    setDemoBusy(true);
+    try {
+      for (const emp of DEMO_EMPLOYEES) {
+        if (employees.some((e) => e.matricule === emp.matricule)) continue;
+        await saveEmployee(emp, true);
+      }
+      showToast("🧪 Données de démo chargées");
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
+  const handleRemoveDemo = async () => {
+    setDemoBusy(true);
+    try {
+      for (const e of employees.filter((x) => isDemoEmployee(x.matricule))) {
+        await deleteEmployee(e.matricule);
+      }
+      showToast("🗑 Données de démo supprimées");
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
   const handleSaveEmp = async (emp: Employee) => {
     const parsed = employeeSchema.safeParse(emp);
     if (!parsed.success) {
