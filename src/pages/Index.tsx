@@ -178,12 +178,12 @@ const Index = () => {
       <nav className="flex-1 py-2.5 overflow-y-auto">
         {navItems.map((n) => (
           <button key={n.id} onClick={() => handleTabChange(n.id)}
-            className={`w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all ${
+            className={`group w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all duration-200 ${
               activeTab === n.id
                 ? "bg-primary/10 text-primary border-l-[3px] border-l-primary"
-                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary"
+                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary hover:text-foreground hover:translate-x-0.5"
             }`}>
-            <span className="flex items-center gap-2.5"><span>{n.icon}</span>{n.label}</span>
+            <span className="flex items-center gap-2.5"><span className="inline-block transition-transform duration-200 group-hover:scale-110">{n.icon}</span>{n.label}</span>
             {n.id === "employes" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{employees.length}</span>}
             {n.id === "conventions" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{conventions.length}</span>}
           </button>
