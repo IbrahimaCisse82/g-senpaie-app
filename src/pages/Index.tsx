@@ -217,7 +217,7 @@ const Index = () => {
             ☰
           </button>
           <div className="text-primary text-[15px] font-black tracking-[2px]">G-SENPAIE</div>
-          <div className="w-8" />
+          <NotificationCenter alerts={alerts} />
         </header>
       )}
 
