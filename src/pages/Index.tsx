@@ -245,6 +245,7 @@ const Index = () => {
           </div>
         ) : (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-primary animate-pulse">Chargement du module…</div></div>}>
+            <div key={activeTab} className="animate-fade-in">
             {activeTab === "dashboard" && (
               <Dashboard
                 allPaies={allPaies}
@@ -254,6 +255,19 @@ const Index = () => {
                 contrats={contrats}
                 onSaveSnapshot={handleSaveSnapshot}
                 onReopenMonth={handleReopenMonth}
+                headerSlot={
+                  <OnboardingChecklist
+                    entreprise={entreprise}
+                    employeesCount={employees.length}
+                    conventionsCount={conventions.length}
+                    historyCount={history.length}
+                    hasDemo={hasDemo}
+                    demoBusy={demoBusy}
+                    onGoTo={handleTabChange}
+                    onLoadDemo={handleLoadDemo}
+                    onRemoveDemo={handleRemoveDemo}
+                  />
+                }
               />
             )}
             {activeTab === "employes" && (
