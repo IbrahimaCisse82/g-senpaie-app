@@ -25,8 +25,12 @@ const SortiesPage = lazy(() => import("@/components/senpaie/SortiesPage").then((
 const ContratsPage = lazy(() => import("@/components/senpaie/ContratsPage").then((m) => ({ default: m.ContratsPage })));
 const EquipePage = lazy(() => import("@/components/senpaie/EquipePage").then((m) => ({ default: m.EquipePage })));
 import { Modal } from "@/components/senpaie/Modal";
+import { OnboardingChecklist } from "@/components/senpaie/OnboardingChecklist";
+import { NotificationCenter } from "@/components/senpaie/NotificationCenter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
+import { buildAlerts } from "@/lib/alerts";
+import { DEMO_EMPLOYEES, isDemoEmployee } from "@/lib/demoData";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -49,6 +53,7 @@ const Index = () => {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const bulletinTemplateId = entreprise.bulletinTemplate || "classique";
 
   // Role-based nav gating
@@ -88,6 +93,34 @@ const Index = () => {
     net: allPaies.reduce((s, e) => s + e.paie.net, 0),
     ch: allPaies.reduce((s, e) => s + e.paie.chargesPat, 0),
     mass: allPaies.reduce((s, e) => s + e.paie.masse, 0),
+  };
+
+  const alerts = buildAlerts(allPaies, totaux, conges, contrats);
+  const hasDemo = employees.some((e) => isDemoEmployee(e.matricule));
+
+  const handleLoadDemo = async () => {
+    setDemoBusy(true);
+    try {
+      for (const emp of DEMO_EMPLOYEES) {
+        if (employees.some((e) => e.matricule === emp.matricule)) continue;
+        await saveEmployee(emp, true);
+      }
+      showToast("🧪 Données de démo chargées");
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
+  const handleRemoveDemo = async () => {
+    setDemoBusy(true);
+    try {
+      for (const e of employees.filter((x) => isDemoEmployee(x.matricule))) {
+        await deleteEmployee(e.matricule);
+      }
+      showToast("🗑 Données de démo supprimées");
+    } finally {
+      setDemoBusy(false);
+    }
   };
 
   const handleSaveEmp = async (emp: Employee) => {
@@ -135,19 +168,22 @@ const Index = () => {
 
   const sidebarContent = (
     <>
-      <div className="px-5 pt-5 pb-4 border-b border-border">
-        <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
-        <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+      <div className="px-5 pt-5 pb-4 border-b border-border flex items-start justify-between gap-2">
+        <div>
+          <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
+          <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+        </div>
+        {!isMobile && <NotificationCenter alerts={alerts} />}
       </div>
       <nav className="flex-1 py-2.5 overflow-y-auto">
         {navItems.map((n) => (
           <button key={n.id} onClick={() => handleTabChange(n.id)}
-            className={`w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all ${
+            className={`group w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all duration-200 ${
               activeTab === n.id
                 ? "bg-primary/10 text-primary border-l-[3px] border-l-primary"
-                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary"
+                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary hover:text-foreground hover:translate-x-0.5"
             }`}>
-            <span className="flex items-center gap-2.5"><span>{n.icon}</span>{n.label}</span>
+            <span className="flex items-center gap-2.5"><span className="inline-block transition-transform duration-200 group-hover:scale-110">{n.icon}</span>{n.label}</span>
             {n.id === "employes" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{employees.length}</span>}
             {n.id === "conventions" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{conventions.length}</span>}
           </button>
@@ -181,7 +217,7 @@ const Index = () => {
             ☰
           </button>
           <div className="text-primary text-[15px] font-black tracking-[2px]">G-SENPAIE</div>
-          <div className="w-8" />
+          <NotificationCenter alerts={alerts} />
         </header>
       )}
 
@@ -209,6 +245,7 @@ const Index = () => {
           </div>
         ) : (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-primary animate-pulse">Chargement du module…</div></div>}>
+            <div key={activeTab} className="animate-fade-in">
             {activeTab === "dashboard" && (
               <Dashboard
                 allPaies={allPaies}
@@ -218,6 +255,19 @@ const Index = () => {
                 contrats={contrats}
                 onSaveSnapshot={handleSaveSnapshot}
                 onReopenMonth={handleReopenMonth}
+                headerSlot={
+                  <OnboardingChecklist
+                    entreprise={entreprise}
+                    employeesCount={employees.length}
+                    conventionsCount={conventions.length}
+                    historyCount={history.length}
+                    hasDemo={hasDemo}
+                    demoBusy={demoBusy}
+                    onGoTo={handleTabChange}
+                    onLoadDemo={handleLoadDemo}
+                    onRemoveDemo={handleRemoveDemo}
+                  />
+                }
               />
             )}
             {activeTab === "employes" && (
@@ -270,6 +320,7 @@ const Index = () => {
               />
             )}
             {activeTab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
+            </div>
           </Suspense>
         )}
       </main>
