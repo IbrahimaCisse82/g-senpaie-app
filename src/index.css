@@ -115,6 +115,28 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer utilities {
+  .page-enter {
+    animation: page-enter 260ms ease-out both;
+  }
+
+  .page-section {
+    animation: page-enter 320ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .page-section {
+    animation: none;
+  }
+}
+
 /* Print styles for bulletin */
 @media print {
   body {

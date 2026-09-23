@@ -81,10 +81,10 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
   }, [periodes, cmpA, cmpB]);
 
   return (
-    <div>
-      <h1 className="text-foreground text-xl font-extrabold mb-4">Analyse des Tendances</h1>
+    <div className="page-enter">
+      <h1 className="page-section text-foreground text-xl font-extrabold mb-4">Analyse des Tendances</h1>
 
-      <div className="bg-card rounded-lg p-4 md:p-5 mb-4">
+      <div className="page-section bg-card rounded-lg p-4 md:p-5 mb-4 [animation-delay:55ms]">
         <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">
           {history.length >= 2 ? "Évolution réelle — Historique clôturé" : "Évolution masse salariale & net · Simulé"}
         </div>
@@ -101,7 +101,7 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-4">
+      <div className="page-section grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-4 [animation-delay:110ms]">
         {stats.map((c) => (
           <div key={c.label} className={`bg-card rounded-lg p-5 border-t-[3px] ${colorClass[c.color]}`}>
             <div className="text-muted-foreground text-[11px]">{c.label}</div>
@@ -112,7 +112,7 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
 
       {/* Mode comparaison */}
       {periodes.length >= 2 && comparaison && (
-        <div className="bg-card rounded-lg p-4 md:p-5 mb-4">
+        <div className="page-section bg-card rounded-lg p-4 md:p-5 mb-4 [animation-delay:165ms]">
           <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Mode comparaison — deux périodes clôturées</div>
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <select
@@ -164,7 +164,7 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
 
       {/* Monthly history table */}
       {historyTable.length > 0 && (
-        <div className="bg-card rounded-lg p-4 md:p-5">
+        <div className="page-section bg-card rounded-lg p-4 md:p-5 [animation-delay:220ms]">
           <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Historique des clôtures mensuelles</div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs">

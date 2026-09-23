@@ -118,8 +118,8 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
   const headers = ["Employé", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Net"];
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+    <div className="page-enter">
+      <div className="page-section flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <h1 className="text-foreground text-xl font-extrabold">État des Cotisations</h1>
         <div className="flex gap-2 flex-wrap">
           {onOpenRapport && (
@@ -152,7 +152,7 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="page-section grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 [animation-delay:70ms]">
         <div className="bg-card border border-border rounded-lg p-3">
           <div className="text-muted-foreground text-[10px] uppercase">Total IR</div>
           <div className="text-destructive font-extrabold text-sm mt-1">{fmt(allPaies.reduce((s, e) => s + e.paie.ir, 0))} F</div>
@@ -171,7 +171,7 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="page-section overflow-x-auto rounded-lg border border-border [animation-delay:140ms]">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-background">

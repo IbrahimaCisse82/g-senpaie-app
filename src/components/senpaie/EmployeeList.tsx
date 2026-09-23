@@ -85,8 +85,8 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+    <div className="page-enter">
+      <div className="page-section flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
           <h1 className="text-foreground text-xl font-extrabold mb-1">Gestion des Employés</h1>
           <div className="text-muted-foreground text-[11px]">{displayed.length} employé{displayed.length > 1 ? "s" : ""} affiché{displayed.length > 1 ? "s" : ""} sur {employees.length}</div>
@@ -135,7 +135,7 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
       )}
 
       {/* Search + Filter bar */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+      <div className="page-section flex flex-col sm:flex-row gap-2 mb-4 [animation-delay:70ms]">
         <input
           placeholder="🔍  Rechercher par nom, matricule, fonction…"
           value={search}

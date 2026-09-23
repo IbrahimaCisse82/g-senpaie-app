@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Entreprise } from "@/lib/payroll";
 import type { TabId } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
 
 interface OnboardingChecklistProps {
   entreprise: Entreprise;
@@ -101,7 +103,8 @@ export function OnboardingChecklist({
         {steps.map((s, i) => (
           <div
             key={s.id + i}
-            className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-border transition-all duration-200 hover:border-primary/50 hover:bg-secondary/40"
+            className="page-section flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-border transition-all duration-200 hover:border-primary/50 hover:bg-secondary/40"
+            style={{ animationDelay: `${i * 55}ms` }}
           >
             <div className="flex items-center gap-3 min-w-0">
               <span
@@ -118,14 +121,17 @@ export function OnboardingChecklist({
                 <div className="text-muted-foreground text-[10px] truncate">{s.hint}</div>
               </div>
             </div>
-            {!s.done && (
-              <button
-                onClick={() => onGoTo(s.id)}
-                className="shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
-              >
-                {s.cta}
-              </button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onGoTo(s.id)}
+              aria-label={`${s.done ? "Revoir" : s.cta} : ${s.label}`}
+              className="group/action h-8 shrink-0 px-2.5 text-[11px] font-bold text-primary hover:bg-primary/15 hover:text-primary"
+            >
+              {s.done ? "Revoir" : s.cta}
+              <ChevronRight className="transition-transform duration-200 group-hover/action:translate-x-0.5" aria-hidden="true" />
+            </Button>
           </div>
         ))}
       </div>
