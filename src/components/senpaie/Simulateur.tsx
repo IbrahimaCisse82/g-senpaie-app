@@ -119,8 +119,8 @@ export function Simulateur({ params }: SimulateurProps) {
   );
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+    <div className="page-enter">
+      <div className="page-section flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
         <div>
           <h1 className="text-foreground text-xl font-extrabold mb-1">Simulateur de Paie</h1>
           <div className="text-muted-foreground text-[11px]">Basé sur les paramètres actifs · Utilisez le curseur pour ajuster le salaire</div>
@@ -135,7 +135,7 @@ export function Simulateur({ params }: SimulateurProps) {
         </button>
       </div>
 
-      <div className={`flex flex-col ${compareMode ? "lg:flex-row" : ""} gap-4`}>
+      <div className={`page-section flex flex-col ${compareMode ? "lg:flex-row" : ""} gap-4 [animation-delay:70ms]`}>
         <SimPanel s={sim} setS={setSim} res={simRes} label={compareMode ? "📊 Scénario A" : "Paramètres de simulation"} />
         {compareMode && (
           <>
@@ -147,7 +147,7 @@ export function Simulateur({ params }: SimulateurProps) {
 
       {/* Comparison summary */}
       {compareMode && (
-        <div className="mt-4 bg-card rounded-lg p-4 md:p-5 border border-border">
+        <div className="page-section mt-4 bg-card rounded-lg p-4 md:p-5 border border-border [animation-delay:140ms]">
           <div className="text-muted-foreground text-[11px] uppercase mb-3">Comparaison</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {([
