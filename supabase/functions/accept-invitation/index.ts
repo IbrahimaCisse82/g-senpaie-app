@@ -37,6 +37,12 @@ Deno.serve(async (req) => {
     });
     if (memErr && !/duplicate/i.test(memErr.message)) return json({ error: memErr.message }, 500);
 
+    if (inv.role === 'employe') {
+      const { data: emp } = await admin.from('employees').update({ auth_user_id: user.id })
+        .eq('entreprise_id', inv.entreprise_id).ilike('email', user.email).select('id');
+      if (!emp || emp.length === 0) return json({ error: 'no_employee', expected: inv.email }, 404);
+    }
+
     await admin.from('entreprise_invitations').update({ accepted_at: new Date().toISOString() }).eq('id', inv.id);
 
     return json({ ok: true, entrepriseId: inv.entreprise_id, role: inv.role });

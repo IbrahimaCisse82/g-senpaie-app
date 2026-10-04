@@ -89,6 +89,7 @@ export function EquipePage({ userId, userEmail, entrepriseId, role }: Props) {
               <option value="drh">DRH</option>
               <option value="comptable">Comptable</option>
               <option value="manager">Manager</option>
+              <option value="employe">Salarié (espace personnel)</option>
             </select>
             <button onClick={invite} className="px-4 py-2 bg-primary text-primary-foreground rounded text-[12px] font-bold">Créer l'invitation</button>
           </div>

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppRole = "admin" | "drh" | "comptable" | "manager";
+export type AppRole = "admin" | "drh" | "comptable" | "manager" | "employe";
 
 interface Ctx {
   entrepriseId: string | null;
@@ -94,6 +94,7 @@ export const ROLE_LABEL: Record<AppRole, string> = {
   drh: "DRH",
   comptable: "Comptable",
   manager: "Manager",
+  employe: "Salarié",
 };
 
 export function canWrite(role: AppRole | null) {
