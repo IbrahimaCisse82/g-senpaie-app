@@ -677,6 +677,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_matricule: { Args: { _entreprise_id: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "drh" | "comptable" | "manager" | "employe"
