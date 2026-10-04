@@ -18,13 +18,14 @@ Deno.serve(async (req) => {
     const key = Deno.env.get("LOVABLE_API_KEY");
     if (!key) throw new Error("LOVABLE_API_KEY manquant");
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "openai/gpt-6-astra",
         stream: true,
-        messages: [{ role: "system", content: SYSTEM }, ...messages],
+        instructions: SYSTEM,
+        input: messages,
       }),
     });
     if (!r.ok) {

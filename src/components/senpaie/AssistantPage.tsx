@@ -59,7 +59,8 @@ export function AssistantPage() {
           const d = line.slice(5).trim();
           if (d === "[DONE]") continue;
           try {
-            const delta = (JSON.parse(d) as { choices?: { delta?: { content?: string } }[] }).choices?.[0]?.delta?.content;
+            const ev = JSON.parse(d) as { type?: string; delta?: string };
+            const delta = ev.type === "response.output_text.delta" ? ev.delta : undefined;
             if (delta) {
               acc += delta;
               setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: acc }]);
