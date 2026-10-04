@@ -24,6 +24,7 @@ const CongesPage = lazy(() => import("@/components/senpaie/CongesPage").then((m)
 const SortiesPage = lazy(() => import("@/components/senpaie/SortiesPage").then((m) => ({ default: m.SortiesPage })));
 const ContratsPage = lazy(() => import("@/components/senpaie/ContratsPage").then((m) => ({ default: m.ContratsPage })));
 const EquipePage = lazy(() => import("@/components/senpaie/EquipePage").then((m) => ({ default: m.EquipePage })));
+const AssistantPage = lazy(() => import("@/components/senpaie/AssistantPage").then((m) => ({ default: m.AssistantPage })));
 import { Modal } from "@/components/senpaie/Modal";
 import { OnboardingChecklist } from "@/components/senpaie/OnboardingChecklist";
 import { NotificationCenter } from "@/components/senpaie/NotificationCenter";
@@ -61,8 +62,8 @@ const Index = () => {
   const ALLOWED_TABS: Record<AppRole, TabId[]> = {
     admin: NAV_ITEMS.map((n) => n.id),
     drh: NAV_ITEMS.filter((n) => n.id !== "equipe").map((n) => n.id),
-    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances"],
-    manager: ["dashboard", "employes", "conges"],
+    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "assistant"],
+    manager: ["dashboard", "employes", "conges", "assistant"],
   };
   const allowedTabs = role ? ALLOWED_TABS[role] : NAV_ITEMS.map((n) => n.id);
   const navItems = NAV_ITEMS.filter((n) => allowedTabs.includes(n.id));
@@ -280,6 +281,7 @@ const Index = () => {
             {activeTab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
             {activeTab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {activeTab === "simulateur" && <Simulateur params={params} />}
+            {activeTab === "assistant" && <AssistantPage />}
             {activeTab === "conges" && (
               <CongesPage
                 userId={user.id}

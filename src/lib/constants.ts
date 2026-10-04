@@ -404,7 +404,7 @@ export const STATUT_COLORS: Record<string, string> = {
   "prestataires": "primary",
 };
 
-export type TabId = "dashboard" | "employes" | "cotisations" | "tendances" | "simulateur" | "conges" | "contrats" | "declarations" | "sorties" | "equipe" | "conventions" | "entreprise" | "parametres";
+export type TabId = "dashboard" | "employes" | "cotisations" | "tendances" | "simulateur" | "conges" | "contrats" | "declarations" | "sorties" | "equipe" | "conventions" | "entreprise" | "parametres" | "assistant";
 
 export const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "dashboard",    icon: "◈",  label: "Tableau de bord" },
@@ -416,6 +416,7 @@ export const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "sorties",      icon: "🚪", label: "Sorties & STC" },
   { id: "tendances",    icon: "∿",  label: "Tendances" },
   { id: "simulateur",   icon: "⊕",  label: "Simulateur" },
+  { id: "assistant",    icon: "✦",  label: "Assistant IA" },
   { id: "conventions",  icon: "📋", label: "Conventions" },
   { id: "equipe",       icon: "👥", label: "Équipe" },
   { id: "entreprise",   icon: "🏢", label: "Entreprise" },
