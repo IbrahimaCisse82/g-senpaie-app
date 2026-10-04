@@ -253,6 +253,7 @@ export type Database = {
       employees: {
         Row: {
           adresse: string | null
+          auth_user_id: string | null
           avance_caisse: number
           avance_financiere: number
           avance_tabaski: number
@@ -297,6 +298,7 @@ export type Database = {
         }
         Insert: {
           adresse?: string | null
+          auth_user_id?: string | null
           avance_caisse?: number
           avance_financiere?: number
           avance_tabaski?: number
@@ -341,6 +343,7 @@ export type Database = {
         }
         Update: {
           adresse?: string | null
+          auth_user_id?: string | null
           avance_caisse?: number
           avance_financiere?: number
           avance_tabaski?: number
@@ -674,9 +677,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_matricule: { Args: { _entreprise_id: string }; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "drh" | "comptable" | "manager"
+      app_role: "admin" | "drh" | "comptable" | "manager" | "employe"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -804,7 +808,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "drh", "comptable", "manager"],
+      app_role: ["admin", "drh", "comptable", "manager", "employe"],
     },
   },
 } as const

@@ -32,6 +32,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
 import { buildAlerts } from "@/lib/alerts";
 import { DEMO_EMPLOYEES, isDemoEmployee } from "@/lib/demoData";
+import { EmployeePortal } from "@/components/senpaie/EmployeePortal";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -64,6 +65,7 @@ const Index = () => {
     drh: NAV_ITEMS.filter((n) => n.id !== "equipe").map((n) => n.id),
     comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "assistant"],
     manager: ["dashboard", "employes", "conges", "assistant"],
+    employe: [],
   };
   const allowedTabs = role ? ALLOWED_TABS[role] : NAV_ITEMS.map((n) => n.id);
   const navItems = NAV_ITEMS.filter((n) => allowedTabs.includes(n.id));
@@ -86,6 +88,9 @@ const Index = () => {
   );
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (role === "employe" && entrepriseId) return (
+    <EmployeePortal userId={user.id} entrepriseId={entrepriseId} employee={employees[0]} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onSignOut={signOut} />
+  );
 
   const allPaies = employees.map((e) => ({ ...e, paie: calculerPaie(e, params) }));
   const filtered = allPaies.filter((e) => `${e.prenom} ${e.nom} ${e.matricule} ${e.fonction}`.toLowerCase().includes(search.toLowerCase()));

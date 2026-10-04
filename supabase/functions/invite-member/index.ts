@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { entrepriseId, email, role } = body ?? {};
     if (!entrepriseId || !email || !role) return json({ error: 'Missing fields' }, 400);
-    if (!['admin', 'drh', 'comptable', 'manager'].includes(role)) return json({ error: 'Invalid role' }, 400);
+    if (!['admin', 'drh', 'comptable', 'manager', 'employe'].includes(role)) return json({ error: 'Invalid role' }, 400);
     const emailNorm = String(email).toLowerCase().trim();
 
     const admin = createClient(url, serviceKey);
