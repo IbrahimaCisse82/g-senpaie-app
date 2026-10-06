@@ -64,7 +64,7 @@ const Index = () => {
   const ALLOWED_TABS: Record<AppRole, TabId[]> = {
     admin: NAV_ITEMS.map((n) => n.id),
     drh: NAV_ITEMS.filter((n) => n.id !== "equipe").map((n) => n.id),
-    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "assistant"],
+    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "avances", "assistant"],
     manager: ["dashboard", "employes", "conges", "assistant"],
     employe: [],
   };
@@ -301,6 +301,7 @@ const Index = () => {
             {activeTab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
             {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
             {activeTab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
+            {activeTab === "avances" && <AvancesPage entrepriseId={entrepriseId} employees={employees} />}
             {activeTab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}
             {activeTab === "conventions" && (
               <ConventionsPage
