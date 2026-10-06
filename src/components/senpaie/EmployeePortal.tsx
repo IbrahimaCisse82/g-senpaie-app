@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConges, useContrats } from "@/hooks/useRH";
 import { calculerPaie, fmt, MOIS, type Employee, type PayrollParams } from "@/lib/payroll";
-import type { Entreprise } from "@/hooks/useSupabaseData";
+import type { Entreprise } from "@/lib/payroll";
 
 const BulletinModal = lazy(() => import("@/components/senpaie/BulletinModal").then((m) => ({ default: m.BulletinModal })));
 

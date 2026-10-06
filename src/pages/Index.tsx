@@ -25,6 +25,7 @@ const SortiesPage = lazy(() => import("@/components/senpaie/SortiesPage").then((
 const ContratsPage = lazy(() => import("@/components/senpaie/ContratsPage").then((m) => ({ default: m.ContratsPage })));
 const EquipePage = lazy(() => import("@/components/senpaie/EquipePage").then((m) => ({ default: m.EquipePage })));
 const AssistantPage = lazy(() => import("@/components/senpaie/AssistantPage").then((m) => ({ default: m.AssistantPage })));
+const AvancesPage = lazy(() => import("@/components/senpaie/AvancesPage").then((m) => ({ default: m.AvancesPage })));
 import { Modal } from "@/components/senpaie/Modal";
 import { OnboardingChecklist } from "@/components/senpaie/OnboardingChecklist";
 import { NotificationCenter } from "@/components/senpaie/NotificationCenter";
@@ -63,7 +64,7 @@ const Index = () => {
   const ALLOWED_TABS: Record<AppRole, TabId[]> = {
     admin: NAV_ITEMS.map((n) => n.id),
     drh: NAV_ITEMS.filter((n) => n.id !== "equipe").map((n) => n.id),
-    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "assistant"],
+    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "avances", "assistant"],
     manager: ["dashboard", "employes", "conges", "assistant"],
     employe: [],
   };
@@ -300,6 +301,7 @@ const Index = () => {
             {activeTab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
             {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
             {activeTab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
+            {activeTab === "avances" && <AvancesPage entrepriseId={entrepriseId} employees={employees} />}
             {activeTab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}
             {activeTab === "conventions" && (
               <ConventionsPage
