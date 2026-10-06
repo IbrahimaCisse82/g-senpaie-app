@@ -25,6 +25,7 @@ const SortiesPage = lazy(() => import("@/components/senpaie/SortiesPage").then((
 const ContratsPage = lazy(() => import("@/components/senpaie/ContratsPage").then((m) => ({ default: m.ContratsPage })));
 const EquipePage = lazy(() => import("@/components/senpaie/EquipePage").then((m) => ({ default: m.EquipePage })));
 const AssistantPage = lazy(() => import("@/components/senpaie/AssistantPage").then((m) => ({ default: m.AssistantPage })));
+const AvancesPage = lazy(() => import("@/components/senpaie/AvancesPage").then((m) => ({ default: m.AvancesPage })));
 import { Modal } from "@/components/senpaie/Modal";
 import { OnboardingChecklist } from "@/components/senpaie/OnboardingChecklist";
 import { NotificationCenter } from "@/components/senpaie/NotificationCenter";
