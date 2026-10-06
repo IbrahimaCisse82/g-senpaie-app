@@ -49,6 +49,63 @@ export type Database = {
           },
         ]
       }
+      avances_pret: {
+        Row: {
+          created_at: string
+          date_octroi: string
+          employee_id: string
+          entreprise_id: string
+          id: string
+          montant: number
+          motif: string | null
+          nb_mensualites: number
+          statut: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_octroi?: string
+          employee_id: string
+          entreprise_id: string
+          id?: string
+          montant: number
+          motif?: string | null
+          nb_mensualites?: number
+          statut?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_octroi?: string
+          employee_id?: string
+          entreprise_id?: string
+          id?: string
+          montant?: number
+          motif?: string | null
+          nb_mensualites?: number
+          statut?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avances_pret_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avances_pret_entreprise_id_fkey"
+            columns: ["entreprise_id"]
+            isOneToOne: false
+            referencedRelation: "entreprises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conges: {
         Row: {
           created_at: string
@@ -243,6 +300,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "conventions_entreprise_id_fkey"
+            columns: ["entreprise_id"]
+            isOneToOne: false
+            referencedRelation: "entreprises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      echeances_avance: {
+        Row: {
+          annee: number
+          avance_id: string
+          created_at: string
+          entreprise_id: string
+          id: string
+          mois: number
+          montant: number
+          statut: string
+        }
+        Insert: {
+          annee: number
+          avance_id: string
+          created_at?: string
+          entreprise_id: string
+          id?: string
+          mois: number
+          montant: number
+          statut?: string
+        }
+        Update: {
+          annee?: number
+          avance_id?: string
+          created_at?: string
+          entreprise_id?: string
+          id?: string
+          mois?: number
+          montant?: number
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "echeances_avance_avance_id_fkey"
+            columns: ["avance_id"]
+            isOneToOne: false
+            referencedRelation: "avances_pret"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "echeances_avance_entreprise_id_fkey"
             columns: ["entreprise_id"]
             isOneToOne: false
             referencedRelation: "entreprises"
