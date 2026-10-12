@@ -25,7 +25,7 @@ export function AvancesPage({ entrepriseId, employees }: { entrepriseId: string 
   const [motif, setMotif] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const empById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
+  const empById = useMemo(() => new Map(employees.filter((e) => e.dbId).map((e) => [e.dbId as string, e])), [employees]);
   const now = new Date();
   const echeancesDuMois = useMemo(
     () => avances.flatMap((a) => a.echeances.filter((e) => e.statut === "en_attente" && e.mois === now.getMonth() + 1 && e.annee === now.getFullYear()).map((e) => ({ echeance: e, avance: a }))),
@@ -124,7 +124,7 @@ export function AvancesPage({ entrepriseId, employees }: { entrepriseId: string 
               <Label>Salarié</Label>
               <Select value={employeeId} onValueChange={setEmployeeId}>
                 <SelectTrigger><SelectValue placeholder="Choisir un salarié" /></SelectTrigger>
-                <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.prenom} {e.nom}</SelectItem>)}</SelectContent>
+                <SelectContent>{employees.filter((e) => e.dbId).map((e) => <SelectItem key={e.dbId} value={e.dbId as string}>{e.prenom} {e.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">

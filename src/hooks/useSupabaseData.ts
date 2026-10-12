@@ -17,6 +17,7 @@ function handleError(context: string, error: unknown) {
 // ── Helpers: convert between DB snake_case and app camelCase ──
 function dbToEmployee(row: Record<string, unknown> & { [k: string]: unknown }): Employee {
   return {
+    dbId: row.id as string,
     matricule: row.matricule as string,
     prenom: row.prenom as string,
     nom: row.nom as string,
