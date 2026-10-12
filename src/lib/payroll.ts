@@ -4,7 +4,7 @@
 
 export interface Employee {
   id?: number;
-  matricule: string;
+  dbId?: string; // identifiant UUID en base (table employees)
   prenom: string;
   nom: string;
   sexe: "M" | "F";
