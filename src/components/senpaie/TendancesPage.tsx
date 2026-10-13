@@ -80,9 +80,78 @@ export function TendancesPage({ allPaies, totaux, history = [] }: TendancesProps
     return { a, b, lignes };
   }, [periodes, cmpA, cmpB]);
 
+  // ── Pilotage avancé : N vs N-1, projection annuelle, coût complet ──
+  const pilotage = useMemo(() => {
+    const anneeCourante = history[0]?.annee ?? new Date().getFullYear();
+    const cumul = (an: number) => history.filter((h) => h.annee === an);
+    const n = cumul(anneeCourante);
+    const n1 = cumul(anneeCourante - 1);
+    const moisN = new Set(n.map((h) => h.mois));
+    const n1Comparable = n1.filter((h) => moisN.has(h.mois));
+    const somme = (arr: PayrollSnapshot[]) => arr.reduce((s, h) => s + h.totaux.mass, 0);
+    const massN = somme(n);
+    const massN1 = somme(n1Comparable);
+    const moyenne = n.length > 0 ? massN / n.length : totaux.mass;
+    const projection = massN + moyenne * (12 - n.length);
+    return { anneeCourante, massN, massN1, variation: massN1 === 0 ? null : (massN - massN1) / massN1, projection, nbMois: n.length };
+  }, [history, totaux.mass]);
+
+  const coutComplet = useMemo(
+    () => [...allPaies]
+      .map((e) => ({ nom: `${e.prenom} ${e.nom}`, brut: e.paie.brut, ch: e.paie.chargesPat, cout: e.paie.masse + e.paie.transport, net: e.paie.net }))
+      .sort((a, b) => b.cout - a.cout),
+    [allPaies],
+  );
+
   return (
     <div className="page-enter">
       <h1 className="page-section text-foreground text-xl font-extrabold mb-4">Analyse des Tendances</h1>
+
+      <div className="page-section grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-4">
+        <div className="bg-card rounded-lg p-5 border-t-[3px] border-t-primary">
+          <div className="text-muted-foreground text-[11px]">Masse cumulée {pilotage.anneeCourante} ({pilotage.nbMois} mois clôturés)</div>
+          <div className="text-2xl font-extrabold mt-2 text-primary">{fmt(pilotage.massN)} F</div>
+        </div>
+        <div className="bg-card rounded-lg p-5 border-t-[3px] border-t-senpaie-blue">
+          <div className="text-muted-foreground text-[11px]">N vs N-1 (mêmes mois)</div>
+          <div className="text-2xl font-extrabold mt-2 text-senpaie-blue">
+            {pilotage.variation === null ? "—" : `${pilotage.variation > 0 ? "+" : ""}${pct(pilotage.variation)}`}
+          </div>
+          <div className="text-muted-foreground text-[10px] mt-1">N-1 : {fmt(pilotage.massN1)} F</div>
+        </div>
+        <div className="bg-card rounded-lg p-5 border-t-[3px] border-t-senpaie-purple">
+          <div className="text-muted-foreground text-[11px]">Projection masse salariale {pilotage.anneeCourante}</div>
+          <div className="text-2xl font-extrabold mt-2 text-senpaie-purple">{fmt(pilotage.projection)} F</div>
+        </div>
+      </div>
+
+      {coutComplet.length > 0 && (
+        <div className="page-section bg-card rounded-lg p-4 md:p-5 mb-4">
+          <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">Coût complet employeur par salarié (mois en cours)</div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="bg-background">
+                  {["Salarié", "Brut", "Charges pat.", "Net", "Coût complet"].map((h, i) => (
+                    <th key={h} className={`py-2.5 px-3 text-muted-foreground font-semibold border-b border-border whitespace-nowrap ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {coutComplet.map((r, i) => (
+                  <tr key={`${r.nom}-${i}`} className={i % 2 === 0 ? "bg-card" : "bg-senpaie-alt-row"}>
+                    <td className="py-2 px-3 text-foreground font-bold">{r.nom}</td>
+                    <td className="py-2 px-3 text-right text-senpaie-blue">{fmt(r.brut)} F</td>
+                    <td className="py-2 px-3 text-right text-senpaie-yellow">{fmt(r.ch)} F</td>
+                    <td className="py-2 px-3 text-right text-primary">{fmt(r.net)} F</td>
+                    <td className="py-2 px-3 text-right text-senpaie-purple font-bold">{fmt(r.cout)} F</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="page-section bg-card rounded-lg p-4 md:p-5 mb-4 [animation-delay:55ms]">
         <div className="text-muted-foreground text-[11px] mb-3.5 uppercase">
