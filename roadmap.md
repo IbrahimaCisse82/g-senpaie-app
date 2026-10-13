@@ -5,5 +5,5 @@
 - [x] Export Excel dynamique dans CotisationsTable
 - [x] V2.2 Assistant IA paie & RH
 - [x] V2.3 Espace salarié
-- [ ] V2.4 Avances & rappels
-- [ ] V2.5 Pilotage avancé
+- [x] V2.4 Avances & rappels
+- [x] V2.5 Pilotage avancé (N vs N-1, projection, coût complet, installable mobile)
