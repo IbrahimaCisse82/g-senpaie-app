@@ -85,6 +85,8 @@ export interface PayrollResult {
   anc: number;
   ancRate: number;
   baseCSS: number;
+  baseCSS_AT: number;
+  baseIPM: number;
   partsIR: number;
   partsTRIMFCap: number;
   // Gestion avancée
@@ -143,7 +145,13 @@ export function getAnciennete(dateEntree: string, refDate?: Date): number {
   return Math.max(0, Math.floor((ref.getTime() - new Date(dateEntree).getTime()) / (365.25 * 86400000)));
 }
 
-/** Taux d'ancienneté : ancienneté / 100, applicable dès 2 ans */
+/** Applique un plafond de cotisation ; null / 0 / vide = sans plafond */
+function plafonner(base: number, plafond: number | null | undefined): number {
+  return plafond && plafond > 0 ? Math.min(base, plafond) : base;
+}
+
+/** Taux d'ancienneté : 1 % par année d'ancienneté, applicable dès 2 ans.
+ *  Prime d'ancienneté = taux × salaire de base (conforme au fichier SENEXCELPAIE). */
 export function getTauxAnciennete(anc: number): number {
   if (anc < 2) return 0;
   return anc / 100;
@@ -215,28 +223,30 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const trimf = calculerTRIMF(brut, partsTRIMFCap);
 
   // IPRES RG : plafond 432 000
-  const baseRG = p.IPRES_RG.plafond ? Math.min(brut, p.IPRES_RG.plafond) : brut;
+  const baseRG = plafonner(brut, p.IPRES_RG.plafond);
   const ipresRG_s = baseRG * p.IPRES_RG.taux * p.IPRES_RG.tauxSalarial;
   const ipresRG_p = baseRG * p.IPRES_RG.taux * p.IPRES_RG.tauxPatronal;
 
   // IPRES RC (cadres uniquement) : plafond 1 296 000
   const baseRC = emp.statut === "cadres"
-    ? (p.IPRES_RCC.plafond ? Math.min(brut, p.IPRES_RCC.plafond) : brut)
+    ? plafonner(brut, p.IPRES_RCC.plafond)
     : 0;
   const ipresRC_s = baseRC * p.IPRES_RCC.taux * p.IPRES_RCC.tauxSalarial;
   const ipresRC_p = baseRC * p.IPRES_RCC.taux * p.IPRES_RCC.tauxPatronal;
 
-  // CSS : plafond 63 000
-  const baseCSS = p.CSS_AF.plafond ? Math.min(brut, p.CSS_AF.plafond) : brut;
+  // CSS : chaque branche a son propre taux et son propre plafond (paramétrables)
+  const baseCSS = plafonner(brut, p.CSS_AF.plafond);
   const css_af = baseCSS * p.CSS_AF.taux;
-  const css_at = baseCSS * p.CSS_AT.taux;
+  const baseCSS_AT = plafonner(brut, p.CSS_AT.plafond);
+  const css_at = baseCSS_AT * p.CSS_AT.taux;
 
   // CFCE
   const cfce = brut * p.CFCE.taux;
 
-  // IPM
-  const ipm_s = brut * p.IPM.taux * p.IPM.tauxSalarial;
-  const ipm_p = brut * p.IPM.taux * p.IPM.tauxPatronal;
+  // IPM : taux, répartition et plafond paramétrables (taux 0 par défaut = pas d'IPM)
+  const baseIPM = plafonner(brut, p.IPM.plafond);
+  const ipm_s = baseIPM * p.IPM.taux * p.IPM.tauxSalarial;
+  const ipm_p = baseIPM * p.IPM.taux * p.IPM.tauxPatronal;
 
   // Avances & retenues diverses
   const avanceTabaski = emp.avanceTabaski || 0;
@@ -256,11 +266,33 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
     salaireBase: emp.salaireBase, sursalaire: emp.sursalaire,
     primeAnc, brut, ir, trimf, ipresRG_s, ipresRC_s, ipm_s, totalRet,
     cfce, ipresRG_p, ipresRC_p, css_af, css_at, ipm_p, chargesPat,
-    transport, net, masse, anc, ancRate, baseCSS, partsIR, partsTRIMFCap,
+    transport, net, masse, anc, ancRate, baseCSS, baseCSS_AT, baseIPM, partsIR, partsTRIMFCap,
     tauxHoraire, retAbsence, indMaladie, mtHS115, mtHS140, mtHS160, mtHS200, totalHS,
     primePanier, indKilometrique, totalAvances,
     avanceTabaski, avanceCaisse, avanceFinanciere, retCooperative, fraisMedicaux,
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Paramètres : classes de risque CSS AT et normalisation
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Classes de risque accident du travail (CSS) — taux patronal */
+export const CSS_AT_CLASSES = [
+  { label: "Classe 1 – risque faible (1 %)", taux: 0.01 },
+  { label: "Classe 2 – risque moyen (3 %)", taux: 0.03 },
+  { label: "Classe 3 – risque élevé (5 %)", taux: 0.05 },
+] as const;
+
+/** Fusionne des paramètres enregistrés (éventuellement anciens / incomplets) avec les valeurs par défaut */
+export function normaliserParams(saved: Partial<PayrollParams> | null | undefined, defaults: PayrollParams): PayrollParams {
+  const out = JSON.parse(JSON.stringify(defaults)) as PayrollParams;
+  if (!saved) return out;
+  for (const key of Object.keys(defaults) as (keyof PayrollParams)[]) {
+    const v = saved[key];
+    if (v && typeof v === "object") Object.assign(out[key], v);
+  }
+  return out;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

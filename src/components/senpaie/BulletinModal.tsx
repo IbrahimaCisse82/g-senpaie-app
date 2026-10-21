@@ -74,7 +74,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
       const { default: jsPDF } = await import("jspdf");
       const { default: html2canvas } = await import("html2canvas");
 
-      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise, params);
       const container = document.createElement("div");
       container.innerHTML = html;
       container.style.position = "fixed";
@@ -115,7 +115,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
     } catch (e) {
       console.error("Erreur PDF:", e);
       // Fallback: open in new tab
-      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise);
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise, params);
       const win = window.open("", "_blank");
       if (win) { win.document.write(html); win.document.close(); }
       else { alert("Erreur lors de la génération du PDF. Veuillez autoriser les popups."); }
@@ -266,7 +266,10 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   );
 }
 
-function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, annee: number, anc: number, ent: Entreprise): string {
+function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, annee: number, anc: number, ent: Entreprise, prm: PayrollParams): string {
+  const tx = (n: number) => `${(Math.round(n * 1000) / 10).toString().replace(".", ",")}%`;
+  const sal = (c: { taux: number; tauxSalarial: number }) => tx(c.taux * c.tauxSalarial);
+  const pat = (c: { taux: number; tauxPatronal: number }) => tx(c.taux * c.tauxPatronal);
   const periode = `${MOIS[mois]} ${annee}`;
   const fmtN = (n: number) => new Intl.NumberFormat("fr-FR").format(Math.round(n || 0));
   const date_emission = new Date().toLocaleDateString("fr-FR");
@@ -341,7 +344,7 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
     (p.indMaladie > 0 ? row("Indemnité maladie", p.indMaladie, { color: "#059669" }) : "") +
     row("SALAIRE BRUT", p.brut, { bold: true, color: "#1d4ed8" })
   )}
-  ${section("Retenues Salariales", "#dc2626", row("Impôt sur le Revenu (IR)", p.ir, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + row("TRIMF", p.trimf, { neg: true, indent: true, color: "#dc2626" }) + row("IPRES R.G. part salarié (5,6%)", p.ipresRG_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + (p.ipresRC_s > 0 ? row("IPRES R.C.C. part salarié (2,4%)", p.ipresRC_s, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row("IPM part salarié", p.ipm_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + row("TOTAL RETENUES", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
+  ${section("Retenues Salariales", "#dc2626", row("Impôt sur le Revenu (IR)", p.ir, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + row("TRIMF", p.trimf, { neg: true, indent: true, color: "#dc2626" }) + row(`IPRES R.G. part salarié (${sal(prm.IPRES_RG)})`, p.ipresRG_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + (p.ipresRC_s > 0 ? row(`IPRES R.C.C. part salarié (${sal(prm.IPRES_RCC)})`, p.ipresRC_s, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row(`IPM part salarié (${sal(prm.IPM)})`, p.ipm_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + row("TOTAL RETENUES", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
   ${p.totalAvances > 0 ? section("Avances & Retenues Diverses", "#b45309", avancesRows + row("TOTAL AVANCES", p.totalAvances, { neg: true, bold: true, color: "#b45309" })) : ""}
   ${section("Indemnités", "#059669",
     row("Indemnité de transport", p.transport, { color: "#065f46", bg: "#f0fdf4" }) +
@@ -349,7 +352,7 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
     (p.indKilometrique > 0 ? row("Indemnité kilométrique", p.indKilometrique, { color: "#065f46", bg: "#f0fdf4" }) : "")
   )}
   <div class="net-box"><div><div class="net-label">NET À PAYER</div><div style="font-size:9px;color:#6b7280;margin-top:2px">Période : ${periode}</div></div><div class="net-val">${fmtN(p.net)} FCFA</div></div>
-  ${section("Charges Patronales (informatif)", "#b45309", [["CFCE (3%)", p.cfce], ["IPRES R.G. patronal (8,4%)", p.ipresRG_p], p.ipresRC_p > 0 ? ["IPRES R.C.C. patronal (3,6%)", p.ipresRC_p] : null, ["CSS Alloc. Familiales (7%)", p.css_af], ["CSS Acc. Travail (1%)", p.css_at], p.ipm_p > 0 ? ["IPM patronal", p.ipm_p] : null].filter(Boolean).map(([l, v]: any, i: number) => row(l, v, { bg: i % 2 === 0 ? "#fffbeb" : "transparent", color: "#92400e" })).join("") + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
+  ${section("Charges Patronales (informatif)", "#b45309", [[`CFCE (${pat(prm.CFCE)})`, p.cfce], [`IPRES R.G. patronal (${pat(prm.IPRES_RG)})`, p.ipresRG_p], p.ipresRC_p > 0 ? [`IPRES R.C.C. patronal (${pat(prm.IPRES_RCC)})`, p.ipresRC_p] : null, [`CSS Alloc. Familiales (${pat(prm.CSS_AF)})`, p.css_af], [`CSS Acc. Travail (${pat(prm.CSS_AT)})`, p.css_at], p.ipm_p > 0 ? [`IPM patronal (${pat(prm.IPM)})`, p.ipm_p] : null].filter(Boolean).map(([l, v]: any, i: number) => row(l, v, { bg: i % 2 === 0 ? "#fffbeb" : "transparent", color: "#92400e" })).join("") + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
   <div class="masse-box"><span style="font-size:10px;font-weight:700;color:#5b21b6">MASSE SALARIALE TOTALE</span><span style="font-size:12px;font-weight:800;color:#5b21b6">${fmtN(p.masse)} FCFA</span></div>
   <div class="sigs">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div class="sig"><div class="sig-name">${s}</div><div class="sig-line">Signature &amp; cachet</div></div>`).join("")}</div>
 </div>
