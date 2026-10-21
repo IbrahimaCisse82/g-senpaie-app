@@ -396,9 +396,12 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
           <Field label="Heures abs. maladie">
             <input type="number" min="0" value={form.heuresAbsMaladie || ""} onChange={(e) => set("heuresAbsMaladie", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
-          <Field label="Taux maladie (0 à 1)">
-            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="0" className={inputClass} />
+          <Field label="Maintien de salaire maladie (0 à 1)">
+            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="1 = 100 %" className={inputClass} />
           </Field>
+        </div>
+        <div className="text-muted-foreground text-[11px] -mt-1">
+          Les heures de maladie sont déduites comme une absence, puis indemnisées au taux de maintien (1 = salaire maintenu à 100 %, 0,5 = 50 %). Ne pas les compter aussi dans « Heures d'absence ».
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { Modal } from "./Modal";
+import { escapeStrings, safeImageUrl } from "@/lib/utils";
 
 interface BulletinModalProps {
   emp: Employee;
@@ -28,6 +29,7 @@ function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee:
     [],
     ["IR", -Math.round(p.ir)],
     ["TRIMF", -Math.round(p.trimf)],
+    ["BRS (prestataire)", -Math.round(p.brs)],
     ["IPRES RG salarié", -Math.round(p.ipresRG_s)],
     ["IPRES RC salarié", -Math.round(p.ipresRC_s)],
     ["IPM salarié", -Math.round(p.ipm_s)],
@@ -202,8 +204,9 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
           <div className="text-destructive text-[10px] font-bold mb-1 uppercase tracking-wider">Retenues salariales</div>
           <Row l="Impôt sur le Revenu (IR)" v={p.ir} c="text-destructive" neg />
           <Row l="TRIMF" v={p.trimf} c="text-destructive" neg />
-          <Row l="IPRES R.G. salarié (5,6%)" v={p.ipresRG_s} c="text-destructive" neg />
-          {p.ipresRC_s > 0 && <Row l="IPRES R.C.C. salarié (2,4%)" v={p.ipresRC_s} c="text-destructive" neg />}
+          {p.brs > 0 && <Row l={`BRS sur honoraires (${(params.BRS.taux * 100).toFixed(0)}%)`} v={p.brs} c="text-destructive" neg />}
+          <Row l={`IPRES R.G. salarié (${(params.IPRES_RG.taux * params.IPRES_RG.tauxSalarial * 100).toFixed(1).replace(".", ",")}%)`} v={p.ipresRG_s} c="text-destructive" neg />
+          {p.ipresRC_s > 0 && <Row l={`IPRES R.C.C. salarié (${(params.IPRES_RCC.taux * params.IPRES_RCC.tauxSalarial * 100).toFixed(1).replace(".", ",")}%)`} v={p.ipresRC_s} c="text-destructive" neg />}
           {p.ipm_s > 0 && <Row l="IPM salarié" v={p.ipm_s} c="text-destructive" neg />}
           <Row l="TOTAL RETENUES" v={p.totalRet} c="text-destructive" bold neg />
         </div>
@@ -266,7 +269,10 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   );
 }
 
-function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, annee: number, anc: number, ent: Entreprise, prm: PayrollParams): string {
+export function genererBulletinHTML(empBrut: Employee, p: PayrollResult, mois: number, annee: number, anc: number, entBrut: Entreprise, prm: PayrollParams): string {
+  // Toutes les données saisies sont échappées avant insertion dans le HTML (protection XSS)
+  const emp = escapeStrings(empBrut);
+  const ent = { ...escapeStrings(entBrut), logo: safeImageUrl(entBrut.logo) };
   const tx = (n: number) => `${(Math.round(n * 1000) / 10).toString().replace(".", ",")}%`;
   const sal = (c: { taux: number; tauxSalarial: number }) => tx(c.taux * c.tauxSalarial);
   const pat = (c: { taux: number; tauxPatronal: number }) => tx(c.taux * c.tauxPatronal);
@@ -336,7 +342,7 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
   <div class="header">${headerLeft}<div class="bul-title"><h2>BULLETIN DE PAIE</h2><div class="periode">Période : <b>${periode}</b></div><div class="emis">Émis le : ${date_emission}</div></div></div>
   <div class="emp-grid">${infoRows.map(([l, v]) => `<div class="emp-cell"><span class="emp-label">${l}</span><span class="emp-val">${v}</span></div>`).join("")}</div>
   ${section("Éléments de Salaire", "#1d4ed8",
-    row("Salaire de base", p.salaireBase, { bg: "#f9fafb" }) +
+    row(p.regime === "prestataire" ? "Honoraires" : "Salaire de base", p.salaireBase, { bg: "#f9fafb" }) +
     (p.sursalaire > 0 ? row("Sursalaire", p.sursalaire) : "") +
     (p.primeAnc > 0 ? row(`Prime d'ancienneté (${anc}%)`, p.primeAnc, { indent: true, color: "#1d4ed8", bg: "#f9fafb" }) : "") +
     hsRows +
@@ -344,15 +350,15 @@ function genererBulletinHTML(emp: Employee, p: PayrollResult, mois: number, anne
     (p.indMaladie > 0 ? row("Indemnité maladie", p.indMaladie, { color: "#059669" }) : "") +
     row("SALAIRE BRUT", p.brut, { bold: true, color: "#1d4ed8" })
   )}
-  ${section("Retenues Salariales", "#dc2626", row("Impôt sur le Revenu (IR)", p.ir, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + row("TRIMF", p.trimf, { neg: true, indent: true, color: "#dc2626" }) + row(`IPRES R.G. part salarié (${sal(prm.IPRES_RG)})`, p.ipresRG_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + (p.ipresRC_s > 0 ? row(`IPRES R.C.C. part salarié (${sal(prm.IPRES_RCC)})`, p.ipresRC_s, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row(`IPM part salarié (${sal(prm.IPM)})`, p.ipm_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + row("TOTAL RETENUES", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
+  ${section(p.regime === "prestataire" ? "Retenues" : "Retenues Salariales", "#dc2626", (p.regime === "salarie" ? row("Impôt sur le Revenu (IR)", p.ir, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) + row("TRIMF", p.trimf, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.brs > 0 ? row(`BRS sur honoraires (${pat({ taux: prm.BRS.taux, tauxPatronal: 1 })})`, p.brs, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipresRG_s > 0 ? row(`IPRES R.G. part salarié (${sal(prm.IPRES_RG)})`, p.ipresRG_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + (p.ipresRC_s > 0 ? row(`IPRES R.C.C. part salarié (${sal(prm.IPRES_RCC)})`, p.ipresRC_s, { neg: true, indent: true, color: "#dc2626" }) : "") + (p.ipm_s > 0 ? row(`IPM part salarié (${sal(prm.IPM)})`, p.ipm_s, { neg: true, indent: true, color: "#dc2626", bg: "#f9fafb" }) : "") + row("TOTAL RETENUES", p.totalRet, { neg: true, bold: true, color: "#dc2626" }))}
   ${p.totalAvances > 0 ? section("Avances & Retenues Diverses", "#b45309", avancesRows + row("TOTAL AVANCES", p.totalAvances, { neg: true, bold: true, color: "#b45309" })) : ""}
-  ${section("Indemnités", "#059669",
-    row("Indemnité de transport", p.transport, { color: "#065f46", bg: "#f0fdf4" }) +
+  ${p.transport + p.primePanier + p.indKilometrique <= 0 ? "" : section("Indemnités", "#059669",
+    (p.transport > 0 ? row("Indemnité de transport", p.transport, { color: "#065f46", bg: "#f0fdf4" }) : "") +
     (p.primePanier > 0 ? row(`Prime de panier (${emp.nbPaniers}j)`, p.primePanier, { color: "#065f46" }) : "") +
     (p.indKilometrique > 0 ? row("Indemnité kilométrique", p.indKilometrique, { color: "#065f46", bg: "#f0fdf4" }) : "")
   )}
   <div class="net-box"><div><div class="net-label">NET À PAYER</div><div style="font-size:9px;color:#6b7280;margin-top:2px">Période : ${periode}</div></div><div class="net-val">${fmtN(p.net)} FCFA</div></div>
-  ${section("Charges Patronales (informatif)", "#b45309", [[`CFCE (${pat(prm.CFCE)})`, p.cfce], [`IPRES R.G. patronal (${pat(prm.IPRES_RG)})`, p.ipresRG_p], p.ipresRC_p > 0 ? [`IPRES R.C.C. patronal (${pat(prm.IPRES_RCC)})`, p.ipresRC_p] : null, [`CSS Alloc. Familiales (${pat(prm.CSS_AF)})`, p.css_af], [`CSS Acc. Travail (${pat(prm.CSS_AT)})`, p.css_at], p.ipm_p > 0 ? [`IPM patronal (${pat(prm.IPM)})`, p.ipm_p] : null].filter(Boolean).map(([l, v]: any, i: number) => row(l, v, { bg: i % 2 === 0 ? "#fffbeb" : "transparent", color: "#92400e" })).join("") + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
+  ${p.chargesPat <= 0 ? "" : section("Charges Patronales (informatif)", "#b45309", [[`CFCE (${pat(prm.CFCE)})`, p.cfce], [`IPRES R.G. patronal (${pat(prm.IPRES_RG)})`, p.ipresRG_p], p.ipresRC_p > 0 ? [`IPRES R.C.C. patronal (${pat(prm.IPRES_RCC)})`, p.ipresRC_p] : null, [`CSS Alloc. Familiales (${pat(prm.CSS_AF)})`, p.css_af], [`CSS Acc. Travail (${pat(prm.CSS_AT)})`, p.css_at], p.ipm_p > 0 ? [`IPM patronal (${pat(prm.IPM)})`, p.ipm_p] : null].filter(Boolean).map(([l, v]: any, i: number) => row(l, v, { bg: i % 2 === 0 ? "#fffbeb" : "transparent", color: "#92400e" })).join("") + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
   <div class="masse-box"><span style="font-size:10px;font-weight:700;color:#5b21b6">MASSE SALARIALE TOTALE</span><span style="font-size:12px;font-weight:800;color:#5b21b6">${fmtN(p.masse)} FCFA</span></div>
   <div class="sigs">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div class="sig"><div class="sig-name">${s}</div><div class="sig-line">Signature &amp; cachet</div></div>`).join("")}</div>
 </div>
