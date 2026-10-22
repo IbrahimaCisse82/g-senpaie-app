@@ -89,6 +89,8 @@ export interface PayrollResult {
   masse: number;
   anc: number;
   ancRate: number;
+  baseIPRES_RG: number;
+  baseIPRES_RC: number;
   baseCSS: number;
   baseCSS_AT: number;
   baseIPM: number;
@@ -339,7 +341,7 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
     salaireBase, sursalaire, regime,
     primeAnc, brut, ir, trimf, brs, ipresRG_s, ipresRC_s, ipm_s, totalRet,
     cfce, ipresRG_p, ipresRC_p, css_af, css_at, ipm_p, chargesPat,
-    transport, net, masse, anc, ancRate, baseCSS, baseCSS_AT, baseIPM, partsIR, partsTRIMFCap,
+    transport, net, masse, anc, ancRate, baseIPRES_RG: baseRG, baseIPRES_RC: baseRC, baseCSS, baseCSS_AT, baseIPM, partsIR, partsTRIMFCap,
     revenuImposable: irCalc.revenuImposable, impotBrut: salarie ? irCalc.impotBrut : 0, reductionFamille: salarie ? irCalc.reduction : 0,
     tauxHoraire, retAbsence, indMaladie, mtHS115, mtHS140, mtHS160, mtHS200, totalHS,
     primePanier, indKilometrique, totalAvances,

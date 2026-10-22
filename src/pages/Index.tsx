@@ -2,9 +2,10 @@ import { useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
+import { versLigne } from "@/lib/etats";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
-import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
+import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory, versArchives } from "@/hooks/useSupabaseData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
@@ -17,6 +18,7 @@ import { RapportCotisationsModal } from "@/components/senpaie/RapportCotisations
 import { TendancesPage } from "@/components/senpaie/TendancesPage";
 import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
 import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
+import { EtatsPage } from "@/components/senpaie/EtatsPage";
 import { Modal } from "@/components/senpaie/Modal";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
@@ -73,7 +75,10 @@ const Index = () => {
 
   const handleSaveSnapshot = async () => {
     const now = new Date();
-    await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length);
+    await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length, {
+      bulletins: allPaies.map((e) => versLigne(e, e.paie)),
+      params,
+    });
     showToast("💾 Mois clôturé et sauvegardé");
   };
 
@@ -177,6 +182,7 @@ const Index = () => {
                 onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
             )}
             {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
+            {tab === "etats" && <EtatsPage employees={employees} params={params} entreprise={entreprise} archives={versArchives(history)} />}
             {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
             {tab === "simulateur" && <Simulateur params={params} />}
             {tab === "conventions" && (
@@ -206,7 +212,7 @@ const Index = () => {
           <EmployeeForm initial={showForm === "new" ? null : showForm as Employee} onSave={handleSaveEmp} onClose={() => setShowForm(null)} existingMats={employees.map((e) => e.matricule)} conventions={conventions} />
         </Modal>
       )}
-      {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} onClose={() => setShowBulletin(null)} />}
+      {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} archives={versArchives(history)} onClose={() => setShowBulletin(null)} />}
       {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
       {showDel && (
         <Modal title="⚠️ Confirmation de suppression" onClose={() => setShowDel(null)} width={420}>

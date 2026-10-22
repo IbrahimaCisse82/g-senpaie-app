@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Employee, PayrollParams, Entreprise, Convention, ConventionCategory } from "@/lib/payroll";
 import { normaliserParams } from "@/lib/payroll";
+import type { LigneBulletin, ArchiveMois } from "@/lib/etats";
 import { DEFAULT_PARAMS, DEFAULT_ENTREPRISE, DEFAULT_CONVENTIONS } from "@/lib/constants";
 import { toast } from "@/hooks/use-toast";
 
@@ -371,6 +372,17 @@ export interface PayrollSnapshot {
   totaux: { brut: number; net: number; ch: number; mass: number };
   nbEmployees: number;
   savedAt: string;
+  /** Bulletins figés à la clôture (absents pour les mois clôturés avant cette version) */
+  bulletins?: LigneBulletin[];
+  /** Paramètres de paie en vigueur à la clôture */
+  params?: PayrollParams;
+}
+
+/** Mois clôturés disposant de bulletins archivés, au format des états de paie */
+export function versArchives(history: PayrollSnapshot[]): ArchiveMois[] {
+  return history
+    .filter((h) => Array.isArray(h.bulletins) && h.bulletins.length > 0)
+    .map((h) => ({ mois: h.mois, annee: h.annee, bulletins: h.bulletins!, params: h.params }));
 }
 
 export function usePayrollHistory(userId: string | undefined) {
@@ -395,6 +407,8 @@ export function usePayrollHistory(userId: string | undefined) {
           totaux: (d?.totaux as { brut: number; net: number; ch: number; mass: number }) || { brut: 0, net: 0, ch: 0, mass: 0 },
           nbEmployees: (d?.nbEmployees as number) || 0,
           savedAt: r.updated_at,
+          bulletins: Array.isArray(d?.bulletins) ? (d!.bulletins as LigneBulletin[]) : undefined,
+          params: d?.params ? normaliserParams(d.params as Partial<PayrollParams>, DEFAULT_PARAMS) : undefined,
         };
       }));
     }
@@ -403,9 +417,13 @@ export function usePayrollHistory(userId: string | undefined) {
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  const saveSnapshot = useCallback(async (mois: number, annee: number, totaux: { brut: number; net: number; ch: number; mass: number }, nbEmployees: number) => {
+  const saveSnapshot = useCallback(async (
+    mois: number, annee: number, totaux: { brut: number; net: number; ch: number; mass: number }, nbEmployees: number,
+    archive?: { bulletins: LigneBulletin[]; params: PayrollParams },
+  ) => {
     if (!userId) return;
-    const payload = { totaux, nbEmployees };
+    // version 2 : les bulletins de chaque salarié et les paramètres sont figés avec le mois
+    const payload = { version: 2, totaux, nbEmployees, ...(archive || {}) };
 
     // Upsert
     const { data: existing } = await supabase

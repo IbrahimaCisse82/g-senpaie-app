@@ -3,11 +3,14 @@ import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/p
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { Modal } from "./Modal";
 import { escapeStrings, safeImageUrl } from "@/lib/utils";
+import { cumulsAnnuels, type ArchiveMois, type Cumuls } from "@/lib/etats";
 
 interface BulletinModalProps {
   emp: Employee;
   params: PayrollParams;
   entreprise: Entreprise;
+  /** Mois clôturés : bulletins figés et base des cumuls annuels */
+  archives?: ArchiveMois[];
   onClose: () => void;
 }
 
@@ -57,13 +60,18 @@ function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee:
   URL.revokeObjectURL(url);
 }
 
-export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModalProps) {
+export function BulletinModal({ emp, params: paramsActuels, entreprise, archives = [], onClose }: BulletinModalProps) {
   const now = new Date();
   const [mois, setMois] = useState(now.getMonth());
   const [annee, setAnnee] = useState(now.getFullYear());
 
   const refDate = new Date(annee, mois + 1, 0);
-  const p = calculerPaie(emp, params, refDate);
+  // Mois clôturé : on réédite le bulletin figé à la clôture, sinon calcul de la période
+  const archiveMois = archives.find((a) => a.mois === mois && a.annee === annee);
+  const bulletinArchive = archiveMois?.bulletins.find((b) => b.matricule === emp.matricule);
+  const params = (bulletinArchive && archiveMois?.params) || paramsActuels;
+  const p = bulletinArchive ? bulletinArchive.paie : calculerPaie(emp, params, refDate);
+  const cumuls = cumulsAnnuels(archives, emp.matricule, annee, mois, p);
   const anc = getAnciennete(emp.dateEntree, refDate);
   const periodeLabel = `${MOIS[mois]} ${annee}`;
   const years = Array.from({ length: 10 }, (_, i) => now.getFullYear() - i);
@@ -76,7 +84,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
       const { default: jsPDF } = await import("jspdf");
       const { default: html2canvas } = await import("html2canvas");
 
-      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise, params);
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise, params, cumuls);
       const container = document.createElement("div");
       container.innerHTML = html;
       container.style.position = "fixed";
@@ -117,7 +125,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
     } catch (e) {
       console.error("Erreur PDF:", e);
       // Fallback: open in new tab
-      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise, params);
+      const html = genererBulletinHTML(emp, p, mois, annee, anc, entreprise, params, cumuls);
       const win = window.open("", "_blank");
       if (win) { win.document.write(html); win.document.close(); }
       else { alert("Erreur lors de la génération du PDF. Veuillez autoriser les popups."); }
@@ -135,6 +143,11 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
 
   return (
     <Modal title="📄 Bulletin de Paie" onClose={onClose} width={680}>
+      {bulletinArchive && (
+        <div className="mb-3 px-3 py-2 rounded-lg border border-primary bg-primary/10 text-primary text-[11px]">
+          🔒 {periodeLabel} est clôturé : ce bulletin est l'exemplaire figé à la clôture.
+        </div>
+      )}
       {/* Période + Boutons */}
       <div className="flex gap-2 items-center mb-5 p-3.5 bg-background rounded-lg flex-wrap">
         <div className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">Période :</div>
@@ -261,6 +274,22 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
           </div>
         </div>
 
+        {/* Cumuls annuels */}
+        <div className="bg-background rounded-lg p-3 border border-border mt-3">
+          <div className="text-senpaie-blue text-[10px] font-bold mb-2 uppercase">
+            Cumuls depuis janvier {annee} ({cumuls.moisPris} mois)
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
+            {([["Brut", cumuls.brut], ["IR", cumuls.ir], ["TRIMF", cumuls.trimf],
+              ["IPRES salarié", cumuls.ipresRG_s + cumuls.ipresRC_s], ["Net payé", cumuls.net]] as [string, number][]).map(([l, v]) => (
+              <div key={l}><div className="text-muted-foreground text-[10px]">{l}</div><div className="text-foreground font-bold">{fmt(v)} F</div></div>
+            ))}
+          </div>
+          {cumuls.moisPris <= 1 && mois > 0 && (
+            <div className="text-muted-foreground text-[10px] mt-2">Les cumuls se construisent à partir des mois clôturés depuis le tableau de bord.</div>
+          )}
+        </div>
+
         <div className="mt-3.5 px-3.5 py-2.5 bg-senpaie-blue/10 rounded-lg border border-senpaie-blue text-senpaie-blue text-[11px]">
           💡 <strong>PDF</strong> : téléchargement direct du bulletin en PDF. <strong>CSV</strong> : téléchargement direct pour Excel.
         </div>
@@ -269,7 +298,7 @@ export function BulletinModal({ emp, params, entreprise, onClose }: BulletinModa
   );
 }
 
-export function genererBulletinHTML(empBrut: Employee, p: PayrollResult, mois: number, annee: number, anc: number, entBrut: Entreprise, prm: PayrollParams): string {
+export function genererBulletinHTML(empBrut: Employee, p: PayrollResult, mois: number, annee: number, anc: number, entBrut: Entreprise, prm: PayrollParams, cumuls?: Cumuls): string {
   // Toutes les données saisies sont échappées avant insertion dans le HTML (protection XSS)
   const emp = escapeStrings(empBrut);
   const ent = { ...escapeStrings(entBrut), logo: safeImageUrl(entBrut.logo) };
@@ -359,6 +388,10 @@ export function genererBulletinHTML(empBrut: Employee, p: PayrollResult, mois: n
   )}
   <div class="net-box"><div><div class="net-label">NET À PAYER</div><div style="font-size:9px;color:#6b7280;margin-top:2px">Période : ${periode}</div></div><div class="net-val">${fmtN(p.net)} FCFA</div></div>
   ${p.chargesPat <= 0 ? "" : section("Charges Patronales (informatif)", "#b45309", [[`CFCE (${pat(prm.CFCE)})`, p.cfce], [`IPRES R.G. patronal (${pat(prm.IPRES_RG)})`, p.ipresRG_p], p.ipresRC_p > 0 ? [`IPRES R.C.C. patronal (${pat(prm.IPRES_RCC)})`, p.ipresRC_p] : null, [`CSS Alloc. Familiales (${pat(prm.CSS_AF)})`, p.css_af], [`CSS Acc. Travail (${pat(prm.CSS_AT)})`, p.css_at], p.ipm_p > 0 ? [`IPM patronal (${pat(prm.IPM)})`, p.ipm_p] : null].filter(Boolean).map(([l, v]: any, i: number) => row(l, v, { bg: i % 2 === 0 ? "#fffbeb" : "transparent", color: "#92400e" })).join("") + row("TOTAL CHARGES PATRONALES", p.chargesPat, { bold: true, color: "#92400e", bg: "#fffbeb" }))}
+  ${cumuls ? `<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr><th colspan="5" style="background:#1d4ed8;color:#fff;padding:6px 10px;text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase">Cumuls depuis janvier ${annee} (${cumuls.moisPris} mois)</th></tr></thead><tbody><tr>${
+    ([["Brut", cumuls.brut], ["IR", cumuls.ir], ["TRIMF", cumuls.trimf], ["IPRES salarié", cumuls.ipresRG_s + cumuls.ipresRC_s], ["Net payé", cumuls.net]] as [string, number][])
+      .map(([l, v]) => `<td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:10px"><span style="display:block;color:#9ca3af;font-size:8px;text-transform:uppercase">${l}</span><b>${fmtN(v)}</b></td>`).join("")
+  }</tr></tbody></table>` : ""}
   <div class="masse-box"><span style="font-size:10px;font-weight:700;color:#5b21b6">MASSE SALARIALE TOTALE</span><span style="font-size:12px;font-weight:800;color:#5b21b6">${fmtN(p.masse)} FCFA</span></div>
   <div class="sigs">${["Employeur", "Service RH", "Employé(e)"].map(s => `<div class="sig"><div class="sig-name">${s}</div><div class="sig-line">Signature &amp; cachet</div></div>`).join("")}</div>
 </div>

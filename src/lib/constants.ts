@@ -402,12 +402,13 @@ export const STATUT_COLORS: Record<string, string> = {
   "prestataires": "primary",
 };
 
-export type TabId = "dashboard" | "employes" | "cotisations" | "tendances" | "simulateur" | "conventions" | "entreprise" | "parametres";
+export type TabId = "dashboard" | "employes" | "cotisations" | "etats" | "tendances" | "simulateur" | "conventions" | "entreprise" | "parametres";
 
 export const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "dashboard",    icon: "◈",  label: "Tableau de bord" },
   { id: "employes",     icon: "◎",  label: "Employés" },
   { id: "cotisations",  icon: "◉",  label: "Cotisations" },
+  { id: "etats",        icon: "📒", label: "États & Compta" },
   { id: "tendances",    icon: "∿",  label: "Tendances" },
   { id: "simulateur",   icon: "⊕",  label: "Simulateur" },
   { id: "conventions",  icon: "📋", label: "Conventions" },
