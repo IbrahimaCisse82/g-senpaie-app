@@ -4,6 +4,7 @@ import { fmt, getAnciennete } from "@/lib/payroll";
 import { Modal, Field, inputClass } from "./Modal";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
 import { parseEmployeeFile, downloadImportTemplate, exportEmployeesXlsx, type ImportRowError } from "@/lib/employeeImport";
+import { useProgressiveList } from "@/hooks/useProgressiveList";
 
 /** SMIG mensuel de référence Sénégal (FCFA) */
 const SMIG_MENSUEL = 64281;
@@ -77,6 +78,7 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
     return list;
   }, [employees, filterStatut, filterContrat, filterConvention, sortKey, sortDir]);
 
+  const prog = useProgressiveList(displayed, 50, `${search}|${filterStatut}|${filterContrat}|${filterConvention}|${sortKey}|${sortDir}`);
   const clearFilters = () => { setFilterStatut(""); setFilterContrat(""); setFilterConvention(""); };
 
   const toggleSort = (key: SortKey) => {
@@ -207,7 +209,7 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
       )}
 
       <div className="grid gap-2.5">
-        {displayed.map((emp) => (
+        {prog.visible.map((emp) => (
           <div key={emp.matricule} className={`bg-card rounded-lg border overflow-hidden transition-colors ${expanded === emp.matricule ? "border-primary" : "border-border"}`}>
             <div
               className="px-4 md:px-5 py-3.5 flex flex-col sm:flex-row justify-between gap-3 cursor-pointer"
@@ -267,6 +269,17 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
           </div>
         ))}
       </div>
+      {prog.total > 0 && (
+        <div className="flex flex-col items-center gap-2 mt-3 text-[11px] text-muted-foreground">
+          <span>{prog.shown} sur {prog.total} employés</span>
+          {prog.hasMore && (
+            <>
+              <div ref={prog.sentinelRef} className="h-1 w-full" />
+              <button onClick={prog.loadMore} className="px-3 py-1.5 border border-border rounded-lg font-bold text-foreground bg-transparent cursor-pointer">Afficher plus</button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
