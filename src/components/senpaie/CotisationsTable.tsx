@@ -1,5 +1,6 @@
 import type { Employee, PayrollResult } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
+import { useProgressiveList } from "@/hooks/useProgressiveList";
 
 interface CotisationsTableProps {
   allPaies: (Employee & { paie: PayrollResult })[];
@@ -116,6 +117,7 @@ async function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], tota
 
 export function CotisationsTable({ allPaies, totaux, onOpenRapport }: CotisationsTableProps) {
   const headers = ["Employé", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Net"];
+  const prog = useProgressiveList(allPaies, 50, allPaies.length);
 
   return (
     <div className="page-enter">
@@ -218,6 +220,17 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
           </tbody>
         </table>
       </div>
+      {prog.total > 0 && (
+        <div className="flex flex-col items-center gap-2 mt-3 text-[11px] text-muted-foreground">
+          <span>{prog.shown} sur {prog.total} bulletins affichés — totaux et exports sur l'ensemble</span>
+          {prog.hasMore && (
+            <>
+              <div ref={prog.sentinelRef} className="h-1 w-full" />
+              <button onClick={prog.loadMore} className="px-3 py-1.5 border border-border rounded-lg font-bold text-foreground bg-transparent cursor-pointer">Afficher plus</button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
