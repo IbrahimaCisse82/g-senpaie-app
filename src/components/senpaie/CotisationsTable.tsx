@@ -181,7 +181,7 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
             </tr>
           </thead>
           <tbody>
-            {allPaies.map((emp, i) => {
+            {prog.visible.map((emp, i) => {
               const vals = [
                 emp.prenom.split(" ")[0] + " " + emp.nom,
                 emp.paie.brut, emp.paie.ir, emp.paie.trimf,
