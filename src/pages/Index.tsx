@@ -1,34 +1,50 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import { Navigate } from "react-router-dom";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
-import { versLigne } from "@/lib/etats";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
-import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory, versArchives } from "@/hooks/useSupabaseData";
+import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
+import { useEntrepriseCtx, ROLE_LABEL, type AppRole } from "@/hooks/useEntrepriseContext";
+import { useConges, useContrats } from "@/hooks/useRH";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
 import { EmployeeList, EmployeeForm } from "@/components/senpaie/EmployeeList";
-import { BulletinModal } from "@/components/senpaie/BulletinModal";
-import { Parametres } from "@/components/senpaie/Parametres";
-import { Simulateur } from "@/components/senpaie/Simulateur";
-import { CotisationsTable } from "@/components/senpaie/CotisationsTable";
-import { RapportCotisationsModal } from "@/components/senpaie/RapportCotisationsModal";
-import { TendancesPage } from "@/components/senpaie/TendancesPage";
-import { ConventionsPage } from "@/components/senpaie/ConventionsPage";
-import { EntreprisePage } from "@/components/senpaie/EntreprisePage";
-import { EtatsPage } from "@/components/senpaie/EtatsPage";
+const BulletinModal = lazy(() => import("@/components/senpaie/BulletinModal").then((m) => ({ default: m.BulletinModal })));
+const Parametres = lazy(() => import("@/components/senpaie/Parametres").then((m) => ({ default: m.Parametres })));
+const Simulateur = lazy(() => import("@/components/senpaie/Simulateur").then((m) => ({ default: m.Simulateur })));
+const CotisationsTable = lazy(() => import("@/components/senpaie/CotisationsTable").then((m) => ({ default: m.CotisationsTable })));
+const RapportCotisationsModal = lazy(() => import("@/components/senpaie/RapportCotisationsModal").then((m) => ({ default: m.RapportCotisationsModal })));
+const TendancesPage = lazy(() => import("@/components/senpaie/TendancesPage").then((m) => ({ default: m.TendancesPage })));
+const ConventionsPage = lazy(() => import("@/components/senpaie/ConventionsPage").then((m) => ({ default: m.ConventionsPage })));
+const EntreprisePage = lazy(() => import("@/components/senpaie/EntreprisePage").then((m) => ({ default: m.EntreprisePage })));
+const DeclarationsPage = lazy(() => import("@/components/senpaie/DeclarationsPage").then((m) => ({ default: m.DeclarationsPage })));
+const CongesPage = lazy(() => import("@/components/senpaie/CongesPage").then((m) => ({ default: m.CongesPage })));
+const SortiesPage = lazy(() => import("@/components/senpaie/SortiesPage").then((m) => ({ default: m.SortiesPage })));
+const ContratsPage = lazy(() => import("@/components/senpaie/ContratsPage").then((m) => ({ default: m.ContratsPage })));
+const EquipePage = lazy(() => import("@/components/senpaie/EquipePage").then((m) => ({ default: m.EquipePage })));
+const AssistantPage = lazy(() => import("@/components/senpaie/AssistantPage").then((m) => ({ default: m.AssistantPage })));
+const AvancesPage = lazy(() => import("@/components/senpaie/AvancesPage").then((m) => ({ default: m.AvancesPage })));
 import { Modal } from "@/components/senpaie/Modal";
+import { OnboardingChecklist } from "@/components/senpaie/OnboardingChecklist";
+import { NotificationCenter } from "@/components/senpaie/NotificationCenter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
+import { buildAlerts } from "@/lib/alerts";
+import { DEMO_EMPLOYEES, isDemoEmployee } from "@/lib/demoData";
+import { EmployeePortal } from "@/components/senpaie/EmployeePortal";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { employees, saveEmployee, deleteEmployee, loading: empLoading } = useEmployees(user?.id);
-  const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id);
-  const { params, saveParams, resetParams } = usePayrollParams(user?.id);
-  const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id);
-  const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id);
+  const { entrepriseId, role, loading: entLoading } = useEntrepriseCtx();
+  const { employees, saveEmployee, deleteEmployee, loading: empLoading } = useEmployees(user?.id, entrepriseId);
+  const { entreprise, saveEntreprise, uploadLogo } = useEntreprise(user?.id, entrepriseId);
+  const { params, saveParams, resetParams } = usePayrollParams(user?.id, entrepriseId);
+  const { conventions, saveConvention, deleteConvention, saveCategory, deleteCategory } = useConventions(user?.id, entrepriseId);
+  const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id, entrepriseId);
+  const { conges } = useConges(user?.id, entrepriseId);
+  const { contrats } = useContrats(user?.id, entrepriseId);
   const isMobile = useIsMobile();
   const { theme, toggleTheme } = useTheme();
 
@@ -40,16 +56,42 @@ const Index = () => {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const bulletinTemplateId = entreprise.bulletinTemplate || "classique";
+
+  // Role-based nav gating
+  // Matrice d'habilitations (CDC §1). « equipe » = Admin uniquement.
+  const ALLOWED_TABS: Record<AppRole, TabId[]> = {
+    admin: NAV_ITEMS.map((n) => n.id),
+    drh: NAV_ITEMS.filter((n) => n.id !== "equipe").map((n) => n.id),
+    comptable: ["dashboard", "employes", "cotisations", "declarations", "tendances", "avances", "assistant"],
+    manager: ["dashboard", "employes", "conges", "assistant"],
+    employe: [],
+  };
+  const allowedTabs = role ? ALLOWED_TABS[role] : NAV_ITEMS.map((n) => n.id);
+  const navItems = NAV_ITEMS.filter((n) => allowedTabs.includes(n.id));
+  const activeTab: TabId = allowedTabs.includes(tab) ? tab : "dashboard";
+  // Écriture employés : Admin & DRH uniquement (aligné sur les politiques RLS)
+  const canWriteEmployees = role === "admin" || role === "drh";
+
+  const handleTemplateChange = async (id: string) => {
+    const updated = { ...entreprise, bulletinTemplate: id };
+    await saveEntreprise(updated);
+    showToast("✅ Modèle de bulletin mis à jour");
+  };
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
 
-  if (authLoading) return (
+  if (authLoading || entLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-primary text-lg font-bold animate-pulse font-mono">Chargement…</div>
     </div>
   );
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (role === "employe" && entrepriseId) return (
+    <EmployeePortal userId={user.id} entrepriseId={entrepriseId} employee={employees[0]} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onSignOut={signOut} />
+  );
 
   const allPaies = employees.map((e) => ({ ...e, paie: calculerPaie(e, params) }));
   const filtered = allPaies.filter((e) => `${e.prenom} ${e.nom} ${e.matricule} ${e.fonction}`.toLowerCase().includes(search.toLowerCase()));
@@ -60,7 +102,40 @@ const Index = () => {
     mass: allPaies.reduce((s, e) => s + e.paie.masse, 0),
   };
 
+  const alerts = buildAlerts(allPaies, totaux, conges, contrats);
+  const hasDemo = employees.some((e) => isDemoEmployee(e.matricule));
+
+  const handleLoadDemo = async () => {
+    setDemoBusy(true);
+    try {
+      for (const emp of DEMO_EMPLOYEES) {
+        if (employees.some((e) => e.matricule === emp.matricule)) continue;
+        await saveEmployee(emp, true);
+      }
+      showToast("🧪 Données de démo chargées");
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
+  const handleRemoveDemo = async () => {
+    setDemoBusy(true);
+    try {
+      for (const e of employees.filter((x) => isDemoEmployee(x.matricule))) {
+        await deleteEmployee(e.matricule);
+      }
+      showToast("🗑 Données de démo supprimées");
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
   const handleSaveEmp = async (emp: Employee) => {
+    const parsed = employeeSchema.safeParse(emp);
+    if (!parsed.success) {
+      showToast("⚠️ " + formatZodError(parsed.error).split("\n")[0]);
+      return;
+    }
     const isNew = !employees.some((e) => e.matricule === emp.matricule);
     await saveEmployee(emp, isNew);
     setShowForm(null);
@@ -73,12 +148,18 @@ const Index = () => {
     showToast("🗑 Employé supprimé");
   };
 
+  const handleImportEmps = async (emps: Employee[]) => {
+    for (const emp of emps) {
+      const parsed = employeeSchema.safeParse(emp);
+      if (!parsed.success) continue;
+      await saveEmployee(emp, true);
+    }
+    showToast(`✅ ${emps.length} employé(s) importé(s)`);
+  };
+
   const handleSaveSnapshot = async () => {
     const now = new Date();
-    await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length, {
-      bulletins: allPaies.map((e) => versLigne(e, e.paie)),
-      params,
-    });
+    await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length);
     showToast("💾 Mois clôturé et sauvegardé");
   };
 
@@ -94,19 +175,22 @@ const Index = () => {
 
   const sidebarContent = (
     <>
-      <div className="px-5 pt-5 pb-4 border-b border-border">
-        <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
-        <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+      <div className="px-5 pt-5 pb-4 border-b border-border flex items-start justify-between gap-2">
+        <div>
+          <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
+          <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
+        </div>
+        {!isMobile && <NotificationCenter alerts={alerts} />}
       </div>
       <nav className="flex-1 py-2.5 overflow-y-auto">
-        {NAV_ITEMS.map((n) => (
+        {navItems.map((n) => (
           <button key={n.id} onClick={() => handleTabChange(n.id)}
-            className={`w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all ${
-              tab === n.id
+            className={`group w-full text-left px-5 py-3 border-none cursor-pointer text-xs flex items-center justify-between transition-all duration-200 ${
+              activeTab === n.id
                 ? "bg-primary/10 text-primary border-l-[3px] border-l-primary"
-                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary"
+                : "text-muted-foreground border-l-[3px] border-l-transparent hover:bg-secondary hover:text-foreground hover:translate-x-0.5"
             }`}>
-            <span className="flex items-center gap-2.5"><span>{n.icon}</span>{n.label}</span>
+            <span className="flex items-center gap-2.5"><span className="inline-block transition-transform duration-200 group-hover:scale-110">{n.icon}</span>{n.label}</span>
             {n.id === "employes" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{employees.length}</span>}
             {n.id === "conventions" && <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-black">{conventions.length}</span>}
           </button>
@@ -117,6 +201,7 @@ const Index = () => {
           {theme === "dark" ? "☀️ Mode clair" : "🌙 Mode sombre"}
         </button>
         <div className="text-muted-foreground text-[10px] truncate">{user.email}</div>
+        {role && <div className="text-primary text-[10px] font-bold uppercase">{ROLE_LABEL[role]}</div>}
         <button onClick={signOut} className="w-full px-3 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer hover:bg-destructive/10 transition-colors">
           🚪 Déconnexion
         </button>
@@ -139,7 +224,7 @@ const Index = () => {
             ☰
           </button>
           <div className="text-primary text-[15px] font-black tracking-[2px]">G-SENPAIE</div>
-          <div className="w-8" />
+          <NotificationCenter alerts={alerts} />
         </header>
       )}
 
@@ -166,26 +251,59 @@ const Index = () => {
             <div className="text-primary animate-pulse">Chargement des données…</div>
           </div>
         ) : (
-          <>
-            {tab === "dashboard" && (
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-primary animate-pulse">Chargement du module…</div></div>}>
+            <div key={activeTab} className="animate-fade-in">
+            {activeTab === "dashboard" && (
               <Dashboard
                 allPaies={allPaies}
                 totaux={totaux}
                 history={history}
+                conges={conges}
+                contrats={contrats}
                 onSaveSnapshot={handleSaveSnapshot}
                 onReopenMonth={handleReopenMonth}
+                headerSlot={
+                  <OnboardingChecklist
+                    entreprise={entreprise}
+                    employeesCount={employees.length}
+                    conventionsCount={conventions.length}
+                    historyCount={history.length}
+                    hasDemo={hasDemo}
+                    demoBusy={demoBusy}
+                    onGoTo={handleTabChange}
+                    onLoadDemo={handleLoadDemo}
+                    onRemoveDemo={handleRemoveDemo}
+                  />
+                }
               />
             )}
-            {tab === "employes" && (
+            {activeTab === "employes" && (
               <EmployeeList employees={filtered} search={search} onSearchChange={setSearch}
                 onAdd={() => setShowForm("new")} onEdit={(emp) => setShowForm(emp)}
-                onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)} />
+                onDelete={(mat) => setShowDel(mat)} onBulletin={(emp) => setShowBulletin(emp)}
+                canWrite={canWriteEmployees}
+                onImport={canWriteEmployees ? handleImportEmps : undefined} />
             )}
-            {tab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
-            {tab === "etats" && <EtatsPage employees={employees} params={params} entreprise={entreprise} archives={versArchives(history)} />}
-            {tab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
-            {tab === "simulateur" && <Simulateur params={params} />}
-            {tab === "conventions" && (
+            {activeTab === "cotisations" && <CotisationsTable allPaies={allPaies} totaux={totaux} onOpenRapport={() => setShowRapport(true)} />}
+            {activeTab === "tendances" && <TendancesPage allPaies={allPaies} totaux={totaux} history={history} />}
+            {activeTab === "simulateur" && <Simulateur params={params} />}
+            {activeTab === "assistant" && <AssistantPage />}
+            {activeTab === "conges" && (
+              <CongesPage
+                userId={user.id}
+                entrepriseId={entrepriseId}
+                employees={employees}
+                canWrite={role !== "comptable"}
+                onApplyAbsences={canWriteEmployees ? async (emp) => { await saveEmployee(emp, false); } : undefined}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
+            {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
+            {activeTab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
+            {activeTab === "avances" && <AvancesPage entrepriseId={entrepriseId} employees={employees} />}
+            {activeTab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}
+            {activeTab === "conventions" && (
               <ConventionsPage
                 conventions={conventions}
                 onSaveConvention={saveConvention}
@@ -195,15 +313,24 @@ const Index = () => {
                 showToast={showToast}
               />
             )}
-            {tab === "entreprise" && (
+            {activeTab === "entreprise" && (
               <EntreprisePage
                 entreprise={entreprise}
-                onSave={async (d) => { await saveEntreprise(d); showToast("✅ Entreprise enregistrée"); }}
+                onSave={async (d) => {
+                  const parsed = entrepriseSchema.safeParse(d);
+                  if (!parsed.success) {
+                    showToast("⚠️ " + formatZodError(parsed.error).split("\n")[0]);
+                    return;
+                  }
+                  await saveEntreprise(d);
+                  showToast("✅ Entreprise enregistrée");
+                }}
                 onUploadLogo={uploadLogo}
               />
             )}
-            {tab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} />}
-          </>
+            {activeTab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
+            </div>
+          </Suspense>
         )}
       </main>
 
@@ -212,8 +339,10 @@ const Index = () => {
           <EmployeeForm initial={showForm === "new" ? null : showForm as Employee} onSave={handleSaveEmp} onClose={() => setShowForm(null)} existingMats={employees.map((e) => e.matricule)} conventions={conventions} />
         </Modal>
       )}
-      {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} archives={versArchives(history)} onClose={() => setShowBulletin(null)} />}
-      {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
+      <Suspense fallback={null}>
+        {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onClose={() => setShowBulletin(null)} />}
+        {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
+      </Suspense>
       {showDel && (
         <Modal title="⚠️ Confirmation de suppression" onClose={() => setShowDel(null)} width={420}>
           <p className="text-foreground mb-5">

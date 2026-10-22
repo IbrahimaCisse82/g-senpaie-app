@@ -1,8 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { fmt, getAnciennete } from "@/lib/payroll";
 import { Modal, Field, inputClass } from "./Modal";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
+import { parseEmployeeFile, downloadImportTemplate, exportEmployeesXlsx, type ImportRowError } from "@/lib/employeeImport";
+
+/** SMIG mensuel de référence Sénégal (FCFA) */
+const SMIG_MENSUEL = 64281;
 
 interface EmployeeListProps {
   employees: (Employee & { paie: PayrollResult })[];
@@ -12,19 +16,39 @@ interface EmployeeListProps {
   onEdit: (emp: Employee) => void;
   onDelete: (matricule: string) => void;
   onBulletin: (emp: Employee) => void;
+  canWrite?: boolean;
+  onImport?: (emps: Employee[]) => Promise<void>;
 }
 
 type SortKey = "nom" | "net" | "brut" | "anciennete";
 type SortDir = "asc" | "desc";
 
-export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin }: EmployeeListProps) {
+export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit, onDelete, onBulletin, canWrite = true, onImport }: EmployeeListProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState<{ ok: number; errors: ImportRowError[] } | null>(null);
   const [filterStatut, setFilterStatut] = useState("");
   const [filterContrat, setFilterContrat] = useState("");
   const [filterConvention, setFilterConvention] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("nom");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showFilters, setShowFilters] = useState(false);
+
+  const handleFile = async (file: File) => {
+    if (!onImport) return;
+    setImporting(true);
+    try {
+      const { employees: parsed, errors } = await parseEmployeeFile(file, employees.map((e) => e.matricule));
+      if (parsed.length) await onImport(parsed);
+      setImportReport({ ok: parsed.length, errors });
+    } catch {
+      setImportReport({ ok: 0, errors: [{ ligne: 0, message: "Fichier illisible — utilisez le modèle Excel." }] });
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   // Extract unique values for filters
   const statuts = useMemo(() => [...new Set(employees.map((e) => e.statut).filter(Boolean))], [employees]);
@@ -61,19 +85,57 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+    <div className="page-enter">
+      <div className="page-section flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
           <h1 className="text-foreground text-xl font-extrabold mb-1">Gestion des Employés</h1>
           <div className="text-muted-foreground text-[11px]">{displayed.length} employé{displayed.length > 1 ? "s" : ""} affiché{displayed.length > 1 ? "s" : ""} sur {employees.length}</div>
         </div>
-        <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
-          + Nouvel Employé
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => void exportEmployeesXlsx(employees)} className="px-3 py-2.5 bg-transparent border border-border text-muted-foreground rounded-lg font-bold text-[11px] cursor-pointer hover:text-foreground whitespace-nowrap">
+            ⬇ Exporter Excel
+          </button>
+          {canWrite && onImport && (
+            <>
+              <button onClick={() => void downloadImportTemplate()} className="px-3 py-2.5 bg-transparent border border-border text-muted-foreground rounded-lg font-bold text-[11px] cursor-pointer hover:text-foreground whitespace-nowrap">
+                📄 Modèle
+              </button>
+              <button onClick={() => fileRef.current?.click()} disabled={importing} className="px-3 py-2.5 bg-secondary border border-border text-foreground rounded-lg font-bold text-[11px] cursor-pointer whitespace-nowrap disabled:opacity-50">
+                {importing ? "Import…" : "⬆ Importer Excel"}
+              </button>
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); }} />
+            </>
+          )}
+          {canWrite && (
+            <button onClick={onAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none whitespace-nowrap">
+              + Nouvel Employé
+            </button>
+          )}
+        </div>
       </div>
 
+      {importReport && (
+        <div className="bg-card border border-border rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-start gap-3">
+            <div className="text-[12px]">
+              <div className="text-primary font-bold">✅ {importReport.ok} employé{importReport.ok > 1 ? "s" : ""} importé{importReport.ok > 1 ? "s" : ""}</div>
+              {importReport.errors.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-destructive font-bold mb-1">⚠️ {importReport.errors.length} ligne(s) ignorée(s)</div>
+                  <ul className="text-muted-foreground text-[11px] space-y-0.5 max-h-40 overflow-y-auto">
+                    {importReport.errors.map((er, i) => <li key={i}>Ligne {er.ligne} — {er.message}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setImportReport(null)} className="text-muted-foreground bg-transparent border-none cursor-pointer text-sm">✕</button>
+          </div>
+        </div>
+      )}
+
       {/* Search + Filter bar */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+      <div className="page-section flex flex-col sm:flex-row gap-2 mb-4 [animation-delay:70ms]">
         <input
           placeholder="🔍  Rechercher par nom, matricule, fonction…"
           value={search}
@@ -170,8 +232,8 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <button onClick={(e) => { e.stopPropagation(); onBulletin(emp); }} className="px-2.5 py-1.5 bg-senpaie-blue text-background rounded-lg text-[11px] font-bold cursor-pointer border-none" title="Bulletin de paie">📄</button>
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer" title="Modifier">✏️</button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer" title="Supprimer">🗑</button>
+                  {canWrite && <button onClick={(e) => { e.stopPropagation(); onEdit(emp); }} className="px-2.5 py-1.5 bg-transparent border border-senpaie-yellow text-senpaie-yellow rounded-lg text-[11px] font-bold cursor-pointer" title="Modifier">✏️</button>}
+                  {canWrite && <button onClick={(e) => { e.stopPropagation(); onDelete(emp.matricule); }} className="px-2.5 py-1.5 bg-transparent border border-destructive text-destructive rounded-lg text-[11px] font-bold cursor-pointer" title="Supprimer">🗑</button>}
                 </div>
                 <span className="text-muted-foreground hidden sm:inline">{expanded === emp.matricule ? "▲" : "▼"}</span>
               </div>
@@ -221,7 +283,7 @@ interface EmpFormProps {
 export function EmployeeForm({ initial, onSave, onClose, existingMats, conventions }: EmpFormProps) {
   const [form, setForm] = useState<Employee>({ ...EMPTY_EMPLOYEE, ...initial });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const set = (k: keyof Employee, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof Employee, v: string | number) => setForm((f) => ({ ...f, [k]: v }));
 
   const selectedCC = conventions.find((c) => c.nom === form.convention);
   const availableCats = selectedCC ? selectedCC.categories : [];
@@ -244,6 +306,15 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
     if (!form.fonction.trim()) e.fonction = "Requis";
     if (!form.dateEntree) e.dateEntree = "Requis";
     if (!(form.salaireBase > 0)) e.salaireBase = "Doit être > 0";
+    // Contrôle SMIG + minimum conventionnel (bloquant)
+    const sb = +form.salaireBase || 0;
+    if (sb > 0 && sb < SMIG_MENSUEL) {
+      e.salaireBase = `Sous le SMIG (${SMIG_MENSUEL.toLocaleString("fr-FR")} FCFA)`;
+    }
+    const cat = availableCats.find((c) => c.code === form.categorie);
+    if (cat && sb > 0 && sb < cat.salaireMinima) {
+      e.salaireBase = `Sous le minimum conventionnel ${form.convention} · ${cat.code} (${cat.salaireMinima.toLocaleString("fr-FR")} FCFA)`;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -396,12 +467,9 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
           <Field label="Heures abs. maladie">
             <input type="number" min="0" value={form.heuresAbsMaladie || ""} onChange={(e) => set("heuresAbsMaladie", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
-          <Field label="Maintien de salaire maladie (0 à 1)">
-            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="1 = 100 %" className={inputClass} />
+          <Field label="Taux maladie (0 à 1)">
+            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
-        </div>
-        <div className="text-muted-foreground text-[11px] -mt-1">
-          Les heures de maladie sont déduites comme une absence, puis indemnisées au taux de maintien (1 = salaire maintenu à 100 %, 0,5 = 50 %). Ne pas les compter aussi dans « Heures d'absence ».
         </div>
       </div>
 

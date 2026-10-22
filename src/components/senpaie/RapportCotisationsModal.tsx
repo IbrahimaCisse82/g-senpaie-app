@@ -3,7 +3,6 @@ import type { Employee, PayrollParams, PayrollResult } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import type { Entreprise } from "@/lib/payroll";
 import { Modal } from "./Modal";
-import { escapeStrings, safeImageUrl } from "@/lib/utils";
 
 interface RapportCotisationsModalProps {
   employees: Employee[];
@@ -117,12 +116,10 @@ function exportRapportCSV(rows: PeriodeTotaux[], totals: ReturnType<typeof sumTo
 function genererRapportHTML(
   rows: PeriodeTotaux[],
   totals: ReturnType<typeof sumTotaux>,
-  entrepriseBrute: Entreprise,
+  entreprise: Entreprise,
   nbEmployees: number,
   periodeLabel: string
 ): string {
-  // Données saisies échappées avant insertion dans le HTML (protection XSS)
-  const entreprise = { ...escapeStrings(entrepriseBrute), logo: safeImageUrl(entrepriseBrute.logo) };
   const fmtN = (n: number) => new Intl.NumberFormat("fr-FR").format(Math.round(n || 0));
   const date_emission = new Date().toLocaleDateString("fr-FR");
 

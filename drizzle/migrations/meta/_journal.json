@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791928636044,
+      "tag": "0000_restrict_avances_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791928994832,
+      "tag": "0001_auto_entreprise_on_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792029234300,
+      "tag": "0002_cleanup_placeholder_entreprise_on_join",
+      "breakpoints": true
+    }
+  ]
+}

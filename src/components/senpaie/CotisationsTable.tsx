@@ -82,12 +82,44 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
   URL.revokeObjectURL(url);
 }
 
+async function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
+  const XLSX = await import("xlsx");
+  const headers = ["Employé", "Matricule", "Statut", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Masse", "Net"];
+  const rows = allPaies.map((emp) => [
+    `${emp.prenom} ${emp.nom}`, emp.matricule, emp.statut,
+    Math.round(emp.paie.brut), Math.round(emp.paie.ir), Math.round(emp.paie.trimf),
+    Math.round(emp.paie.ipresRG_s + emp.paie.ipresRG_p),
+    Math.round(emp.paie.ipresRC_s + emp.paie.ipresRC_p),
+    Math.round(emp.paie.css_af + emp.paie.css_at),
+    Math.round(emp.paie.ipm_s + emp.paie.ipm_p),
+    Math.round(emp.paie.totalRet), Math.round(emp.paie.chargesPat),
+    Math.round(emp.paie.masse), Math.round(emp.paie.net),
+  ]);
+  const totRow = [
+    "TOTAUX", "", "",
+    Math.round(totaux.brut),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ir, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.trimf, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ipresRG_s + e.paie.ipresRG_p, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ipresRC_s + e.paie.ipresRC_p, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.css_af + e.paie.css_at, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.ipm_s + e.paie.ipm_p, 0)),
+    Math.round(allPaies.reduce((s, e) => s + e.paie.totalRet, 0)),
+    Math.round(totaux.ch), Math.round(totaux.mass), Math.round(totaux.net),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows, totRow]);
+  ws["!cols"] = headers.map(() => ({ wch: 14 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cotisations");
+  XLSX.writeFile(wb, `cotisations_${MOIS[new Date().getMonth()]}_${new Date().getFullYear()}.xlsx`);
+}
+
 export function CotisationsTable({ allPaies, totaux, onOpenRapport }: CotisationsTableProps) {
   const headers = ["Employé", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Net"];
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+    <div className="page-enter">
+      <div className="page-section flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <h1 className="text-foreground text-xl font-extrabold">État des Cotisations</h1>
         <div className="flex gap-2 flex-wrap">
           {onOpenRapport && (
@@ -110,11 +142,17 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
           >
             📥 Exporter CSV
           </button>
+          <button
+            onClick={() => void exportXLSX(allPaies, totaux)}
+            className="px-4 py-2 bg-senpaie-yellow text-background rounded-lg font-bold text-[12px] cursor-pointer border-none whitespace-nowrap"
+          >
+            📊 Exporter Excel
+          </button>
         </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="page-section grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 [animation-delay:70ms]">
         <div className="bg-card border border-border rounded-lg p-3">
           <div className="text-muted-foreground text-[10px] uppercase">Total IR</div>
           <div className="text-destructive font-extrabold text-sm mt-1">{fmt(allPaies.reduce((s, e) => s + e.paie.ir, 0))} F</div>
@@ -133,7 +171,7 @@ export function CotisationsTable({ allPaies, totaux, onOpenRapport }: Cotisation
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="page-section overflow-x-auto rounded-lg border border-border [animation-delay:140ms]">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-background">

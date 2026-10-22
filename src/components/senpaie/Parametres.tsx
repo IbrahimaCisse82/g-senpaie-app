@@ -1,27 +1,22 @@
 import { useState } from "react";
 import type { PayrollParams } from "@/lib/payroll";
-import { CSS_AT_CLASSES } from "@/lib/payroll";
 import { Field, inputClass } from "./Modal";
+import { BulletinTemplateSelector } from "./BulletinTemplateSelector";
 
 interface ParametresProps {
   params: PayrollParams;
   onSave: (p: PayrollParams) => void;
   onReset: () => void;
+  bulletinTemplateId: string;
+  onBulletinTemplateChange: (id: string) => void;
 }
 
-export function Parametres({ params, onSave, onReset }: ParametresProps) {
+export function Parametres({ params, onSave, onReset, bulletinTemplateId, onBulletinTemplateChange }: ParametresProps) {
   const [local, setLocal] = useState<PayrollParams>(() => JSON.parse(JSON.stringify(params)));
   const setP = (key: keyof PayrollParams, field: string, value: string) => {
     setLocal((prev) => ({
       ...prev,
       [key]: { ...(prev[key] as Record<string, unknown>), [field]: isNaN(+value) ? value : +value },
-    }));
-  };
-
-  const setPlafond = (key: keyof PayrollParams, actif: boolean) => {
-    setLocal((prev) => ({
-      ...prev,
-      [key]: { ...(prev[key] as Record<string, unknown>), plafond: actif ? 63000 : null },
     }));
   };
 
@@ -38,6 +33,11 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
           <button onClick={onReset} className="px-4 py-2 bg-transparent border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px] cursor-pointer">↺ Réinitialiser</button>
           <button onClick={() => onSave(local)} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] cursor-pointer border-none">💾 Enregistrer</button>
         </div>
+      </div>
+
+      {/* Bulletin Templates */}
+      <div className="mb-6">
+        <BulletinTemplateSelector selectedId={bulletinTemplateId} onSelect={onBulletinTemplateChange} />
       </div>
 
       <div className="bg-card rounded-lg mb-5 overflow-hidden border border-border">
@@ -61,22 +61,7 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
                 const p = local[key];
                 return (
                   <tr key={key} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-senpaie-alt-row"}`}>
-                    <td className="py-2.5 px-4 text-foreground font-semibold">
-                      {p.label}
-                      {key === "CSS_AT" && (
-                        <select
-                          value={CSS_AT_CLASSES.find((c) => Math.abs(c.taux - p.taux) < 1e-9)?.taux ?? ""}
-                          onChange={(e) => e.target.value && setP(key, "taux", e.target.value)}
-                          className={`${inputClass} mt-1.5 py-1 px-2 text-[11px] font-normal w-full max-w-[230px]`}
-                        >
-                          <option value="">Taux personnalisé</option>
-                          {CSS_AT_CLASSES.map((c) => <option key={c.taux} value={c.taux}>{c.label}</option>)}
-                        </select>
-                      )}
-                      {key === "IPM" && p.taux === 0 && (
-                        <div className="text-muted-foreground text-[10px] font-normal mt-1">Taux 0 = entreprise sans IPM</div>
-                      )}
-                    </td>
+                    <td className="py-2.5 px-4 text-foreground font-semibold">{p.label}</td>
                     <td className="py-2 px-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <input type="number" step="0.001" min="0" max="1" value={p.taux} onChange={(e) => setP(key, "taux", e.target.value)}
@@ -99,18 +84,12 @@ export function Parametres({ params, onSave, onReset }: ParametresProps) {
                       </div>
                     </td>
                     <td className="py-2 px-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer whitespace-nowrap">
-                          <input type="checkbox" checked={p.plafond !== null} onChange={(e) => setPlafond(key, e.target.checked)} />
-                          Plafonné
-                        </label>
-                        {p.plafond !== null ? (
-                          <input type="number" step="1000" min="0" value={p.plafond ?? ""} onChange={(e) => setP(key, "plafond", e.target.value)}
-                            className={`${inputClass} w-[120px] text-center py-1.5 px-2`} />
-                        ) : (
-                          <span className="text-senpaie-dim text-[11px] w-[120px]">Sans plafond</span>
-                        )}
-                      </div>
+                      {p.plafond !== null ? (
+                        <input type="number" step="1000" min="0" value={p.plafond ?? ""} onChange={(e) => setP(key, "plafond", e.target.value)}
+                          className={`${inputClass} w-[130px] text-center py-1.5 px-2`} />
+                      ) : (
+                        <span className="text-senpaie-dim text-[11px]">Sans plafond</span>
+                      )}
                     </td>
                   </tr>
                 );
