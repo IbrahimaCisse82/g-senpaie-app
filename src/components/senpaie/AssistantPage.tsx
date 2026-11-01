@@ -97,7 +97,7 @@ export function AssistantPage() {
       <div className="flex flex-col gap-3">
         {messages.map((m, i) => (
           <div key={i} className={`rounded-md p-3 text-sm whitespace-pre-wrap ${m.role === "user" ? "bg-primary text-primary-foreground self-end max-w-[85%]" : "bg-card border border-border"}`}>
-            {m.content || "…"}
+            {m.content ? renderBold(m.content) : "…"}
           </div>
         ))}
         {error && <div className="text-sm text-destructive">{error}</div>}
@@ -117,5 +117,13 @@ export function AssistantPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function renderBold(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") && part.length > 4
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part.replace(/^#{1,6}\s+/gm, ""),
   );
 }
