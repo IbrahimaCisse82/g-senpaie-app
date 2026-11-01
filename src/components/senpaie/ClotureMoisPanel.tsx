@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MOIS } from "@/lib/constants";
-import { fmt } from "@/lib/payroll";
+import { MOIS, fmt } from "@/lib/payroll";
 import type { Employee, PayrollResult } from "@/lib/payroll";
 
 type Row = { id: string; matricule: string; nom_complet: string; email: string | null; net: number; statut_envoi: string };

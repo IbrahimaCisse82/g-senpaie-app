@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Dashboard } from "@/components/senpaie/Dashboard";
 import { EmployeeList, EmployeeForm } from "@/components/senpaie/EmployeeList";
 const BulletinModal = lazy(() => import("@/components/senpaie/BulletinModal").then((m) => ({ default: m.BulletinModal })));
+const ClotureMoisPanel = lazy(() => import("@/components/senpaie/ClotureMoisPanel"));
 const Parametres = lazy(() => import("@/components/senpaie/Parametres").then((m) => ({ default: m.Parametres })));
 const Simulateur = lazy(() => import("@/components/senpaie/Simulateur").then((m) => ({ default: m.Simulateur })));
 const CotisationsTable = lazy(() => import("@/components/senpaie/CotisationsTable").then((m) => ({ default: m.CotisationsTable })));
@@ -326,6 +327,14 @@ const Index = () => {
                   showToast("✅ Entreprise enregistrée");
                 }}
                 onUploadLogo={uploadLogo}
+              />
+            )}
+            {activeTab === "entreprise" && (
+              <ClotureMoisPanel
+                entrepriseId={entrepriseId}
+                allPaies={allPaies}
+                onCloseMonth={handleSaveSnapshot}
+                canClose={role === "admin" || role === "drh" || role === "comptable"}
               />
             )}
             {activeTab === "parametres" && <Parametres params={params} onSave={async (p) => { await saveParams(p); showToast("✅ Paramètres enregistrés"); }} onReset={async () => { await resetParams(); showToast("↺ Paramètres réinitialisés"); }} bulletinTemplateId={bulletinTemplateId} onBulletinTemplateChange={handleTemplateChange} />}
