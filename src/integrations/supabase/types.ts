@@ -106,6 +106,68 @@ export type Database = {
           },
         ]
       }
+      bulletins_mois: {
+        Row: {
+          annee: number
+          brut: number
+          created_at: string
+          data: Json
+          email: string | null
+          entreprise_id: string
+          envoye_at: string | null
+          erreur: string | null
+          id: string
+          matricule: string
+          mois: number
+          net: number
+          nom_complet: string
+          statut_envoi: string
+          updated_at: string
+        }
+        Insert: {
+          annee: number
+          brut?: number
+          created_at?: string
+          data?: Json
+          email?: string | null
+          entreprise_id: string
+          envoye_at?: string | null
+          erreur?: string | null
+          id?: string
+          matricule: string
+          mois: number
+          net?: number
+          nom_complet: string
+          statut_envoi?: string
+          updated_at?: string
+        }
+        Update: {
+          annee?: number
+          brut?: number
+          created_at?: string
+          data?: Json
+          email?: string | null
+          entreprise_id?: string
+          envoye_at?: string | null
+          erreur?: string | null
+          id?: string
+          matricule?: string
+          mois?: number
+          net?: number
+          nom_complet?: string
+          statut_envoi?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulletins_mois_entreprise_id_fkey"
+            columns: ["entreprise_id"]
+            isOneToOne: false
+            referencedRelation: "entreprises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conges: {
         Row: {
           created_at: string
