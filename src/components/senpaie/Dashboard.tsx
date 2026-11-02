@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { StatCard } from "./StatCard";
 import type { Employee, PayrollResult } from "@/lib/payroll";
-import { fmt, MOIS } from "@/lib/payroll";
+import { fmt, MOIS, normaliserStatut } from "@/lib/payroll";
 import type { PayrollSnapshot } from "@/hooks/useSupabaseData";
 import type { Conge, Contrat } from "@/hooks/useRH";
 import { buildAlerts } from "@/lib/alerts";
@@ -82,7 +82,7 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
   const statutDistribution = useMemo(() => {
     const map: Record<string, { count: number; totalNet: number }> = {};
     allPaies.forEach((e) => {
-      const s = e.statut || "Non défini";
+      const s = normaliserStatut(e.statut) || "Non défini";
       if (!map[s]) map[s] = { count: 0, totalNet: 0 };
       map[s].count++;
       map[s].totalNet += e.paie.net;

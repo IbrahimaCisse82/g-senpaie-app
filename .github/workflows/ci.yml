@@ -1,0 +1,27 @@
+# Contrôle automatique : toute modification (y compris depuis Lovable) doit garder
+# les calculs de paie conformes au modèle Excel SENEXCELPAIE et au droit sénégalais.
+name: CI paie
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Installation (lockfile strict)
+        run: npm ci --no-audit --no-fund
+      - name: Types
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Tests de paie (non-régression Excel, règles légales)
+        run: npx vitest run
+      - name: Build
+        run: npm run build

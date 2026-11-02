@@ -1,5 +1,6 @@
 import type { Employee, PayrollResult, Entreprise } from "./payroll";
 import { getAnciennete, fmt, MOIS } from "./payroll";
+import { escapeStrings, safeImageUrl } from "./utils";
 
 // ══════════════════════════════════════════════════════════════
 //  Types
@@ -56,27 +57,38 @@ function signaturesHTML() {
   </div>`;
 }
 
+/** Taux effectif affiché entre parenthèses, déduit du montant et de sa base (suit les paramètres de l'entreprise) */
+function tx(montant: number, base: number | undefined): string {
+  if (!base || base <= 0 || !montant) return "";
+  const t = Math.round((montant / base) * 1000) / 10;
+  return ` (${String(t).replace(".", ",")}%)`;
+}
+
 function buildSalaryRows(emp: Employee, p: PayrollResult, anc: number): string[][] {
   const rows: string[][] = [];
-  rows.push(["Salaire de base", fmtN(p.salaireBase)]);
+  rows.push([p.regime === "prestataire" ? "Honoraires" : "Salaire de base", fmtN(p.salaireBase)]);
   if (p.sursalaire > 0) rows.push(["Sursalaire", fmtN(p.sursalaire)]);
   if (p.primeAnc > 0) rows.push([`Prime d'ancienneté (${anc}%)`, fmtN(p.primeAnc)]);
   if (p.mtHS115 > 0) rows.push([`HS 115% (${emp.hs115}h)`, fmtN(p.mtHS115)]);
   if (p.mtHS140 > 0) rows.push([`HS 140% (${emp.hs140}h)`, fmtN(p.mtHS140)]);
   if (p.mtHS160 > 0) rows.push([`HS 160% (${emp.hs160}h)`, fmtN(p.mtHS160)]);
   if (p.mtHS200 > 0) rows.push([`HS 200% (${emp.hs200}h)`, fmtN(p.mtHS200)]);
-  if (p.retAbsence > 0) rows.push([`Retenue absences (${emp.heuresAbsence}h)`, `– ${fmtN(p.retAbsence)}`]);
-  if (p.indMaladie > 0) rows.push(["Indemnité maladie", fmtN(p.indMaladie)]);
+  const hAbs = (emp.heuresAbsence || 0) + (emp.heuresAbsMaladie || 0);
+  if (p.retAbsence > 0) rows.push([`Retenue absences (${hAbs}h)`, `– ${fmtN(p.retAbsence)}`]);
+  if (p.indMaladie > 0) rows.push([`Indemnité maladie (${emp.heuresAbsMaladie}h)`, fmtN(p.indMaladie)]);
   return rows;
 }
 
 function buildRetRows(p: PayrollResult): string[][] {
   const rows: string[][] = [];
-  rows.push(["Impôt sur le Revenu (IR)", `– ${fmtN(p.ir)}`]);
-  rows.push(["TRIMF", `– ${fmtN(p.trimf)}`]);
-  rows.push(["IPRES R.G. salarié (5,6%)", `– ${fmtN(p.ipresRG_s)}`]);
-  if (p.ipresRC_s > 0) rows.push(["IPRES R.C.C. salarié (2,4%)", `– ${fmtN(p.ipresRC_s)}`]);
-  if (p.ipm_s > 0) rows.push(["IPM salarié", `– ${fmtN(p.ipm_s)}`]);
+  if (p.regime === "salarie") {
+    rows.push(["Impôt sur le Revenu (IR)", `– ${fmtN(p.ir)}`]);
+    rows.push(["TRIMF", `– ${fmtN(p.trimf)}`]);
+  }
+  if (p.brs > 0) rows.push([`BRS sur honoraires${tx(p.brs, p.brut)}`, `– ${fmtN(p.brs)}`]);
+  if (p.ipresRG_s > 0) rows.push([`IPRES R.G. salarié${tx(p.ipresRG_s, p.baseIPRES_RG)}`, `– ${fmtN(p.ipresRG_s)}`]);
+  if (p.ipresRC_s > 0) rows.push([`IPRES R.C.C. salarié${tx(p.ipresRC_s, p.baseIPRES_RC)}`, `– ${fmtN(p.ipresRC_s)}`]);
+  if (p.ipm_s > 0) rows.push([`IPM salarié${tx(p.ipm_s, p.baseIPM)}`, `– ${fmtN(p.ipm_s)}`]);
   return rows;
 }
 
@@ -92,7 +104,7 @@ function buildAvancesRows(p: PayrollResult): string[][] {
 
 function buildIndemRows(emp: Employee, p: PayrollResult): string[][] {
   const rows: string[][] = [];
-  rows.push(["Indemnité de transport", fmtN(p.transport)]);
+  if (p.transport > 0) rows.push(["Indemnité de transport", fmtN(p.transport)]);
   if (p.primePanier > 0) rows.push([`Prime de panier (${emp.nbPaniers}j)`, fmtN(p.primePanier)]);
   if (p.indKilometrique > 0) rows.push(["Indemnité kilométrique", fmtN(p.indKilometrique)]);
   return rows;
@@ -100,12 +112,12 @@ function buildIndemRows(emp: Employee, p: PayrollResult): string[][] {
 
 function buildChargesRows(p: PayrollResult): string[][] {
   const rows: string[][] = [];
-  rows.push(["CFCE (3%)", fmtN(p.cfce)]);
-  rows.push(["IPRES R.G. patronal (8,4%)", fmtN(p.ipresRG_p)]);
-  if (p.ipresRC_p > 0) rows.push(["IPRES R.C.C. patronal (3,6%)", fmtN(p.ipresRC_p)]);
-  rows.push(["CSS Alloc. Familiales (7%)", fmtN(p.css_af)]);
-  rows.push(["CSS Acc. Travail (1%)", fmtN(p.css_at)]);
-  if (p.ipm_p > 0) rows.push(["IPM patronal", fmtN(p.ipm_p)]);
+  if (p.cfce > 0) rows.push([`CFCE${tx(p.cfce, p.brut)}`, fmtN(p.cfce)]);
+  if (p.ipresRG_p > 0) rows.push([`IPRES R.G. patronal${tx(p.ipresRG_p, p.baseIPRES_RG)}`, fmtN(p.ipresRG_p)]);
+  if (p.ipresRC_p > 0) rows.push([`IPRES R.C.C. patronal${tx(p.ipresRC_p, p.baseIPRES_RC)}`, fmtN(p.ipresRC_p)]);
+  if (p.css_af > 0) rows.push([`CSS Alloc. Familiales${tx(p.css_af, p.baseCSS)}`, fmtN(p.css_af)]);
+  if (p.css_at > 0) rows.push([`CSS Acc. Travail${tx(p.css_at, p.baseCSS_AT)}`, fmtN(p.css_at)]);
+  if (p.ipm_p > 0) rows.push([`IPM patronal${tx(p.ipm_p, p.baseIPM)}`, fmtN(p.ipm_p)]);
   return rows;
 }
 
@@ -115,6 +127,7 @@ function pageWrapper(css: string, body: string) {
 
 function tableSection(title: string, bgColor: string, rows: string[][], opts: { negColor?: string; totalRow?: [string, string]; totalColor?: string } = {}) {
   const { negColor = "#dc2626", totalRow, totalColor = bgColor } = opts;
+  if (rows.length === 0) return ""; // section sans objet (ex. prestataire : pas de charges patronales)
   let html = `<table style="width:100%;border-collapse:collapse;margin-bottom:10px">
     <thead><tr><th colspan="2" style="background:${bgColor};color:#fff;padding:6px 10px;text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase">${title}</th></tr></thead><tbody>`;
   rows.forEach(([l, v], i) => {
@@ -393,17 +406,23 @@ function t10_soleil(emp: Employee, p: PayrollResult, mois: number, annee: number
 //  Registry
 // ══════════════════════════════════════════════════════════════
 
+/** Échappe toutes les données saisies (salarié, entreprise) avant de générer le HTML d'un modèle (protection XSS) */
+function securise(gen: BulletinTemplate["generate"]): BulletinTemplate["generate"] {
+  return (emp, p, mois, annee, anc, ent) =>
+    gen(escapeStrings(emp), p, mois, annee, anc, { ...escapeStrings(ent), logo: safeImageUrl(ent.logo) });
+}
+
 export const BULLETIN_TEMPLATES: BulletinTemplate[] = [
-  { id: "classique", nom: "Classique Émeraude", description: "Le modèle original avec en-tête vert émeraude", couleurPrimaire: "#064e3b", generate: t1_classique },
-  { id: "corporate", nom: "Bleu Corporate", description: "Style professionnel avec dégradé bleu", couleurPrimaire: "#2563eb", generate: t2_corporate },
-  { id: "minimal", nom: "Minimaliste Noir", description: "Design épuré, noir et blanc avec accents subtils", couleurPrimaire: "#111111", generate: t3_minimal },
-  { id: "bordeaux", nom: "Or & Bordeaux", description: "Élégant avec accents dorés et bordeaux", couleurPrimaire: "#991b1b", generate: t4_bordeaux },
-  { id: "senegalais", nom: "Élégant Sénégalais", description: "Aux couleurs du drapeau national vert-jaune-rouge", couleurPrimaire: "#006633", generate: t5_senegalais },
-  { id: "violet", nom: "Moderne Violet", description: "Design contemporain avec dégradé violet", couleurPrimaire: "#7c3aed", generate: t6_violet },
-  { id: "tableau", nom: "Tableau Structuré", description: "Format comptable avec tableau complet", couleurPrimaire: "#1e40af", generate: t7_tableau },
-  { id: "ocean", nom: "Océan Turquoise", description: "Ambiance marine avec teintes turquoise", couleurPrimaire: "#0d9488", generate: t8_ocean },
-  { id: "ardoise", nom: "Ardoise Moderne", description: "Style sombre et moderne avec accents cyan", couleurPrimaire: "#1e293b", generate: t9_ardoise },
-  { id: "soleil", nom: "Soleil Orange", description: "Chaleureux avec dégradé orange africain", couleurPrimaire: "#ea580c", generate: t10_soleil },
+  { id: "classique", nom: "Classique Émeraude", description: "Le modèle original avec en-tête vert émeraude", couleurPrimaire: "#064e3b", generate: securise(t1_classique) },
+  { id: "corporate", nom: "Bleu Corporate", description: "Style professionnel avec dégradé bleu", couleurPrimaire: "#2563eb", generate: securise(t2_corporate) },
+  { id: "minimal", nom: "Minimaliste Noir", description: "Design épuré, noir et blanc avec accents subtils", couleurPrimaire: "#111111", generate: securise(t3_minimal) },
+  { id: "bordeaux", nom: "Or & Bordeaux", description: "Élégant avec accents dorés et bordeaux", couleurPrimaire: "#991b1b", generate: securise(t4_bordeaux) },
+  { id: "senegalais", nom: "Élégant Sénégalais", description: "Aux couleurs du drapeau national vert-jaune-rouge", couleurPrimaire: "#006633", generate: securise(t5_senegalais) },
+  { id: "violet", nom: "Moderne Violet", description: "Design contemporain avec dégradé violet", couleurPrimaire: "#7c3aed", generate: securise(t6_violet) },
+  { id: "tableau", nom: "Tableau Structuré", description: "Format comptable avec tableau complet", couleurPrimaire: "#1e40af", generate: securise(t7_tableau) },
+  { id: "ocean", nom: "Océan Turquoise", description: "Ambiance marine avec teintes turquoise", couleurPrimaire: "#0d9488", generate: securise(t8_ocean) },
+  { id: "ardoise", nom: "Ardoise Moderne", description: "Style sombre et moderne avec accents cyan", couleurPrimaire: "#1e293b", generate: securise(t9_ardoise) },
+  { id: "soleil", nom: "Soleil Orange", description: "Chaleureux avec dégradé orange africain", couleurPrimaire: "#ea580c", generate: securise(t10_soleil) },
 ];
 
 export function getTemplate(id: string): BulletinTemplate {

@@ -1,5 +1,6 @@
 import type { Employee } from "@/lib/payroll";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
+import { normaliserStatut, normaliserSituation, STATUTS } from "./payroll";
 
 /** Colonnes du modèle d'import (libellé → clé Employee) */
 export const IMPORT_COLUMNS: { header: string; key: keyof Employee; type: "text" | "number" }[] = [
@@ -103,6 +104,12 @@ export async function parseEmployeeFile(file: File, existingMats: string[] = [])
     emp.dateNaissance = toDate(get("Date naissance (AAAA-MM-JJ)"));
     emp.dateEntree = toDate(get("Date entree (AAAA-MM-JJ)"));
     emp.sexe = emp.sexe.toUpperCase().startsWith("F") ? "F" : "M";
+    // Valeurs canoniques : « Cadre », « CADRES », « Mariée »… sont reconnues par le moteur de paie
+    emp.statut = normaliserStatut(emp.statut) || "employés";
+    emp.situationFamille = normaliserSituation(emp.situationFamille) || "Célibataire";
+    if (emp.statut && !(STATUTS as readonly string[]).includes(emp.statut)) {
+      errors.push({ ligne, message: `${emp.matricule || "?"} : statut « ${emp.statut} » inconnu (attendu : ${STATUTS.join(", ")})` }); return;
+    }
 
     if (!emp.matricule) { errors.push({ ligne, message: "Matricule manquant" }); return; }
     if (!emp.nom || !emp.prenom) { errors.push({ ligne, message: `${emp.matricule} : nom ou prénom manquant` }); return; }

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { BULLETIN_TEMPLATES, type BulletinTemplate } from "@/lib/bulletinTemplates";
+import { calculerPaie } from "@/lib/payroll";
+import { DEFAULT_PARAMS } from "@/lib/constants";
 
 interface TemplateSelectorProps {
   selectedId: string;
@@ -120,20 +122,13 @@ function TemplatePreviewModal({ template, isDefault, onSetDefault, onClose }: {
     avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, indKilometrique: 0,
   };
 
-  const sampleResult = {
-    salaireBase: 250000, sursalaire: 50000, primeAnc: 15000, brut: 315000,
-    ir: 22500, trimf: 1000, ipresRG_s: 24192, ipresRC_s: 7776, ipm_s: 0, totalRet: 55468,
-    cfce: 9450, ipresRG_p: 36288, ipresRC_p: 11664, css_af: 4410, css_at: 630, ipm_p: 0, chargesPat: 62442,
-    transport: 26000, net: 285532, masse: 377442, anc: 8, ancRate: 0.08, baseCSS: 63000, partsIR: 3.5, partsTRIMFCap: 2,
-    tauxHoraire: 1442.31, retAbsence: 0, indMaladie: 0,
-    mtHS115: 0, mtHS140: 0, mtHS160: 0, mtHS200: 0, totalHS: 0,
-    primePanier: 0, indKilometrique: 0, totalAvances: 0,
-    avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0,
-  };
+  // Résultat calculé par le moteur réel : l'aperçu reste cohérent avec les règles de paie
+  const finMois = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+  const sampleResult = calculerPaie(sampleEmp, DEFAULT_PARAMS, finMois);
 
-  const sampleEnt = { nom: "GROW HUB SARL", logo: "", adresse: "Dakar, Sénégal", telephone: "33 800 00 00", email: "contact@growhub.sn", ninea: "12345678", rccm: "SN-DKR-2020-B-1234", bulletinTemplate: "classique" };
+  const sampleEnt = { nom: "GROW HUB SARL", logo: "", adresse: "Dakar, Sénégal", telephone: "33 800 00 00", email: "contact@growhub.sn", ninea: "006760210", rccm: "SN-DKR-2020-B-12345", bulletinTemplate: "classique" };
 
-  const html = template.generate(sampleEmp, sampleResult, new Date().getMonth(), new Date().getFullYear(), 8, sampleEnt);
+  const html = template.generate(sampleEmp, sampleResult, new Date().getMonth(), new Date().getFullYear(), sampleResult.anc, sampleEnt);
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>

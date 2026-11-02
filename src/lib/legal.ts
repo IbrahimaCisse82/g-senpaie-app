@@ -3,22 +3,64 @@
  * Références : art. L.61, L.116, L.143, Convention collective interprofessionnelle.
  */
 import type { Employee, PayrollResult } from "./payroll";
-import { getAnciennete } from "./payroll";
+import { getAnciennete, normaliserStatut } from "./payroll";
 
-/** Droit de congés payés : 2 jours ouvrables / mois (24j/an). Cumul depuis embauche. */
-export function droitCongesAcquis(dateEntree: string, refDate?: Date): number {
-  if (!dateEntree) return 0;
+/** Cumul maximal des congés : 3 ans (Code du travail, art. L.148 et suivants) */
+export const CUMUL_CONGES_MAX_MOIS = 36;
+
+const ajouterMois = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
+const moisEntre = (a: Date, b: Date) => Math.max(0, (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()));
+
+/**
+ * Début de la période de cumul des congés : la date d'entrée, ou 36 mois avant la date de référence
+ * si l'embauche est plus ancienne (au-delà, les congés non pris ne se cumulent pas).
+ */
+export function debutPeriodeConges(dateEntree: string, refDate?: Date): Date | null {
+  if (!dateEntree) return null;
   const ref = refDate || new Date();
-  const start = new Date(dateEntree);
-  const months = Math.max(0, (ref.getFullYear() - start.getFullYear()) * 12 + (ref.getMonth() - start.getMonth()));
-  return months * 2;
+  const entree = new Date(dateEntree);
+  const limite = ajouterMois(ref, -CUMUL_CONGES_MAX_MOIS);
+  return entree > limite ? entree : limite;
 }
 
-/** Préavis légal (mois) selon statut et ancienneté. */
-export function dureePreavisMois(statut: string, anciennete: number): number {
-  const cadre = statut === "cadres";
-  if (cadre) return 3;
-  if (anciennete >= 5) return 2;
+/** Jours supplémentaires annuels selon l'ancienneté (CCNI 2019, art. 70) : +1 après 10 ans, +2 après 15, +3 après 20 */
+export function majorationAncienneteConges(anciennete: number): number {
+  if (anciennete >= 20) return 3;
+  if (anciennete >= 15) return 2;
+  if (anciennete >= 10) return 1;
+  return 0;
+}
+
+/**
+ * Droit de congés payés acquis et cumulable : 2 jours ouvrables par mois de service effectif
+ * (CCNI 2019, art. 70), sur la période de cumul de 36 mois au plus, majoration d'ancienneté comprise.
+ */
+export function droitCongesAcquis(dateEntree: string, refDate?: Date): number {
+  const debut = debutPeriodeConges(dateEntree, refDate);
+  if (!debut) return 0;
+  const ref = refDate || new Date();
+  const mois = Math.min(moisEntre(debut, ref), CUMUL_CONGES_MAX_MOIS);
+  const majoration = majorationAncienneteConges(getAnciennete(dateEntree, ref)) * (mois / 12);
+  return Math.floor(mois * 2 + majoration);
+}
+
+/** Jours de congés payés validés pris pendant la période de cumul */
+export function joursCongesPrisSurPeriode(
+  conges: { matricule: string; type: string; statut: string; dateDebut: string; jours: number }[],
+  matricule: string, dateEntree: string, refDate?: Date,
+): number {
+  const debut = debutPeriodeConges(dateEntree, refDate);
+  if (!debut) return 0;
+  return conges
+    .filter((c) => c.matricule === matricule && c.type === "paye" && c.statut === "valide" && new Date(c.dateDebut) >= debut)
+    .reduce((s, c) => s + (c.jours || 0), 0);
+}
+
+/** Préavis (CCNI 2019, art. 75) : ouvriers et employés 1 mois, agents de maîtrise 2 mois, cadres 3 mois. */
+export function dureePreavisMois(statut: string, _anciennete?: number): number {
+  const s = normaliserStatut(statut);
+  if (s === "cadres") return 3;
+  if (s === "agents de maîtrise") return 2;
   return 1;
 }
 
@@ -50,10 +92,14 @@ export function indemnitePreavis(salaireMoyenMensuel: number, moisPreavis: numbe
   return salaireMoyenMensuel * moisPreavis;
 }
 
-/** Indemnité compensatrice de congés payés = (jours acquis – jours pris) × (salaire / 26) */
+/**
+ * Indemnité compensatrice de congés payés : l'allocation de congé vaut 1/12 de la rémunération annuelle
+ * pour 24 jours ouvrables, soit (salaire mensuel / 24) par jour restant.
+ */
+export const JOURS_CONGES_PAR_AN = 24;
 export function indemniteCongesNonPris(salaireMoyenMensuel: number, joursAcquis: number, joursPris: number): number {
   const reste = Math.max(0, joursAcquis - joursPris);
-  return (salaireMoyenMensuel / 26) * reste;
+  return (salaireMoyenMensuel / JOURS_CONGES_PAR_AN) * reste;
 }
 
 export interface SoldeToutCompte {

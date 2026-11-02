@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculerPaie, getAnciennete, getTauxAnciennete, type Employee } from "@/lib/payroll";
+import { calculerPaie, getAnciennete, getTauxAnciennete, HEURES_MOIS_HS, resteVariables, remiseAZeroVariables, type Employee } from "@/lib/payroll";
 import { DEFAULT_PARAMS, EMPTY_EMPLOYEE, DEFAULT_EMPLOYEES } from "@/lib/constants";
 
 const refDate = new Date("2025-06-01");
@@ -126,7 +126,8 @@ describe("calculerPaie - Majorations heures supplémentaires", () => {
   it("applique 15 / 40 / 60 / 100 %", () => {
     const emp = baseEmp({ dateEntree: "2024-01-01", hs115: 1, hs140: 1, hs160: 1, hs200: 1 });
     const r = calculerPaie(emp, DEFAULT_PARAMS, refDate);
-    const th = 100000 / 173.33;
+    // Excel SENEXCELPAIE : taux horaire HS = (salaire de base + sursalaire) / (40 h × 52 / 12)
+    const th = 100000 / HEURES_MOIS_HS;
     expect(r.tauxHoraire).toBeCloseTo(th, 6);
     expect(r.mtHS115).toBeCloseTo(th * 1.15, 6);
     expect(r.mtHS140).toBeCloseTo(th * 1.4, 6);
@@ -136,9 +137,29 @@ describe("calculerPaie - Majorations heures supplémentaires", () => {
 });
 
 describe("Scénario de référence Excel (GROW HUB)", () => {
-  it("total net à payer = 338 174 FCFA", () => {
+  // 339 250 F : ancienneté en années révolues au lendemain de la fin de mois (DATEDIF de l'Excel).
+  // L'ancienne valeur (338 174 F) comptait 16 ans au lieu de 17 pour une embauche au 1er juin 2009.
+  it("total net à payer = 339 250 FCFA", () => {
     const ref = new Date("2026-06-01");
     const total = DEFAULT_EMPLOYEES.reduce((s, e) => s + calculerPaie(e, DEFAULT_PARAMS, ref).net, 0);
-    expect(Math.round(total)).toBe(338174);
+    expect(Math.round(total)).toBe(339250);
+  });
+});
+describe("Ancienneté au jour anniversaire", () => {
+  it("compte l'année révolue le jour anniversaire de l'embauche", () => {
+    expect(getAnciennete("2009-06-01", new Date(2026, 4, 31))).toBe(17); // paie de mai 2026
+    expect(getAnciennete("2009-06-02", new Date(2026, 4, 31))).toBe(16);
+  });
+});
+
+describe("Clôture : remise à zéro des éléments variables", () => {
+  it("les absences, HS et paniers ne sont pas repris le mois suivant ; le reste de la fiche est conservé", () => {
+    const e = baseEmp({ heuresAbsence: 16, heuresAbsMaladie: 8, hs115: 4, nbPaniers: 10, sursalaire: 50000, avanceFinanciere: 20000 });
+    expect(resteVariables(e)).toBe(true);
+    const r = remiseAZeroVariables(e);
+    expect([r.heuresAbsence, r.heuresAbsMaladie, r.hs115, r.nbPaniers]).toEqual([0, 0, 0, 0]);
+    expect(r.sursalaire).toBe(50000);
+    expect(r.avanceFinanciere).toBe(20000);
+    expect(resteVariables(r)).toBe(false);
   });
 });

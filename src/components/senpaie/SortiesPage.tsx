@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import type { Employee, PayrollParams, Entreprise } from "@/lib/payroll";
 import { calculerPaie, fmt } from "@/lib/payroll";
-import { calculerSTC } from "@/lib/legal";
+import { calculerSTC, joursCongesPrisSurPeriode } from "@/lib/legal";
 import { useConges, logAttestation } from "@/hooks/useRH";
 import { exportHtmlToPdf } from "@/lib/pdfExport";
 import { Modal, Field, inputClass } from "./Modal";
 import { supabase } from "@/integrations/supabase/client";
+import { escapeStrings, safeImageUrl } from "@/lib/utils";
 
 interface Props {
   userId: string;
@@ -216,7 +217,7 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
           emp={showSTC}
           params={params}
           entreprise={entreprise}
-          joursCongesPris={conges.filter((c) => c.matricule === showSTC.matricule && c.type === "paye" && c.statut === "valide").reduce((s, c) => s + c.jours, 0)}
+          joursCongesPris={joursCongesPrisSurPeriode(conges, showSTC.matricule, showSTC.dateEntree)}
           onClose={() => setShowSTC(null)}
           onGenerated={async () => { if (entrepriseId) { await logAttestation(userId, entrepriseId, showSTC.matricule, "stc"); loadLogs(); } }}
         />
@@ -281,6 +282,9 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
 function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerated }: {
   emp: Employee; params: PayrollParams; entreprise: Entreprise; joursCongesPris: number; onClose: () => void; onGenerated: () => void;
 }) {
+  // Données saisies échappées avant insertion dans le HTML (protection XSS)
+  const hEmp = escapeStrings(emp);
+  const hEnt = { ...escapeStrings(entreprise), logo: safeImageUrl(entreprise.logo) };
   const [motif, setMotif] = useState<"licenciement" | "demission" | "retraite" | "fin_cdd">("licenciement");
   const [dateFin, setDateFin] = useState(emp.dateSortie || new Date().toISOString().slice(0, 10));
   const paie = useMemo(() => calculerPaie(emp, params, new Date(dateFin)), [emp, params, dateFin]);
@@ -291,10 +295,10 @@ function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerat
       <h1 style="text-align:center;margin:0 0 5px;font-size:18px;">SOLDE DE TOUT COMPTE</h1>
       <div style="text-align:center;font-size:11px;color:#555;margin-bottom:25px;">Conformément aux dispositions du Code du Travail du Sénégal (art. L.61, L.143)</div>
       <div style="margin-bottom:18px;font-size:12px;">
-        <b>Employeur :</b> ${entreprise.nom || "—"}${entreprise.ninea ? " · NINEA " + entreprise.ninea : ""}<br/>
-        <b>Salarié :</b> ${emp.prenom} ${emp.nom} · Matricule ${emp.matricule}<br/>
-        <b>Emploi :</b> ${emp.fonction} · <b>Statut :</b> ${emp.statut}<br/>
-        <b>Date d'embauche :</b> ${emp.dateEntree} · <b>Date de sortie :</b> ${dateFin}<br/>
+        <b>Employeur :</b> ${hEnt.nom || "—"}${hEnt.ninea ? " · NINEA " + entreprise.ninea : ""}<br/>
+        <b>Salarié :</b> ${hEmp.prenom} ${hEmp.nom} · Matricule ${hEmp.matricule}<br/>
+        <b>Emploi :</b> ${hEmp.fonction} · <b>Statut :</b> ${hEmp.statut}<br/>
+        <b>Date d'embauche :</b> ${hEmp.dateEntree} · <b>Date de sortie :</b> ${dateFin}<br/>
         <b>Motif :</b> ${motif} · <b>Ancienneté :</b> ${stc.anciennete} an(s)
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -307,13 +311,14 @@ function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerat
           <tr style="background:#e8f5e9;font-weight:bold;"><td style="border:1px solid #999;padding:6px;">TOTAL BRUT À VERSER</td><td style="border:1px solid #999;padding:6px;text-align:right;">${fmt(stc.totalBrut)}</td></tr>
         </tbody>
       </table>
+      <p style="font-size:10px;color:#555;margin-top:6px;">Montants bruts, avant retenues fiscales et sociales (IR, TRIMF, IPRES) applicables au préavis et à l'indemnité de congés ; l'indemnité de licenciement relève de son propre régime d'exonération. Congés : cumul limité aux 36 derniers mois.</p>
       <div style="margin-top:30px;font-size:11px;">
         Le présent reçu est délivré pour solde de tout compte. Toute contestation devra intervenir dans les délais légaux.<br/><br/><br/>
-        Fait à ${entreprise.adresse || "Dakar"}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/><br/>
+        Fait à ${hEnt.adresse || "Dakar"}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/><br/>
         <table style="width:100%;"><tr><td style="width:50%;">Signature de l'employeur</td><td style="width:50%;">Signature du salarié<br/>(« Lu et approuvé, bon pour solde de tout compte »)</td></tr></table>
       </div>
     </div>`;
-    await exportHtmlToPdf(html, `STC_${emp.matricule}.pdf`);
+    await exportHtmlToPdf(html, `STC_${hEmp.matricule}.pdf`);
     onGenerated();
   };
 
@@ -339,6 +344,7 @@ function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerat
         <Line l="Indemnité de licenciement" v={`${fmt(stc.indLicenciement)} FCFA`} />
         <hr className="border-border my-2" />
         <div className="flex justify-between font-bold text-primary text-[14px]"><span>TOTAL BRUT</span><span>{fmt(stc.totalBrut)} FCFA</span></div>
+        <div className="text-muted-foreground text-[10px] mt-2">Montants bruts, avant IR, TRIMF et IPRES sur le préavis et les congés. Congés : cumul limité aux 36 derniers mois.</div>
       </div>
       <div className="flex gap-2 justify-end mt-4">
         <button onClick={onClose} className="px-4 py-2 border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px]">Fermer</button>
@@ -355,6 +361,9 @@ function Line({ l, v }: { l: string; v: string }) {
 function AttestationModal({ emp, type, params, entreprise, onClose, onGenerated }: {
   emp: Employee; type: AttestType; params: PayrollParams; entreprise: Entreprise; onClose: () => void; onGenerated: () => void;
 }) {
+  // Données saisies échappées avant insertion dans le HTML (protection XSS)
+  const hEmp = escapeStrings(emp);
+  const hEnt = { ...escapeStrings(entreprise), logo: safeImageUrl(entreprise.logo) };
   const paie = calculerPaie(emp, params);
   const today = new Date().toLocaleDateString("fr-FR");
 
@@ -365,25 +374,25 @@ function AttestationModal({ emp, type, params, entreprise, onClose, onGenerated 
   };
 
   const bodies: Record<AttestType, string> = {
-    travail: `Je soussigné(e), responsable de la société <b>${entreprise.nom || "—"}</b>, atteste par la présente que <b>${emp.prenom} ${emp.nom}</b>, né(e) le ${emp.dateNaissance || "—"} à ${emp.lieuNaissance || "—"}, est employé(e) au sein de notre entreprise en qualité de <b>${emp.fonction}</b> depuis le <b>${emp.dateEntree}</b>${emp.dateSortie ? ` jusqu'au <b>${emp.dateSortie}</b>` : ""} sous contrat <b>${emp.contrat}</b>.<br/><br/>La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.`,
-    salaire: `Je soussigné(e), responsable de la société <b>${entreprise.nom || "—"}</b>, atteste par la présente que <b>${emp.prenom} ${emp.nom}</b>, matricule ${emp.matricule}, employé(e) en qualité de <b>${emp.fonction}</b> depuis le <b>${emp.dateEntree}</b>, perçoit un salaire brut mensuel de <b>${fmt(paie.brut)} FCFA</b> et un salaire net de <b>${fmt(paie.net)} FCFA</b>.<br/><br/>La présente attestation est délivrée pour servir et valoir ce que de droit.`,
-    presence: `Je soussigné(e), responsable de la société <b>${entreprise.nom || "—"}</b>, atteste par la présente que <b>${emp.prenom} ${emp.nom}</b>, matricule ${emp.matricule}, est effectivement présent(e) au sein de notre entreprise à ce jour, en qualité de <b>${emp.fonction}</b> depuis le <b>${emp.dateEntree}</b>.<br/><br/>La présente attestation est délivrée pour servir et valoir ce que de droit.`,
+    travail: `Je soussigné(e), responsable de la société <b>${hEnt.nom || "—"}</b>, atteste par la présente que <b>${hEmp.prenom} ${hEmp.nom}</b>, né(e) le ${hEmp.dateNaissance || "—"} à ${hEmp.lieuNaissance || "—"}, est employé(e) au sein de notre entreprise en qualité de <b>${hEmp.fonction}</b> depuis le <b>${hEmp.dateEntree}</b>${hEmp.dateSortie ? ` jusqu'au <b>${hEmp.dateSortie}</b>` : ""} sous contrat <b>${hEmp.contrat}</b>.<br/><br/>La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.`,
+    salaire: `Je soussigné(e), responsable de la société <b>${hEnt.nom || "—"}</b>, atteste par la présente que <b>${hEmp.prenom} ${hEmp.nom}</b>, matricule ${hEmp.matricule}, employé(e) en qualité de <b>${hEmp.fonction}</b> depuis le <b>${hEmp.dateEntree}</b>, perçoit un salaire brut mensuel de <b>${fmt(paie.brut)} FCFA</b> et un salaire net de <b>${fmt(paie.net)} FCFA</b>.<br/><br/>La présente attestation est délivrée pour servir et valoir ce que de droit.`,
+    presence: `Je soussigné(e), responsable de la société <b>${hEnt.nom || "—"}</b>, atteste par la présente que <b>${hEmp.prenom} ${hEmp.nom}</b>, matricule ${hEmp.matricule}, est effectivement présent(e) au sein de notre entreprise à ce jour, en qualité de <b>${hEmp.fonction}</b> depuis le <b>${hEmp.dateEntree}</b>.<br/><br/>La présente attestation est délivrée pour servir et valoir ce que de droit.`,
   };
 
   const exportPdf = async () => {
     const html = `<div class="page" style="font-family:Georgia,serif;padding:50px 60px;color:#111;background:#fff;width:674px;min-height:1000px;">
       <div style="text-align:center;margin-bottom:40px;">
-        <div style="font-size:14px;font-weight:bold;">${entreprise.nom || "—"}</div>
-        <div style="font-size:10px;color:#666;">${entreprise.adresse || ""}${entreprise.telephone ? " · Tél : " + entreprise.telephone : ""}${entreprise.ninea ? " · NINEA " + entreprise.ninea : ""}</div>
+        <div style="font-size:14px;font-weight:bold;">${hEnt.nom || "—"}</div>
+        <div style="font-size:10px;color:#666;">${hEnt.adresse || ""}${hEnt.telephone ? " · Tél : " + entreprise.telephone : ""}${hEnt.ninea ? " · NINEA " + entreprise.ninea : ""}</div>
       </div>
       <h1 style="text-align:center;text-decoration:underline;font-size:18px;letter-spacing:2px;margin:40px 0;">${titles[type]}</h1>
       <div style="font-size:13px;line-height:1.8;text-align:justify;margin-top:30px;">${bodies[type]}</div>
       <div style="margin-top:80px;font-size:12px;text-align:right;">
-        Fait à ${entreprise.adresse || "Dakar"}, le ${today}<br/><br/><br/>
+        Fait à ${hEnt.adresse || "Dakar"}, le ${today}<br/><br/><br/>
         Signature & cachet
       </div>
     </div>`;
-    await exportHtmlToPdf(html, `attestation_${type}_${emp.matricule}.pdf`);
+    await exportHtmlToPdf(html, `attestation_${type}_${hEmp.matricule}.pdf`);
     onGenerated();
   };
 

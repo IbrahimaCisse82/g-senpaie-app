@@ -4,6 +4,7 @@ import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
 import { useEntrepriseCtx, ROLE_LABEL, type AppRole } from "@/hooks/useEntrepriseContext";
 import { useConges, useContrats } from "@/hooks/useRH";
@@ -34,6 +35,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
 import { buildAlerts } from "@/lib/alerts";
 import { DEMO_EMPLOYEES, isDemoEmployee } from "@/lib/demoData";
+import { resteVariables, remiseAZeroVariables } from "@/lib/payroll";
 import { EmployeePortal } from "@/components/senpaie/EmployeePortal";
 
 const Index = () => {
@@ -158,10 +160,33 @@ const Index = () => {
     showToast(`✅ ${emps.length} employé(s) importé(s)`);
   };
 
+  /**
+   * Clôture unique du mois (tableau de bord et page Entreprise) :
+   * 1. archive les totaux, 2. fige un bulletin par salarié (bulletins_mois),
+   * 3. remet à zéro les éléments variables du mois pour qu'ils ne soient pas repris le mois suivant.
+   */
   const handleSaveSnapshot = async () => {
     const now = new Date();
-    await saveSnapshot(now.getMonth(), now.getFullYear(), totaux, allPaies.length);
-    showToast("💾 Mois clôturé et sauvegardé");
+    const mois = now.getMonth(), annee = now.getFullYear();
+    if (!confirm(`Clôturer ${MOIS[mois]} ${annee} et figer ${allPaies.length} bulletin(s) ?\nLes absences, heures supplémentaires et paniers saisis seront remis à zéro pour le mois suivant.`)) return;
+    await saveSnapshot(mois, annee, totaux, allPaies.length);
+    if (entrepriseId && allPaies.length) {
+      const payload = allPaies.map((e) => ({
+        entreprise_id: entrepriseId, mois, annee,
+        matricule: e.matricule,
+        nom_complet: `${e.prenom} ${e.nom}`,
+        email: e.email?.trim() || null,
+        brut: Math.round(e.paie.brut),
+        net: Math.round(e.paie.net),
+        data: JSON.parse(JSON.stringify(e.paie)),
+        statut_envoi: e.email?.trim() ? "en_attente" : "sans_email",
+      }));
+      const { error } = await supabase.from("bulletins_mois").upsert(payload as never, { onConflict: "entreprise_id,mois,annee,matricule" });
+      if (error) { showToast("⚠️ Bulletins non archivés : " + error.message); return; }
+    }
+    const aRemettre = employees.filter((e) => resteVariables(e));
+    for (const e of aRemettre) await saveEmployee(remiseAZeroVariables(e), false);
+    showToast(`💾 ${MOIS[mois]} ${annee} clôturé · ${allPaies.length} bulletin(s) figés${aRemettre.length ? ` · ${aRemettre.length} fiche(s) remise(s) à zéro` : ""}`);
   };
 
   const handleReopenMonth = async (mois: number, annee: number) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { normaliserParams } from "@/lib/payroll";
 import type { Employee, PayrollParams, Entreprise, Convention, ConventionCategory } from "@/lib/payroll";
 import { DEFAULT_PARAMS, DEFAULT_ENTREPRISE, DEFAULT_CONVENTIONS } from "@/lib/constants";
 import { toast } from "@/hooks/use-toast";
@@ -199,7 +200,7 @@ export function usePayrollParams(userId: string | undefined, entrepriseId: strin
     if (!entrepriseId) return;
     supabase.from("payroll_params").select("*").eq("entreprise_id" as never, entrepriseId as never).maybeSingle().then(({ data, error }) => {
       if (error) { handleError("Chargement paramètres", error); setLoading(false); return; }
-      if (data?.params) setParams(data.params as unknown as PayrollParams);
+      if (data?.params) setParams(normaliserParams(data.params as unknown as Partial<PayrollParams>, DEFAULT_PARAMS));
       setLoading(false);
     });
   }, [entrepriseId]);

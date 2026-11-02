@@ -40,23 +40,12 @@ export default function ClotureMoisPanel({ entrepriseId, allPaies, onCloseMonth,
 
   useEffect(() => { load(); }, [load]);
 
+  // La clôture (archivage, bulletins figés, remise à zéro des variables) est faite par onCloseMonth,
+  // la même fonction que le bouton du tableau de bord.
   const cloturer = async () => {
-    if (!entrepriseId || !confirm(`Clôturer ${MOIS[mois]} ${annee} et générer ${allPaies.length} bulletin(s) ?`)) return;
+    if (!entrepriseId) return;
     setBusy(true);
     await onCloseMonth();
-    const payload = allPaies.map((e) => ({
-      entreprise_id: entrepriseId, mois, annee,
-      matricule: e.matricule,
-      nom_complet: `${e.prenom} ${e.nom}`,
-      email: e.email?.trim() || null,
-      brut: Math.round(e.paie.brut),
-      net: Math.round(e.paie.net),
-      data: JSON.parse(JSON.stringify(e.paie)),
-      statut_envoi: e.email?.trim() ? "en_attente" : "sans_email",
-    }));
-    if (payload.length) {
-      await supabase.from("bulletins_mois").upsert(payload, { onConflict: "entreprise_id,mois,annee,matricule" });
-    }
     await load();
     setBusy(false);
   };

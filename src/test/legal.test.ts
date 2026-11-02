@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   droitCongesAcquis,
+  joursCongesPrisSurPeriode,
   dureePreavisMois,
   indemniteLicenciement,
   indemnitePreavis,
@@ -28,9 +29,15 @@ describe("Préavis légal", () => {
     expect(dureePreavisMois("cadres", 1)).toBe(3);
     expect(dureePreavisMois("cadres", 12)).toBe(3);
   });
-  it("non-cadre : 1 mois avant 5 ans, 2 mois au-delà", () => {
+  // CCNI 2019, art. 75 : la durée dépend de la catégorie, pas de l'ancienneté
+  it("ouvriers et employés : 1 mois, quelle que soit l'ancienneté", () => {
     expect(dureePreavisMois("employés", 3)).toBe(1);
-    expect(dureePreavisMois("employés", 5)).toBe(2);
+    expect(dureePreavisMois("employés", 12)).toBe(1);
+    expect(dureePreavisMois("Ouvrier", 8)).toBe(1);
+  });
+  it("agents de maîtrise : 2 mois", () => {
+    expect(dureePreavisMois("agents de maîtrise", 1)).toBe(2);
+    expect(dureePreavisMois("Agent de maîtrise", 9)).toBe(2);
   });
 });
 
@@ -56,8 +63,10 @@ describe("Indemnités compensatrices", () => {
   it("préavis = mois × salaire", () => {
     expect(indemnitePreavis(300000, 2)).toBe(600000);
   });
-  it("congés non pris = reliquat × salaire/26", () => {
-    expect(indemniteCongesNonPris(260000, 24, 10)).toBeCloseTo(140000, 0);
+  // Allocation de congé = 1/12 de la rémunération annuelle pour 24 jours ouvrables
+  it("congés non pris = reliquat × salaire/24", () => {
+    expect(indemniteCongesNonPris(240000, 30, 6)).toBeCloseTo(240000 / 24 * 24, 6);
+    expect(indemniteCongesNonPris(240000, 5, 10)).toBe(0);
   });
   it("aucun reliquat négatif", () => {
     expect(indemniteCongesNonPris(260000, 5, 12)).toBe(0);
@@ -102,5 +111,24 @@ describe("Répercussion congés → paie", () => {
       "E001", 7, 2026,
     );
     expect(r.heuresAbsence).toBe(0);
+  });
+});
+
+describe("Cumul des congés limité à 36 mois", () => {
+  it("un salarié embauché il y a 11 ans n'accumule pas 264 jours", () => {
+    const acquis = droitCongesAcquis("2015-01-05", new Date(2026, 10, 30));
+    expect(acquis).toBe(36 * 2 + 1 * 3); // 72 j + majoration d'1 j/an (≥ 10 ans) sur 3 ans
+  });
+  it("un embauché récent cumule depuis son entrée", () => {
+    expect(droitCongesAcquis("2026-01-01", new Date(2026, 10, 30))).toBe(20);
+  });
+  it("les congés pris avant la période de cumul ne sont pas décomptés", () => {
+    const conges = [
+      { matricule: "A", type: "paye", statut: "valide", dateDebut: "2020-08-01", jours: 24 },
+      { matricule: "A", type: "paye", statut: "valide", dateDebut: "2025-08-01", jours: 12 },
+      { matricule: "A", type: "paye", statut: "refuse", dateDebut: "2025-09-01", jours: 5 },
+      { matricule: "B", type: "paye", statut: "valide", dateDebut: "2025-08-01", jours: 7 },
+    ];
+    expect(joursCongesPrisSurPeriode(conges, "A", "2015-01-05", new Date(2026, 10, 30))).toBe(12);
   });
 });

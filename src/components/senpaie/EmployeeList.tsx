@@ -480,8 +480,8 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
           <Field label="Heures abs. maladie">
             <input type="number" min="0" value={form.heuresAbsMaladie || ""} onChange={(e) => set("heuresAbsMaladie", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
-          <Field label="Taux maladie (0 à 1)">
-            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="0" className={inputClass} />
+          <Field label="Maintien salaire maladie (0 à 1)">
+            <input type="number" min="0" max="1" step="0.01" value={form.tauxMaladie || ""} onChange={(e) => set("tauxMaladie", e.target.value)} placeholder="1 = 100 % (par défaut)" className={inputClass} />
           </Field>
         </div>
       </div>

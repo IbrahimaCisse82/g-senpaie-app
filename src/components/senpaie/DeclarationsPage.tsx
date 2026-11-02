@@ -1,4 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useEntrepriseCtx } from "@/hooks/useEntrepriseContext";
+import { calculerDADS, moisClotures, type BulletinArchive, type LigneDADS } from "@/lib/dads";
+import { escapeHtml } from "@/lib/utils";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { exportHtmlToPdf, exportRowsToCsv } from "@/lib/pdfExport";
@@ -19,6 +23,14 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
   const [mois, setMois] = useState(now.getMonth());
   const [annee, setAnnee] = useState(now.getFullYear());
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
+  const { entrepriseId } = useEntrepriseCtx();
+  const [bulletinsAnnee, setBulletinsAnnee] = useState<BulletinArchive[]>([]);
+  useEffect(() => {
+    if (!entrepriseId) return;
+    supabase.from("bulletins_mois").select("matricule, nom_complet, mois, annee, brut, data")
+      .eq("entreprise_id", entrepriseId).eq("annee", annee)
+      .then(({ data }) => setBulletinsAnnee((data ?? []) as unknown as BulletinArchive[]));
+  }, [entrepriseId, annee]);
 
   const refDate = new Date(annee, mois + 1, 0);
   const rows = useMemo(
@@ -62,7 +74,7 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
     const html = `<div class="page" style="font-family:Arial,sans-serif;padding:30px;color:#111;background:#fff;width:734px;">
       <div style="text-align:center;margin-bottom:25px;">
         <h1 style="margin:0;font-size:18px;">DÉCLARATION MENSUELLE IPRES / CSS</h1>
-        <div style="font-size:11px;margin-top:5px;">${entreprise.nom || "—"} ${entreprise.ninea ? "· NINEA " + entreprise.ninea : ""}</div>
+        <div style="font-size:11px;margin-top:5px;">${escapeHtml(entreprise.nom || "—")} ${entreprise.ninea ? "· NINEA " + entreprise.ninea : ""}</div>
         <div style="font-size:13px;font-weight:bold;margin-top:5px;">Période : ${MOIS[mois]} ${annee}</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:9px;">
@@ -78,8 +90,8 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
           <th style="border:1px solid #999;padding:4px;">CSS AT</th>
         </tr></thead><tbody>
         ${rows.map((r) => `<tr>
-          <td style="border:1px solid #999;padding:3px;">${r.emp.matricule}</td>
-          <td style="border:1px solid #999;padding:3px;">${r.emp.nom} ${r.emp.prenom}</td>
+          <td style="border:1px solid #999;padding:3px;">${escapeHtml(r.emp.matricule)}</td>
+          <td style="border:1px solid #999;padding:3px;">${escapeHtml(r.emp.nom)} ${escapeHtml(r.emp.prenom)}</td>
           <td style="border:1px solid #999;padding:3px;text-align:right;">${fmt(r.p.brut)}</td>
           <td style="border:1px solid #999;padding:3px;text-align:right;">${fmt(r.p.ipresRG_s)}</td>
           <td style="border:1px solid #999;padding:3px;text-align:right;">${fmt(r.p.ipresRG_p)}</td>
@@ -103,7 +115,7 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
         <div><b>Total à verser IPRES :</b> ${fmt(totaux.ipresRG_s + totaux.ipresRG_p + totaux.ipresRC_s + totaux.ipresRC_p)} FCFA</div>
         <div><b>Total à verser CSS :</b> ${fmt(totaux.css_af + totaux.css_at)} FCFA</div>
       </div>
-      <div style="margin-top:40px;font-size:10px;">Fait à ${entreprise.adresse || "Dakar"}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/>Signature & cachet de l'employeur</div>
+      <div style="margin-top:40px;font-size:10px;">Fait à ${escapeHtml(entreprise.adresse || "Dakar")}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/>Signature & cachet de l'employeur</div>
     </div>`;
     await exportHtmlToPdf(html, `declaration_ipres_${MOIS[mois]}_${annee}.pdf`);
   };
@@ -114,7 +126,7 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
       <div style="text-align:center;margin-bottom:20px;">
         <h1 style="margin:0;font-size:17px;">LIVRE DE PAIE</h1>
         <div style="font-size:10px;">Registre obligatoire — Art. L.116 du Code du Travail (Sénégal)</div>
-        <div style="font-size:12px;margin-top:6px;"><b>${entreprise.nom || "—"}</b>${entreprise.ninea ? " · NINEA " + entreprise.ninea : ""}${entreprise.rccm ? " · RCCM " + entreprise.rccm : ""}</div>
+        <div style="font-size:12px;margin-top:6px;"><b>${escapeHtml(entreprise.nom || "—")}</b>${entreprise.ninea ? " · NINEA " + entreprise.ninea : ""}${entreprise.rccm ? " · RCCM " + entreprise.rccm : ""}</div>
         <div style="font-size:12px;font-weight:bold;margin-top:4px;">Période : ${MOIS[mois]} ${annee}</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:8.5px;">
@@ -130,9 +142,9 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
           <th style="border:1px solid #444;padding:4px;">Émargement</th>
         </tr></thead><tbody>
         ${rows.map((r) => `<tr>
-          <td style="border:1px solid #999;padding:3px;">${r.emp.matricule}</td>
-          <td style="border:1px solid #999;padding:3px;">${r.emp.nom} ${r.emp.prenom}</td>
-          <td style="border:1px solid #999;padding:3px;">${r.emp.fonction}</td>
+          <td style="border:1px solid #999;padding:3px;">${escapeHtml(r.emp.matricule)}</td>
+          <td style="border:1px solid #999;padding:3px;">${escapeHtml(r.emp.nom)} ${escapeHtml(r.emp.prenom)}</td>
+          <td style="border:1px solid #999;padding:3px;">${escapeHtml(r.emp.fonction)}</td>
           <td style="border:1px solid #999;padding:3px;text-align:right;">${fmt(r.p.brut)}</td>
           <td style="border:1px solid #999;padding:3px;text-align:right;">${fmt(r.p.ir + r.p.trimf)}</td>
           <td style="border:1px solid #999;padding:3px;text-align:right;">${fmt(r.p.ipresRG_s + r.p.ipresRC_s + r.p.ipm_s)}</td>
@@ -150,31 +162,20 @@ export function DeclarationsPage({ employees, params, entreprise }: Props) {
           <td style="border:1px solid #999;"></td>
         </tr>
       </tbody></table>
-      <div style="margin-top:30px;font-size:10px;">Arrêté à la somme de <b>${fmt(totaux.net)} FCFA</b> (net) · Charges patronales <b>${fmt(totaux.ipresRG_p + totaux.ipresRC_p + totaux.css_af + totaux.css_at + totaux.cfce)} FCFA</b><br/><br/>Fait à ${entreprise.adresse || "Dakar"}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/>Signature de l'employeur</div>
+      <div style="margin-top:30px;font-size:10px;">Arrêté à la somme de <b>${fmt(totaux.net)} FCFA</b> (net) · Charges patronales <b>${fmt(totaux.ipresRG_p + totaux.ipresRC_p + totaux.css_af + totaux.css_at + totaux.cfce)} FCFA</b><br/><br/>Fait à ${escapeHtml(entreprise.adresse || "Dakar")}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/>Signature de l'employeur</div>
     </div>`;
     await exportHtmlToPdf(html, `livre_paie_${MOIS[mois]}_${annee}.pdf`, { orientation: "landscape" });
   };
 
-  // ── DADS annuelle
-  const dadsRows = useMemo(() => {
-    return employees.map((e) => {
-      // Cumul annuel approché : on multiplie par 12 le calcul mensuel
-      const p = calculerPaie(e, params, new Date(annee, 11, 31));
-      return {
-        emp: e,
-        brutAnnuel: p.brut * 12,
-        irAnnuel: p.ir * 12,
-        ipresAnnuel: (p.ipresRG_s + p.ipresRC_s) * 12,
-        cssAnnuel: (p.css_af + p.css_at) * 12,
-      };
-    });
-  }, [employees, params, annee]);
+  // ── DADS annuelle : cumul des bulletins réellement clôturés (aucune extrapolation)
+  const dadsRows: LigneDADS[] = useMemo(() => calculerDADS(bulletinsAnnee, employees, annee), [bulletinsAnnee, employees, annee]);
+  const dadsMois = useMemo(() => moisClotures(bulletinsAnnee, annee), [bulletinsAnnee, annee]);
 
   const exportDADS = () => {
-    const header = ["Matricule", "Nom", "Prénom", "Date entrée", "Date sortie", "Brut annuel", "IR annuel", "Cotis IPRES (salarié)", "CSS (patronal)"];
+    const header = ["Matricule", "Nom", "Prénom", "Date entrée", "Date sortie", "Mois déclarés", "Brut annuel", "IR annuel", "Cotis IPRES (salarié)", "CSS (patronal)"];
     const body = dadsRows.map((r) => [
       r.emp.matricule, r.emp.nom, r.emp.prenom, r.emp.dateEntree, r.emp.dateSortie || "",
-      Math.round(r.brutAnnuel), Math.round(r.irAnnuel), Math.round(r.ipresAnnuel), Math.round(r.cssAnnuel),
+      r.moisPayes.length, Math.round(r.brutAnnuel), Math.round(r.irAnnuel), Math.round(r.ipresAnnuel), Math.round(r.cssAnnuel),
     ]);
     exportRowsToCsv([header, ...body], `dads_${annee}.csv`);
   };
@@ -272,7 +273,7 @@ ${dadsRows.map((r) => `    <Salarie>
 
       {tab === "ipres" && <IpresPreview rows={rows} totaux={totaux} />}
       {tab === "livre" && <LivrePreview rows={rows} totaux={totaux} />}
-      {tab === "dads" && <DadsPreview rows={dadsRows} annee={annee} />}
+      {tab === "dads" && <DadsPreview rows={dadsRows} annee={annee} moisClotures={dadsMois} />}
     </div>
   );
 }
@@ -354,7 +355,7 @@ function LivrePreview({ rows, totaux }: { rows: { emp: Employee; p: PayrollResul
   );
 }
 
-function DadsPreview({ rows, annee }: { rows: { emp: Employee; brutAnnuel: number; irAnnuel: number; ipresAnnuel: number; cssAnnuel: number }[]; annee: number }) {
+function DadsPreview({ rows, annee, moisClotures }: { rows: LigneDADS[]; annee: number; moisClotures: number[] }) {
   const tot = rows.reduce((s, r) => ({
     brut: s.brut + r.brutAnnuel,
     ir: s.ir + r.irAnnuel,
@@ -364,7 +365,14 @@ function DadsPreview({ rows, annee }: { rows: { emp: Employee; brutAnnuel: numbe
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-x-auto">
-      <div className="px-4 py-3 border-b border-border text-muted-foreground text-[11px]">DADS — Déclaration Annuelle des Salaires <strong className="text-foreground">{annee}</strong> (cumul reconstitué)</div>
+      <div className="px-4 py-3 border-b border-border text-muted-foreground text-[11px]">
+        DADS — Déclaration Annuelle des Salaires <strong className="text-foreground">{annee}</strong> · cumul des bulletins clôturés
+        <span className={`ml-2 font-bold ${moisClotures.length === 12 ? "text-primary" : "text-senpaie-yellow"}`}>
+          {moisClotures.length}/12 mois clôturés{moisClotures.length ? ` (${moisClotures.map((m) => MOIS[m].slice(0, 3)).join(", ")})` : ""}
+        </span>
+        {moisClotures.length < 12 && <div className="mt-1">Seuls les mois clôturés sont déclarés. Clôturez chaque mois depuis la page Entreprise avant de déposer la DADS.</div>}
+      </div>
+      {rows.length === 0 && <div className="px-4 py-6 text-center text-muted-foreground text-[12px]">Aucun bulletin clôturé pour {annee}.</div>}
       <table className="w-full text-[11px]">
         <thead>
           <tr className="bg-background text-muted-foreground">

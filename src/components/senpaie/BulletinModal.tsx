@@ -206,10 +206,11 @@ export function BulletinModal({ emp, params, entreprise, templateId, onClose }: 
         {/* Retenues */}
         <div className="mb-2.5">
           <div className="text-destructive text-[10px] font-bold mb-1 uppercase tracking-wider">Retenues salariales</div>
-          <Row l="Impôt sur le Revenu (IR)" v={p.ir} c="text-destructive" neg />
-          <Row l="TRIMF" v={p.trimf} c="text-destructive" neg />
-          <Row l="IPRES R.G. salarié (5,6%)" v={p.ipresRG_s} c="text-destructive" neg />
-          {p.ipresRC_s > 0 && <Row l="IPRES R.C.C. salarié (2,4%)" v={p.ipresRC_s} c="text-destructive" neg />}
+          {p.regime === "salarie" && <Row l="Impôt sur le Revenu (IR)" v={p.ir} c="text-destructive" neg />}
+          {p.regime === "salarie" && <Row l="TRIMF" v={p.trimf} c="text-destructive" neg />}
+          {p.brs > 0 && <Row l={`BRS sur honoraires (${(params.BRS.taux * 100).toFixed(0)}%)`} v={p.brs} c="text-destructive" neg />}
+          {p.ipresRG_s > 0 && <Row l={`IPRES R.G. salarié (${(params.IPRES_RG.taux * params.IPRES_RG.tauxSalarial * 100).toFixed(1).replace(".", ",")}%)`} v={p.ipresRG_s} c="text-destructive" neg />}
+          {p.ipresRC_s > 0 && <Row l={`IPRES R.C.C. salarié (${(params.IPRES_RCC.taux * params.IPRES_RCC.tauxSalarial * 100).toFixed(1).replace(".", ",")}%)`} v={p.ipresRC_s} c="text-destructive" neg />}
           {p.ipm_s > 0 && <Row l="IPM salarié" v={p.ipm_s} c="text-destructive" neg />}
           <Row l="TOTAL RETENUES" v={p.totalRet} c="text-destructive" bold neg />
         </div>

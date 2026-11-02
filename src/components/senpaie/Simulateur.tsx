@@ -84,6 +84,7 @@ export function Simulateur({ params }: SimulateurProps) {
           ["SALAIRE BRUT", res.brut, "text-senpaie-blue", true],
           ["— IR", -res.ir, "text-destructive", false],
           ["— TRIMF", -res.trimf, "text-destructive", false],
+          ["— BRS (prestataire)", -res.brs, "text-destructive", false],
           ["— IPRES RG salarié", -res.ipresRG_s, "text-destructive", false],
           ["— IPRES RC salarié", -res.ipresRC_s, "text-destructive", false],
           ["— IPM salarié", -res.ipm_s, "text-destructive", false],

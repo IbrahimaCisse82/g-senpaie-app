@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import type { Employee } from "@/lib/payroll";
 import { MOIS } from "@/lib/payroll";
 import { useConges, type Conge } from "@/hooks/useRH";
-import { droitCongesAcquis, joursOuvrables, absencesDuMois } from "@/lib/legal";
+import { droitCongesAcquis, joursCongesPrisSurPeriode, joursOuvrables, absencesDuMois, CUMUL_CONGES_MAX_MOIS } from "@/lib/legal";
 import { Modal, Field, inputClass } from "./Modal";
 
 interface Props {
@@ -56,10 +56,9 @@ export function CongesPage({ userId, entrepriseId, employees, canWrite = true, o
 
   const soldes = useMemo(() => {
     return employees.map((emp) => {
+      // Cumul limité à 36 mois : au-delà, les congés non pris ne se reportent pas
       const acquis = droitCongesAcquis(emp.dateEntree);
-      const pris = conges
-        .filter((c) => c.matricule === emp.matricule && c.type === "paye" && c.statut === "valide")
-        .reduce((s, c) => s + c.jours, 0);
+      const pris = joursCongesPrisSurPeriode(conges, emp.matricule, emp.dateEntree);
       return { emp, acquis, pris, solde: acquis - pris };
     });
   }, [employees, conges]);
