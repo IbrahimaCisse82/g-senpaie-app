@@ -4,6 +4,7 @@ import { useContrats, type Contrat } from "@/hooks/useRH";
 import { exportHtmlToPdf } from "@/lib/pdfExport";
 import { fmt } from "@/lib/payroll";
 import { Modal, Field, inputClass } from "./Modal";
+import { controlerContrat, periodeEssaiMaxMois } from "@/lib/legal";
 
 interface Props {
   userId: string;
@@ -69,6 +70,7 @@ export function ContratsPage({ userId, entrepriseId, employees, entreprise }: Pr
         <ContratForm
           initial={showForm === "new" ? null : showForm}
           employees={employees}
+          autresContrats={contrats}
           onClose={() => setShowForm(null)}
           onSave={async (c) => { await save(c); setShowForm(null); }}
         />
@@ -77,9 +79,10 @@ export function ContratsPage({ userId, entrepriseId, employees, entreprise }: Pr
   );
 }
 
-function ContratForm({ initial, employees, onClose, onSave }: {
+function ContratForm({ initial, employees, autresContrats = [], onClose, onSave }: {
   initial: Contrat | null;
   employees: Employee[];
+  autresContrats?: Contrat[];
   onClose: () => void;
   onSave: (c: Omit<Contrat, "id"> & { id?: string }) => Promise<void>;
 }) {
@@ -87,15 +90,24 @@ function ContratForm({ initial, employees, onClose, onSave }: {
   const [type, setType] = useState<Contrat["type"]>(initial?.type || "CDI");
   const [dateDebut, setDD] = useState(initial?.dateDebut || "");
   const [dateFin, setDF] = useState(initial?.dateFin || "");
-  const [periodeEssaiMois, setPE] = useState(initial?.periodeEssaiMois ?? 3);
+  const empDe = (m: string) => employees.find((e) => e.matricule === m);
+  const [periodeEssaiMois, setPE] = useState(initial?.periodeEssaiMois ?? periodeEssaiMaxMois(empDe(initial?.matricule || employees[0]?.matricule || "")?.statut));
   const [lieuTravail, setLT] = useState(initial?.lieuTravail || "Dakar");
-  const [remuneration, setRem] = useState(initial?.remuneration || 0);
+  const [remuneration, setRem] = useState(initial?.remuneration || (() => { const e = empDe(initial?.matricule || employees[0]?.matricule || ""); return e ? (e.salaireBase || 0) + (e.sursalaire || 0) : 0; })());
   const [clausesParticulieres, setCP] = useState(initial?.clausesParticulieres || "");
+
+  const controle = controlerContrat(
+    { id: initial?.id, matricule, type, dateDebut, dateFin: dateFin || null, periodeEssaiMois },
+    empDe(matricule)?.statut, autresContrats,
+  );
 
   return (
     <Modal title={initial ? "Modifier le contrat" : "Nouveau contrat"} onClose={onClose} width={620}>
       <Field label="Employé">
-        <select value={matricule} onChange={(e) => setMat(e.target.value)} className={inputClass}>
+        <select value={matricule} onChange={(e) => {
+          const m = e.target.value; setMat(m);
+          if (!initial) { const emp = empDe(m); setPE(periodeEssaiMaxMois(emp?.statut)); setRem(emp ? (emp.salaireBase || 0) + (emp.sursalaire || 0) : 0); }
+        }} className={inputClass}>
           {employees.map((e) => <option key={e.matricule} value={e.matricule}>{e.nom} {e.prenom} ({e.matricule})</option>)}
         </select>
       </Field>
@@ -116,10 +128,16 @@ function ContratForm({ initial, employees, onClose, onSave }: {
       </div>
       <Field label="Lieu de travail"><input value={lieuTravail} onChange={(e) => setLT(e.target.value)} className={inputClass} /></Field>
       <Field label="Clauses particulières"><textarea value={clausesParticulieres} onChange={(e) => setCP(e.target.value)} className={inputClass} rows={3} /></Field>
+      {(controle.erreurs.length > 0 || controle.alertes.length > 0) && (
+        <div className="mt-2 space-y-1 text-[11px]">
+          {controle.erreurs.map((m) => <div key={m} className="text-destructive">⛔ {m}</div>)}
+          {controle.alertes.map((m) => <div key={m} className="text-senpaie-yellow">⚠️ {m}</div>)}
+        </div>
+      )}
       <div className="flex gap-3 justify-end mt-3">
         <button onClick={onClose} className="px-4 py-2 border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px]">Annuler</button>
         <button onClick={() => onSave({ id: initial?.id, matricule, type, dateDebut, dateFin: dateFin || null, periodeEssaiMois, lieuTravail, remuneration, clausesParticulieres })}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-[13px]" disabled={!matricule || !dateDebut}>
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-[13px] disabled:opacity-40" disabled={!matricule || !dateDebut || controle.erreurs.length > 0}>
           💾 Enregistrer
         </button>
       </div>
@@ -135,7 +153,9 @@ function buildContratHtml(emp: Employee, c: Contrat, ent: Entreprise): string {
   const salaireBase = emp.salaireBase || 0;
   const sursalaire = emp.sursalaire || 0;
   const autres = Math.max(0, (c.remuneration || 0) - salaireBase - sursalaire);
-  const total = c.remuneration || (salaireBase + sursalaire);
+  const TRANSPORT = 26000;
+  // Le total est toujours la somme exacte des éléments détaillés ci-dessus
+  const total = salaireBase + sursalaire + TRANSPORT + autres;
   const rep = (ent as Entreprise & { representant?: string; qualiteRepresentant?: string }).representant || "son représentant légal";
   const qualite = (ent as Entreprise & { qualiteRepresentant?: string }).qualiteRepresentant || "Directeur";
 
@@ -182,7 +202,7 @@ function buildContratHtml(emp: Employee, c: Contrat, ent: Entreprise): string {
       <ul style="margin:4px 0 4px 20px;">
         <li>Salaire de base : <b>${fmt(salaireBase)} FCFA</b></li>
         <li>Sursalaire : <b>${fmt(sursalaire)} FCFA</b></li>
-        <li>Indemnité de transport : <b>26 000 FCFA</b></li>
+        <li>Indemnité de transport : <b>${fmt(TRANSPORT)} FCFA</b></li>
         <li>Autres : <b>${fmt(autres)} FCFA</b></li>
       </ul>
       <p>Soit un total de <b>${fmt(total)} FCFA</b>, payable mensuellement à terme échu.</p>

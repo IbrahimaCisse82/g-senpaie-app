@@ -168,6 +168,15 @@ const Index = () => {
   const handleSaveSnapshot = async () => {
     const now = new Date();
     const mois = now.getMonth(), annee = now.getFullYear();
+    // Un mois déjà clôturé est verrouillé : les variables ont été remises à zéro, régénérer fausserait les bulletins figés
+    if (entrepriseId) {
+      const { count } = await supabase.from("bulletins_mois").select("id", { count: "exact", head: true })
+        .eq("entreprise_id", entrepriseId).eq("mois", mois).eq("annee", annee);
+      if ((count || 0) > 0 || history.some((h) => h.mois === mois && h.annee === annee)) {
+        showToast(`🔒 ${MOIS[mois]} ${annee} est déjà clôturé. Rouvrez-le depuis le tableau de bord pour le refaire.`);
+        return;
+      }
+    }
     if (!confirm(`Clôturer ${MOIS[mois]} ${annee} et figer ${allPaies.length} bulletin(s) ?\nLes absences, heures supplémentaires et paniers saisis seront remis à zéro pour le mois suivant.`)) return;
     await saveSnapshot(mois, annee, totaux, allPaies.length);
     if (entrepriseId && allPaies.length) {
@@ -191,7 +200,10 @@ const Index = () => {
 
   const handleReopenMonth = async (mois: number, annee: number) => {
     await deleteSnapshot(mois, annee);
-    showToast(`🔓 ${MOIS[mois]} ${annee} rouvert`);
+    if (entrepriseId) {
+      await supabase.from("bulletins_mois").delete().eq("entreprise_id", entrepriseId).eq("mois", mois).eq("annee", annee);
+    }
+    showToast(`🔓 ${MOIS[mois]} ${annee} rouvert : ressaisissez les absences et heures supplémentaires du mois avant de le clôturer à nouveau`);
   };
 
   const handleTabChange = (id: TabId) => {

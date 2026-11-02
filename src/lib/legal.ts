@@ -23,8 +23,12 @@ export function debutPeriodeConges(dateEntree: string, refDate?: Date): Date | n
   return entree > limite ? entree : limite;
 }
 
-/** Jours supplémentaires annuels selon l'ancienneté (CCNI 2019, art. 70) : +1 après 10 ans, +2 après 15, +3 après 20 */
+/**
+ * Jours supplémentaires annuels selon l'ancienneté (CCNI 2019, art. 70) :
+ * +1 après 10 ans, +2 après 15, +3 après 20, +7 après 25 (palier de 25 ans tel que transcrit, à confirmer sur le JO).
+ */
 export function majorationAncienneteConges(anciennete: number): number {
+  if (anciennete >= 25) return 7;
   if (anciennete >= 20) return 3;
   if (anciennete >= 15) return 2;
   if (anciennete >= 10) return 1;
@@ -209,4 +213,65 @@ export function absencesDuMois(
     heuresAbsence: joursNonPayes * HEURES_PAR_JOUR,
     heuresAbsMaladie: joursMaladie * HEURES_PAR_JOUR,
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Contrats de travail
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Période d'essai maximale en mois (CCNI 2019, art. 23) : ouvriers et employés 1, agents de maîtrise 2, cadres 3 */
+export function periodeEssaiMaxMois(statut: string | undefined): number {
+  const s = normaliserStatut(statut);
+  if (s === "cadres") return 3;
+  if (s === "agents de maîtrise") return 2;
+  return 1;
+}
+
+/** Code du travail 2026 (loi n° 2026-18, art. 100) : CDD de 2 ans au plus, un renouvellement, 4 ans cumulés au plus */
+export const CDD_DUREE_MAX_MOIS = 24;
+export const CDD_CUMUL_MAX_MOIS = 48;
+
+const dureeMois = (debut: string, fin: string) => {
+  const a = new Date(debut), b = new Date(fin);
+  // durée en mois calendaires, un mois entamé n'étant pas compté (fin incluse)
+  const lendemain = new Date(b.getFullYear(), b.getMonth(), b.getDate() + 1);
+  let m = (lendemain.getFullYear() - a.getFullYear()) * 12 + (lendemain.getMonth() - a.getMonth());
+  if (lendemain.getDate() < a.getDate()) m--;
+  return m + (lendemain.getDate() !== a.getDate() ? 0.5 : 0); // demi-mois si fraction
+};
+
+export interface ContratAControler {
+  id?: string;
+  matricule: string;
+  type: string;
+  dateDebut: string;
+  dateFin?: string | null;
+  periodeEssaiMois?: number;
+}
+
+/**
+ * Contrôles légaux d'un contrat avant enregistrement.
+ * `erreurs` bloquent l'enregistrement ; `alertes` informent sans bloquer.
+ */
+export function controlerContrat(c: ContratAControler, statut: string | undefined, autres: ContratAControler[] = []) {
+  const erreurs: string[] = [];
+  const alertes: string[] = [];
+  const essaiMax = periodeEssaiMaxMois(statut);
+  if ((c.periodeEssaiMois || 0) > essaiMax) {
+    erreurs.push(`Période d'essai de ${c.periodeEssaiMois} mois supérieure au maximum de ${essaiMax} mois pour ce statut (CCNI 2019, art. 23).`);
+  }
+  if (c.type === "CDD") {
+    if (!c.dateFin) erreurs.push("Un CDD doit avoir une date de fin.");
+    else if (c.dateDebut && c.dateFin <= c.dateDebut) erreurs.push("La date de fin doit être postérieure à la date de début.");
+    else if (c.dateDebut) {
+      const d = dureeMois(c.dateDebut, c.dateFin);
+      if (d > CDD_DUREE_MAX_MOIS) erreurs.push(`CDD de ${Math.floor(d)} mois : un CDD ne peut excéder 2 ans (Code du travail 2026, art. 100).`);
+      const precedents = autres.filter((x) => x.matricule === c.matricule && x.type === "CDD" && x.id !== c.id && x.dateFin);
+      const cumul = precedents.reduce((s, x) => s + dureeMois(x.dateDebut, x.dateFin as string), d);
+      if (cumul > CDD_CUMUL_MAX_MOIS) erreurs.push(`Durée cumulée des CDD de ce salarié : ${Math.floor(cumul)} mois, au-delà de 4 ans (art. 100). Au-delà, le contrat devient un CDI (art. 101).`);
+      if (precedents.length >= 2) alertes.push("Ce salarié a déjà eu plusieurs CDD : un seul renouvellement est autorisé (art. 100).");
+      else if (precedents.length === 1) alertes.push("Renouvellement de CDD : l'accord écrit doit être déposé à l'inspection du travail avant exécution (art. 103).");
+    }
+  }
+  return { erreurs, alertes };
 }

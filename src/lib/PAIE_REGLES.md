@@ -16,9 +16,12 @@ sans que l'ensemble des tests passe.** Si un test échoue, c'est le calcul qu'il
 | Prestataire : BRS 5 %, ni IR, TRIMF, IPRES, CSS, CFCE, prime d'ancienneté ni transport | Excel |
 | CSS AT et IPM : taux, répartition et plafond paramétrables | Choix client |
 | Statut et situation de famille normalisés (« Cadre », « CADRES », « Mariée »…) | — |
-| Congés : 2 j ouvrables/mois, cumul limité à 36 mois, +1/+2/+3 j après 10/15/20 ans | CCNI 2019 art. 70, Code du travail |
+| Congés : 2 j ouvrables/mois, +1/+2/+3/+7 j après 10/15/20/25 ans | CCNI 2019 art. 70 (palier 25 ans à confirmer sur le JO) |
+| Cumul des congés limité à 36 mois | Hypothèse de prudence, non trouvée dans la CCNI : à valider par un juriste |
 | Indemnité de congés = salaire mensuel / 24 par jour | 1/12 de la rémunération annuelle pour 24 jours |
 | Préavis : ouvriers et employés 1 mois, agents de maîtrise 2 mois, cadres 3 mois | CCNI 2019 art. 75 |
 | DADS : cumul des bulletins clôturés (bulletins_mois), jamais d'extrapolation × 12 | — |
-| Clôture : bulletins figés + remise à zéro des absences, HS et paniers | — |
+| Clôture unique : bulletins figés + remise à zéro des absences, HS et paniers ; un mois clôturé est verrouillé (rouvrir pour refaire) | — |
+| Période d'essai max : ouvriers et employés 1 mois, agents de maîtrise 2, cadres 3 | CCNI 2019 art. 23 |
+| CDD : 2 ans max par contrat, 1 renouvellement, 4 ans cumulés max | Code du travail 2026 (loi n° 2026-18) art. 100 |
 | Toute donnée saisie est échappée avant insertion dans un HTML (bulletins, attestations, STC, rapports) | Sécurité |

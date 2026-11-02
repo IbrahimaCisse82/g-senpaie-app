@@ -59,9 +59,11 @@ export default function ClotureMoisPanel({ entrepriseId, allPaies, onCloseMonth,
           <div className="text-muted-foreground text-[11px] uppercase">Clôture du mois</div>
           <div className="font-bold">{MOIS[mois]} {annee} — {rows.length ? `${rows.length} bulletin(s) générés` : "non clôturé"}</div>
         </div>
-        {canClose && (
+        {rows.length > 0 ? (
+          <span className="text-xs text-primary font-bold" title="Pour corriger, rouvrez le mois depuis le tableau de bord">🔒 Mois clôturé · bulletins figés</span>
+        ) : canClose && (
           <Button onClick={cloturer} disabled={busy || !allPaies.length}>
-            {busy ? "Génération…" : rows.length ? "🔁 Régénérer les bulletins" : "💾 Clôturer le mois"}
+            {busy ? "Génération…" : "💾 Clôturer le mois"}
           </Button>
         )}
       </div>
