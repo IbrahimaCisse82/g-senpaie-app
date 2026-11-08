@@ -258,7 +258,7 @@ ${dadsRows.map((r) => `    <Salarie>
         <div className="flex-1" />
         {tab === "ipres" && (
           <>
-            <button onClick={exportIPRESExcel} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px]">📥 Excel</button>
+            <button onClick={exportIPRESExcel} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px]">📥 CSV</button>
             <button onClick={exportIPRESPdf} className="px-4 py-2 bg-destructive text-foreground rounded-lg font-bold text-[12px]">⬇️ PDF</button>
           </>
         )}

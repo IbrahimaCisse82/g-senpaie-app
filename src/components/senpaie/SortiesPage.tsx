@@ -78,7 +78,7 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
     <div>
       <div className="mb-5">
         <h1 className="text-foreground text-xl font-extrabold mb-1">Sorties & Attestations</h1>
-        <div className="text-muted-foreground text-[11px]">Solde de tout compte conforme art. L.61 + attestations (travail, salaire, présence)</div>
+        <div className="text-muted-foreground text-[11px]">Solde de tout compte (CCNI 2019, art. 75 et 80) + attestations (travail, salaire, présence)</div>
       </div>
 
       <div className="bg-card border border-border rounded-lg mb-5">

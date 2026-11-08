@@ -28,7 +28,9 @@ function joursOuvrables(d1: string, d2: string): number {
 }
 
 export function EmployeePortal({ userId, entrepriseId, employee, params, entreprise, templateId, onSignOut }: Props) {
-  const { conges, save } = useConges(userId, entrepriseId);
+  const { conges: congesVisibles, save } = useConges(userId, entrepriseId);
+  // Défense en profondeur : en plus des règles d'accès de la base, on n'affiche que les congés du salarié connecté
+  const conges = congesVisibles.filter((c) => c.matricule === employee?.matricule);
   const { contrats } = useContrats(userId, entrepriseId);
   const [showBulletin, setShowBulletin] = useState(false);
   const [debut, setDebut] = useState("");

@@ -137,10 +137,15 @@ export function useAvances(entrepriseId: string | null) {
 }
 
 /** Montant à retenir sur la paie d'un salarié pour un mois/année donnés. */
+/**
+ * Une échéance appartient au bulletin de son mois : déjà payée (retenue à la clôture ou marquée retenue),
+ * elle reste sur ce bulletin ; en attente, elle n'est retenue que si l'avance est toujours en cours.
+ * Une avance annulée n'est jamais retenue.
+ */
 export function retenueDuMois(avances: Avance[], employeeId: string, mois: number, annee: number): number {
   return avances
-    .filter((a) => a.employeeId === employeeId && a.statut === "en_cours")
-    .flatMap((a) => a.echeances)
-    .filter((e) => e.statut === "en_attente" && e.mois === mois && e.annee === annee)
-    .reduce((s, e) => s + e.montant, 0);
+    .filter((a) => a.employeeId === employeeId && a.statut !== "annule")
+    .flatMap((a) => a.echeances.map((e) => ({ e, a })))
+    .filter(({ e, a }) => e.mois === mois && e.annee === annee && (e.statut === "paye" || (e.statut === "en_attente" && a.statut === "en_cours")))
+    .reduce((s, { e }) => s + e.montant, 0);
 }

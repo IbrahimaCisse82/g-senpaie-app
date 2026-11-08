@@ -3,12 +3,15 @@ import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/p
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { getTemplate } from "@/lib/bulletinTemplates";
 import { Modal } from "./Modal";
+import { retenueDuMois, type Avance } from "@/hooks/useAvances";
 
 interface BulletinModalProps {
   emp: Employee;
   params: PayrollParams;
   entreprise: Entreprise;
   templateId?: string;
+  /** Avances & prêts : leurs échéances de la période sont retenues sur le bulletin */
+  avances?: Avance[];
   onClose: () => void;
 }
 
@@ -57,12 +60,13 @@ function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee:
   URL.revokeObjectURL(url);
 }
 
-export function BulletinModal({ emp, params, entreprise, templateId, onClose }: BulletinModalProps) {
+export function BulletinModal({ emp: empFiche, params, entreprise, templateId, avances = [], onClose }: BulletinModalProps) {
   const now = new Date();
   const [mois, setMois] = useState(now.getMonth());
   const [annee, setAnnee] = useState(now.getFullYear());
 
   const refDate = new Date(annee, mois + 1, 0);
+  const emp: Employee = { ...empFiche, retenueEcheances: empFiche.dbId ? retenueDuMois(avances, empFiche.dbId, mois + 1, annee) : 0 };
   const p = calculerPaie(emp, params, refDate);
   const anc = getAnciennete(emp.dateEntree, refDate);
   const periodeLabel = `${MOIS[mois]} ${annee}`;
@@ -224,6 +228,7 @@ export function BulletinModal({ emp, params, entreprise, templateId, onClose }: 
             {p.avanceFinanciere > 0 && <Row l="Avance financière" v={p.avanceFinanciere} c="text-senpaie-yellow" neg />}
             {p.retCooperative > 0 && <Row l="Retenue coopérative" v={p.retCooperative} c="text-senpaie-yellow" neg />}
             {p.fraisMedicaux > 0 && <Row l="Frais médicaux" v={p.fraisMedicaux} c="text-senpaie-yellow" neg />}
+            {p.retenueEcheances > 0 && <Row l="Remboursement avances / prêts" v={p.retenueEcheances} c="text-senpaie-yellow" neg />}
             <Row l="TOTAL AVANCES" v={p.totalAvances} c="text-senpaie-yellow" bold neg />
           </div>
         )}

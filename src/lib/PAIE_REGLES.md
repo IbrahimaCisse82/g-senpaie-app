@@ -25,3 +25,5 @@ sans que l'ensemble des tests passe.** Si un test échoue, c'est le calcul qu'il
 | Période d'essai max : ouvriers et employés 1 mois, agents de maîtrise 2, cadres 3 | CCNI 2019 art. 23 |
 | CDD : 2 ans max par contrat, 1 renouvellement, 4 ans cumulés max | Code du travail 2026 (loi n° 2026-18) art. 100 |
 | Toute donnée saisie est échappée avant insertion dans un HTML (bulletins, attestations, STC, rapports) | Sécurité |
+| Avances & prêts : l'échéance du mois est retenue sur le net (ni brut ni cotisations), marquée payée à la clôture ; une échéance payée reste sur le bulletin de son mois | Module Avances & prêts |
+| Rapport de cotisations sur une période : uniquement les mois clôturés (bulletins_mois), les autres sont signalés et exclus | — |

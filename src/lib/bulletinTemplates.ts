@@ -99,6 +99,7 @@ function buildAvancesRows(p: PayrollResult): string[][] {
   if (p.avanceFinanciere > 0) rows.push(["Avance financière", `– ${fmtN(p.avanceFinanciere)}`]);
   if (p.retCooperative > 0) rows.push(["Retenue coopérative", `– ${fmtN(p.retCooperative)}`]);
   if (p.fraisMedicaux > 0) rows.push(["Frais médicaux", `– ${fmtN(p.fraisMedicaux)}`]);
+  if ((p.retenueEcheances || 0) > 0) rows.push(["Remboursement avances / prêts", `– ${fmtN(p.retenueEcheances)}`]);
   return rows;
 }
 

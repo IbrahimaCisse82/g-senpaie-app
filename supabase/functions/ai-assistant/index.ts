@@ -1,3 +1,5 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -10,9 +12,19 @@ Réponds en français, de façon concise et structurée (markdown). Si on te dem
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    if (!req.headers.get("authorization")) {
-      return new Response(JSON.stringify({ error: "Non authentifié" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    // Un simple en-tête ne suffit pas (la clé publique « anon » en est un) : on exige un utilisateur
+    // connecté, membre d'une entreprise, pour éviter que n'importe qui consomme les crédits IA.
+    const authHeader = req.headers.get("authorization") ?? "";
+    const refus = (status: number, error: string) =>
+      new Response(JSON.stringify({ error }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!authHeader.startsWith("Bearer ")) return refus(401, "Non authentifié");
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return refus(401, "Non authentifié");
+    const { data: membre } = await supabase.from("entreprise_members").select("role").eq("user_id", user.id).limit(1).maybeSingle();
+    if (!membre || membre.role === "employe") return refus(403, "Accès réservé aux gestionnaires de paie");
     const { messages } = await req.json();
     if (!Array.isArray(messages) || messages.length > 50) throw new Error("Messages invalides");
     const key = Deno.env.get("LOVABLE_API_KEY");

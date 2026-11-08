@@ -41,6 +41,8 @@ export interface Employee {
   retCooperative: number;
   fraisMedicaux: number;
   indKilometrique: number;
+  /** Échéances d'avances/prêts du mois (module Avances & prêts) — calculé, jamais enregistré sur la fiche */
+  retenueEcheances?: number;
   // Sortie
   dateSortie?: string;
   motifSortie?: string;
@@ -117,6 +119,8 @@ export interface PayrollResult {
   avanceFinanciere: number;
   retCooperative: number;
   fraisMedicaux: number;
+  /** Remboursement des avances et prêts échelonnés du mois */
+  retenueEcheances: number;
 }
 
 export interface Convention {
@@ -360,7 +364,8 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const avanceFinanciere = emp.avanceFinanciere || 0;
   const retCooperative = emp.retCooperative || 0;
   const fraisMedicaux = emp.fraisMedicaux || 0;
-  const totalAvances = avanceTabaski + avanceCaisse + avanceFinanciere + retCooperative + fraisMedicaux;
+  const retenueEcheances = Math.max(0, emp.retenueEcheances || 0);
+  const totalAvances = avanceTabaski + avanceCaisse + avanceFinanciere + retCooperative + fraisMedicaux + retenueEcheances;
 
   const totalRet = ir + trimf + brs + ipresRG_s + ipresRC_s + ipm_s;
   const chargesPat = cfce + ipresRG_p + ipresRC_p + css_af + css_at + ipm_p;
@@ -377,7 +382,7 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
     revenuImposable: irCalc.revenuImposable, impotBrut: salarie ? irCalc.impotBrut : 0, reductionFamille: salarie ? irCalc.reduction : 0,
     tauxHoraire, retAbsence, indMaladie, mtHS115, mtHS140, mtHS160, mtHS200, totalHS,
     primePanier, indKilometrique, totalAvances,
-    avanceTabaski, avanceCaisse, avanceFinanciere, retCooperative, fraisMedicaux,
+    avanceTabaski, avanceCaisse, avanceFinanciere, retCooperative, fraisMedicaux, retenueEcheances,
   };
 }
 

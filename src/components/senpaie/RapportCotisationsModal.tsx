@@ -1,71 +1,18 @@
-import { useState } from "react";
-import type { Employee, PayrollParams, PayrollResult } from "@/lib/payroll";
-import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
+import { useEffect, useState } from "react";
+import type { Employee, PayrollParams } from "@/lib/payroll";
+import { fmt, MOIS } from "@/lib/payroll";
+import { supabase } from "@/integrations/supabase/client";
+import { totauxPeriode, type BulletinArchive, type PeriodeTotaux } from "@/lib/dads";
 import type { Entreprise } from "@/lib/payroll";
 import { Modal } from "./Modal";
 import { escapeStrings, safeImageUrl } from "@/lib/utils";
 
 interface RapportCotisationsModalProps {
+  entrepriseId: string | null;
   employees: Employee[];
   params: PayrollParams;
   entreprise: Entreprise;
   onClose: () => void;
-}
-
-interface PeriodeTotaux {
-  mois: number;
-  annee: number;
-  brut: number;
-  ir: number;
-  trimf: number;
-  ipresRG: number;
-  ipresRC: number;
-  css: number;
-  cfce: number;
-  ipm: number;
-  totalRet: number;
-  chargesPat: number;
-  net: number;
-  masse: number;
-}
-
-function calculerPeriodeTotaux(
-  employees: Employee[],
-  params: PayrollParams,
-  moisDebut: number,
-  anneeDebut: number,
-  moisFin: number,
-  anneeFin: number
-): PeriodeTotaux[] {
-  const result: PeriodeTotaux[] = [];
-  let m = moisDebut;
-  let a = anneeDebut;
-
-  while (a < anneeFin || (a === anneeFin && m <= moisFin)) {
-    const refDate = new Date(a, m + 1, 0);
-    const paies = employees.map((e) => calculerPaie(e, params, refDate));
-
-    result.push({
-      mois: m,
-      annee: a,
-      brut: paies.reduce((s, p) => s + p.brut, 0),
-      ir: paies.reduce((s, p) => s + p.ir, 0),
-      trimf: paies.reduce((s, p) => s + p.trimf, 0),
-      ipresRG: paies.reduce((s, p) => s + p.ipresRG_s + p.ipresRG_p, 0),
-      ipresRC: paies.reduce((s, p) => s + p.ipresRC_s + p.ipresRC_p, 0),
-      css: paies.reduce((s, p) => s + p.css_af + p.css_at, 0),
-      cfce: paies.reduce((s, p) => s + p.cfce, 0),
-      ipm: paies.reduce((s, p) => s + p.ipm_s + p.ipm_p, 0),
-      totalRet: paies.reduce((s, p) => s + p.totalRet, 0),
-      chargesPat: paies.reduce((s, p) => s + p.chargesPat, 0),
-      net: paies.reduce((s, p) => s + p.net, 0),
-      masse: paies.reduce((s, p) => s + p.masse, 0),
-    });
-
-    m++;
-    if (m > 11) { m = 0; a++; }
-  }
-  return result;
 }
 
 function sumTotaux(rows: PeriodeTotaux[]) {
@@ -234,7 +181,7 @@ table{width:100%;border-collapse:collapse}
 </div></body></html>`;
 }
 
-export function RapportCotisationsModal({ employees, params, entreprise, onClose }: RapportCotisationsModalProps) {
+export function RapportCotisationsModal({ entrepriseId, employees, entreprise, onClose }: RapportCotisationsModalProps) {
   const now = new Date();
   const [moisDebut, setMoisDebut] = useState(0);
   const [anneeDebut, setAnneeDebut] = useState(now.getFullYear());
@@ -246,7 +193,15 @@ export function RapportCotisationsModal({ employees, params, entreprise, onClose
   // Validate period
   const isValid = anneeDebut < anneeFin || (anneeDebut === anneeFin && moisDebut <= moisFin);
 
-  const rows = isValid ? calculerPeriodeTotaux(employees, params, moisDebut, anneeDebut, moisFin, anneeFin) : [];
+  // Seuls les bulletins figés à la clôture sont repris : aucun mois n'est reconstitué
+  const [bulletins, setBulletins] = useState<BulletinArchive[]>([]);
+  useEffect(() => {
+    if (!entrepriseId || !isValid) return;
+    supabase.from("bulletins_mois").select("matricule, nom_complet, mois, annee, brut, data")
+      .eq("entreprise_id", entrepriseId).gte("annee", anneeDebut).lte("annee", anneeFin)
+      .then(({ data }) => setBulletins((data ?? []) as unknown as BulletinArchive[]));
+  }, [entrepriseId, isValid, anneeDebut, anneeFin]);
+  const { lignes: rows, nonClotures } = isValid ? totauxPeriode(bulletins, moisDebut, anneeDebut, moisFin, anneeFin) : { lignes: [], nonClotures: [] };
   const totals = sumTotaux(rows);
 
   const periodeLabel = `${MOIS[moisDebut]} ${anneeDebut} → ${MOIS[moisFin]} ${anneeFin}`;
@@ -356,6 +311,15 @@ export function RapportCotisationsModal({ employees, params, entreprise, onClose
         </div>
       )}
 
+      {isValid && nonClotures.length > 0 && (
+        <div className="mb-3 px-3 py-2 rounded-lg border border-senpaie-yellow bg-senpaie-yellow/10 text-senpaie-yellow text-[11px]">
+          ⏳ {nonClotures.length} mois non clôturé(s), exclu(s) du rapport : {nonClotures.map((x) => `${MOIS[x.mois]} ${x.annee}`).join(", ")}.
+          Clôturez chaque mois depuis le tableau de bord pour qu'il soit déclaré.
+        </div>
+      )}
+      {isValid && rows.length === 0 && (
+        <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-xs">Aucun mois clôturé sur cette période.</div>
+      )}
       {isValid && rows.length > 0 && (
         <>
           {/* Summary cards */}
@@ -420,7 +384,7 @@ export function RapportCotisationsModal({ employees, params, entreprise, onClose
           </div>
 
           <div className="mt-3 text-muted-foreground text-[10px] text-center">
-            {rows.length} mois · {employees.length} employé(s) · Émis le {new Date().toLocaleDateString("fr-FR")}
+            {rows.length} mois clôturé(s) · Émis le {new Date().toLocaleDateString("fr-FR")}
           </div>
         </>
       )}

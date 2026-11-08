@@ -1,10 +1,11 @@
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { Navigate } from "react-router-dom";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { NAV_ITEMS, type TabId } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAvances, retenueDuMois } from "@/hooks/useAvances";
 import { useEmployees, useEntreprise, usePayrollParams, useConventions, usePayrollHistory } from "@/hooks/useSupabaseData";
 import { useEntrepriseCtx, ROLE_LABEL, type AppRole } from "@/hooks/useEntrepriseContext";
 import { useConges, useContrats } from "@/hooks/useRH";
@@ -48,6 +49,7 @@ const Index = () => {
   const { history, saveSnapshot, deleteSnapshot } = usePayrollHistory(user?.id, entrepriseId);
   const { conges } = useConges(user?.id, entrepriseId);
   const { contrats } = useContrats(user?.id, entrepriseId);
+  const { avances, refetch: refreshAvances } = useAvances(entrepriseId);
   const isMobile = useIsMobile();
   const { theme, toggleTheme } = useTheme();
 
@@ -74,6 +76,8 @@ const Index = () => {
   const allowedTabs = role ? ALLOWED_TABS[role] : NAV_ITEMS.map((n) => n.id);
   const navItems = NAV_ITEMS.filter((n) => allowedTabs.includes(n.id));
   const activeTab: TabId = allowedTabs.includes(tab) ? tab : "dashboard";
+  // Les avances créées ou soldées dans « Avances & prêts » doivent se refléter aussitôt sur les nets
+  useEffect(() => { if (activeTab !== "avances") refreshAvances(); }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
   // Écriture employés : Admin & DRH uniquement (aligné sur les politiques RLS)
   const canWriteEmployees = role === "admin" || role === "drh";
 
@@ -96,7 +100,12 @@ const Index = () => {
     <EmployeePortal userId={user.id} entrepriseId={entrepriseId} employee={employees[0]} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onSignOut={signOut} />
   );
 
-  const allPaies = employees.map((e) => ({ ...e, paie: calculerPaie(e, params) }));
+  // Les échéances d'avances/prêts du mois en cours sont retenues sur le net (module Avances & prêts)
+  const moisCourant = new Date().getMonth() + 1, anneeCourante = new Date().getFullYear();
+  const allPaies = employees.map((e) => {
+    const emp = { ...e, retenueEcheances: e.dbId ? retenueDuMois(avances, e.dbId, moisCourant, anneeCourante) : 0 };
+    return { ...emp, paie: calculerPaie(emp, params) };
+  });
   const filtered = allPaies.filter((e) => `${e.prenom} ${e.nom} ${e.matricule} ${e.fonction}`.toLowerCase().includes(search.toLowerCase()));
   const totaux = {
     brut: allPaies.reduce((s, e) => s + e.paie.brut, 0),
@@ -193,6 +202,16 @@ const Index = () => {
       const { error } = await supabase.from("bulletins_mois").upsert(payload as never, { onConflict: "entreprise_id,mois,annee,matricule" });
       if (error) { showToast("⚠️ Bulletins non archivés : " + error.message); return; }
     }
+    // Les échéances retenues sur les bulletins figés sont marquées payées ; une avance entièrement remboursée est soldée
+    const echeancesRetenues = avances.filter((a) => a.statut === "en_cours")
+      .flatMap((a) => a.echeances.filter((ec) => ec.statut === "en_attente" && ec.mois === mois + 1 && ec.annee === annee).map((ec) => ({ ec, a })));
+    if (echeancesRetenues.length) {
+      await supabase.from("echeances_avance").update({ statut: "paye" } as never).in("id", echeancesRetenues.map((x) => x.ec.id));
+      const soldees = [...new Set(echeancesRetenues.map((x) => x.a))].filter((a) =>
+        a.echeances.every((ec) => ec.statut === "paye" || echeancesRetenues.some((x) => x.ec.id === ec.id)));
+      if (soldees.length) await supabase.from("avances_pret").update({ statut: "solde" } as never).in("id", soldees.map((a) => a.id));
+      await refreshAvances();
+    }
     const aRemettre = employees.filter((e) => resteVariables(e));
     for (const e of aRemettre) await saveEmployee(remiseAZeroVariables(e), false);
     showToast(`💾 ${MOIS[mois]} ${annee} clôturé · ${allPaies.length} bulletin(s) figés${aRemettre.length ? ` · ${aRemettre.length} fiche(s) remise(s) à zéro` : ""}`);
@@ -218,7 +237,7 @@ const Index = () => {
           <div className="text-primary text-[17px] font-black tracking-[3px]">G-SENPAIE</div>
           <div className="text-muted-foreground text-[10px] mt-1 tracking-wider">GESTION DE LA PAIE</div>
         </div>
-        {!isMobile && <NotificationCenter alerts={alerts} />}
+        {!isMobile && <NotificationCenter alerts={alerts} align="left" />}
       </div>
       <nav className="flex-1 py-2.5 overflow-y-auto">
         {navItems.map((n) => (
@@ -386,8 +405,8 @@ const Index = () => {
         </Modal>
       )}
       <Suspense fallback={null}>
-        {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} templateId={bulletinTemplateId} onClose={() => setShowBulletin(null)} />}
-        {showRapport && <RapportCotisationsModal employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
+        {showBulletin && <BulletinModal emp={showBulletin} params={params} entreprise={entreprise} templateId={bulletinTemplateId} avances={avances} onClose={() => setShowBulletin(null)} />}
+        {showRapport && <RapportCotisationsModal entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} onClose={() => setShowRapport(false)} />}
       </Suspense>
       {showDel && (
         <Modal title="⚠️ Confirmation de suppression" onClose={() => setShowDel(null)} width={420}>

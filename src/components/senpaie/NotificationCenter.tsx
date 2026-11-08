@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppAlert } from "@/lib/alerts";
 
 interface NotificationCenterProps {
+  /** Côté vers lequel le panneau s'ouvre : "left" dans la barre latérale (bureau), "right" dans l'en-tête mobile */
+  align?: "left" | "right";
   alerts: AppAlert[];
 }
 
@@ -16,7 +18,7 @@ function loadRead(): string[] {
   }
 }
 
-export function NotificationCenter({ alerts }: NotificationCenterProps) {
+export function NotificationCenter({ alerts, align = "right" }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const [read, setRead] = useState<string[]>(loadRead);
   const ref = useRef<HTMLDivElement>(null);
@@ -54,7 +56,7 @@ export function NotificationCenter({ alerts }: NotificationCenterProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-9 w-[290px] max-h-[340px] overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-[300] animate-scale-in origin-top-right">
+        <div className={`absolute ${align === "left" ? "left-0 origin-top-left" : "right-0 origin-top-right"} top-9 w-[290px] max-w-[calc(100vw-24px)] max-h-[340px] overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-[300] animate-scale-in`}>
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border sticky top-0 bg-card">
             <span className="text-foreground text-[11px] font-extrabold uppercase tracking-wider">Notifications</span>
             {alerts.length > 0 && (

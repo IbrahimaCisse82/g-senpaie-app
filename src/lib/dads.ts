@@ -64,3 +64,46 @@ export function calculerDADS(bulletins: BulletinArchive[], employees: Employee[]
 export function moisClotures(bulletins: BulletinArchive[], annee: number): number[] {
   return [...new Set(bulletins.filter((b) => b.annee === annee).map((b) => b.mois))].sort((a, b) => a - b);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Rapport de cotisations sur une période : uniquement les mois clôturés
+// ══════════════════════════════════════════════════════════════════════════════
+export interface PeriodeTotaux {
+  mois: number; annee: number; effectif: number;
+  brut: number; ir: number; trimf: number; ipresRG: number; ipresRC: number; css: number; cfce: number; ipm: number;
+  totalRet: number; chargesPat: number; net: number; masse: number;
+}
+
+/** Mois (0-11) de la période, bornes incluses */
+export function moisDeLaPeriode(moisDebut: number, anneeDebut: number, moisFin: number, anneeFin: number): { mois: number; annee: number }[] {
+  const out: { mois: number; annee: number }[] = [];
+  let m = moisDebut, a = anneeDebut;
+  while ((a < anneeFin || (a === anneeFin && m <= moisFin)) && out.length < 240) {
+    out.push({ mois: m, annee: a });
+    if (++m > 11) { m = 0; a++; }
+  }
+  return out;
+}
+
+/**
+ * Totaux mensuels à partir des bulletins figés. Les mois sans bulletin clôturé sont
+ * retournés à part (`nonClotures`) et ne figurent ni dans les lignes ni dans les totaux.
+ */
+export function totauxPeriode(bulletins: BulletinArchive[], moisDebut: number, anneeDebut: number, moisFin: number, anneeFin: number) {
+  const lignes: PeriodeTotaux[] = [];
+  const nonClotures: { mois: number; annee: number }[] = [];
+  for (const { mois, annee } of moisDeLaPeriode(moisDebut, anneeDebut, moisFin, anneeFin)) {
+    const bs = bulletins.filter((b) => b.mois === mois && b.annee === annee);
+    if (bs.length === 0) { nonClotures.push({ mois, annee }); continue; }
+    const s = (f: (p: Partial<PayrollResult>) => number) => bs.reduce((acc, b) => acc + f(b.data || {}), 0);
+    lignes.push({
+      mois, annee, effectif: bs.length,
+      brut: bs.reduce((acc, b) => acc + n(b.data?.brut ?? b.brut), 0),
+      ir: s((p) => n(p.ir)), trimf: s((p) => n(p.trimf)),
+      ipresRG: s((p) => n(p.ipresRG_s) + n(p.ipresRG_p)), ipresRC: s((p) => n(p.ipresRC_s) + n(p.ipresRC_p)),
+      css: s((p) => n(p.css_af) + n(p.css_at)), cfce: s((p) => n(p.cfce)), ipm: s((p) => n(p.ipm_s) + n(p.ipm_p)),
+      totalRet: s((p) => n(p.totalRet)), chargesPat: s((p) => n(p.chargesPat)), net: s((p) => n(p.net)), masse: s((p) => n(p.masse)),
+    });
+  }
+  return { lignes, nonClotures };
+}

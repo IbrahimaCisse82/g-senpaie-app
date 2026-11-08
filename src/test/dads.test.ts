@@ -29,3 +29,18 @@ describe("DADS : cumul des mois réellement clôturés", () => {
     expect(moisClotures(bulletins, 2026)).toEqual([0, 1]);
   });
 });
+
+import { totauxPeriode, moisDeLaPeriode } from "@/lib/dads";
+describe("Rapport de période : mois clôturés uniquement", () => {
+  const b = (mois: number, brut: number, ir: number) => ({ matricule: "A", nom_complet: "A", mois, annee: 2026, brut, data: { brut, ir, ipresRG_s: 10, ipresRG_p: 15, masse: brut + 100 } });
+  it("aucune reconstitution : les mois sans bulletin figé sont exclus et listés", () => {
+    const r = totauxPeriode([b(0, 100000, 1000), b(2, 120000, 2000)], 0, 2026, 3, 2026);
+    expect(r.lignes.map((l) => l.mois)).toEqual([0, 2]);
+    expect(r.nonClotures).toEqual([{ mois: 1, annee: 2026 }, { mois: 3, annee: 2026 }]);
+    expect(r.lignes[1].brut).toBe(120000);
+    expect(r.lignes[0].ipresRG).toBe(25);
+  });
+  it("période à cheval sur deux années", () => {
+    expect(moisDeLaPeriode(10, 2025, 1, 2026).map((x) => `${x.mois}/${x.annee}`)).toEqual(["10/2025", "11/2025", "0/2026", "1/2026"]);
+  });
+});

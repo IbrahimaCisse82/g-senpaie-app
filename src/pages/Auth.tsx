@@ -4,6 +4,7 @@ import { Navigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import authBg from "@/assets/auth-bg.jpg";
+import { traduireErreurAuth } from "@/lib/authErreurs";
 
 export default function Auth() {
   const { user, loading, signIn, signUp } = useAuth();
@@ -41,7 +42,7 @@ export default function Auth() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) setError(error.message);
+      if (error) setError(traduireErreurAuth(error.message));
       else setSuccess("✅ Un email de réinitialisation a été envoyé. Vérifiez votre boîte de réception.");
       setSubmitting(false);
       return;
@@ -49,11 +50,11 @@ export default function Auth() {
 
     if (mode === "login") {
       const { error } = await signIn(email, password);
-      if (error) setError(error);
+      if (error) setError(traduireErreurAuth(error));
     } else {
       if (!fullName.trim()) { setError("Le nom est requis"); setSubmitting(false); return; }
       const { error } = await signUp(email, password, fullName);
-      if (error) setError(error);
+      if (error) setError(traduireErreurAuth(error));
       else setSuccess("✅ Compte créé ! Vérifiez votre email pour confirmer votre inscription.");
     }
     setSubmitting(false);
