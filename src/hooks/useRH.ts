@@ -14,7 +14,8 @@ function handleError(context: string, error: unknown) {
 export interface Conge {
   id: string;
   matricule: string;
-  type: "paye" | "maladie" | "maternite" | "sans_solde";
+  /** « reprise_solde » : jours de congés restant dus à la mise en service de G-SenPaie (date de reprise = dateDebut) */
+  type: "paye" | "maladie" | "maternite" | "sans_solde" | "reprise_solde";
   dateDebut: string;
   dateFin: string;
   jours: number;

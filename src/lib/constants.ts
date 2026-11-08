@@ -41,7 +41,8 @@ export const DEFAULT_PARAMS: PayrollParams = {
   CSS_AF:    { label: "CSS Alloc. Fam.",  taux: 0.07,  tauxSalarial: 0,   tauxPatronal: 1,   plafond: 63000 },
   CSS_AT:    { label: "CSS Acc. Trav.",   taux: 0.01,  tauxSalarial: 0,   tauxPatronal: 1,   plafond: 63000 },
   IPM:       { label: "IPM",             taux: 0,     tauxSalarial: 0.5, tauxPatronal: 0.5, plafond: null },
-  transport: { label: "Ind. Transport",  valeur: 26000 },
+  transport: { label: "Ind. Transport",  valeur: 26000, mode: "entiere" },
+  panier:    { label: "Prime de panier", valeur: 3000 },
 };
 
 // ══════════════════════════════════════════════════════════════════════════════

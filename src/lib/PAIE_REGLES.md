@@ -27,3 +27,9 @@ sans que l'ensemble des tests passe.** Si un test échoue, c'est le calcul qu'il
 | Toute donnée saisie est échappée avant insertion dans un HTML (bulletins, attestations, STC, rapports) | Sécurité |
 | Avances & prêts : l'échéance du mois est retenue sur le net (ni brut ni cotisations), marquée payée à la clôture ; une échéance payée reste sur le bulletin de son mois | Module Avances & prêts |
 | Rapport de cotisations sur une période : uniquement les mois clôturés (bulletins_mois), les autres sont signalés et exclus | — |
+| Indemnité de transport en cas d'absence, au choix de l'entreprise (Paramètres) : versée entière ; proratisée par jour (montant × (30 − jours d'absence) / 30) ; proratisée par jour ouvré (montant × (jours ouvrés du mois − jours d'absence) / jours ouvrés, lundi à vendredi). Jours d'absence = (heures d'absence + heures de maladie) / 8. Défaut : versée entière | Choix client (`primeTransport`, tests `src/test/primes.test.ts`) |
+| Prime de panier = nombre de paniers × montant paramétrable (défaut 3 000 F) | Choix client |
+| Reprise de solde de congés : à la mise en service, l'entreprise saisit les jours restant dus à une date ; le solde = jours repris + acquis depuis cette date − congés payés pris depuis | Module Congés (`soldeConges`) |
+| Congé de maternité : 18 semaines, date de fin proposée automatiquement | Code du travail 2026 (loi n° 2026-18) |
+| STC net : prorata du dernier mois (brut × jours / 30) + préavis + indemnité de congés soumis à IR, TRIMF, IPRES, IPM ; indemnité de licenciement ajoutée hors IR et cotisations | CCNI 2019 art. 72, 75, 80 ; traitement fiscal à faire valider (CGI) |
+| NINEA : 7 à 9 chiffres, suivi éventuellement du code COFI (3 caractères) ; RCCM au format SN-DKR-AAAA-X-NNNN (séparateurs libres) | Formats DGID / greffe |

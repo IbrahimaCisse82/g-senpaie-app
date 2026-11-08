@@ -3,7 +3,7 @@
  * Références : art. L.61, L.116, L.143, Convention collective interprofessionnelle.
  */
 import type { Employee, PayrollResult } from "./payroll";
-import { getAnciennete, normaliserStatut } from "./payroll";
+import { getAnciennete, normaliserStatut, calculerPaie, type PayrollParams } from "./payroll";
 
 /** Cumul maximal des congés : 3 ans (Code du travail, art. L.148 et suivants) */
 export const CUMUL_CONGES_MAX_MOIS = 36;
@@ -46,6 +46,49 @@ export function droitCongesAcquis(dateEntree: string, refDate?: Date): number {
   const mois = Math.min(moisEntre(debut, ref), CUMUL_CONGES_MAX_MOIS);
   const majoration = majorationAncienneteConges(getAnciennete(dateEntree, ref)) * (mois / 12);
   return Math.floor(mois * 2 + majoration);
+}
+
+type CongeLeger = { matricule: string; type: string; statut: string; dateDebut: string; jours: number };
+
+/** Congé maternité : 18 semaines (Code du travail, loi n° 2026-18) — auparavant 14 semaines */
+export const DUREE_CONGE_MATERNITE_SEMAINES = 18;
+/** Date de fin proposée d'un congé maternité commençant à `debut` (AAAA-MM-JJ) */
+export function finCongeMaternite(debut: string): string {
+  const d = new Date(debut + "T00:00:00");
+  d.setDate(d.getDate() + DUREE_CONGE_MATERNITE_SEMAINES * 7 - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Dernière reprise de solde enregistrée pour un salarié (jours dus à la mise en service de l'outil) */
+export function repriseSoldeConges(conges: CongeLeger[], matricule: string): { date: string; jours: number } | null {
+  const r = conges.filter((c) => c.matricule === matricule && c.type === "reprise_solde")
+    .sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))[0];
+  return r ? { date: r.dateDebut, jours: Math.max(0, Number(r.jours) || 0) } : null;
+}
+
+export interface SoldeConges { acquis: number; pris: number; solde: number; reprise: { date: string; jours: number } | null; depuis: Date | null }
+
+/**
+ * Solde de congés d'un salarié à la date de référence.
+ * - Avec une reprise de solde : jours repris + 2 j ouvrables/mois (et majoration d'ancienneté) depuis la date de reprise,
+ *   moins les congés payés validés pris depuis cette date.
+ * - Sans reprise : droit acquis sur la période de cumul (36 mois au plus) moins les congés pris sur cette période.
+ */
+export function soldeConges(emp: { matricule: string; dateEntree: string }, conges: CongeLeger[], refDate?: Date): SoldeConges {
+  const ref = refDate || new Date();
+  const reprise = repriseSoldeConges(conges, emp.matricule);
+  if (reprise) {
+    const debut = new Date(reprise.date);
+    const mois = Math.min(moisEntre(debut, ref), CUMUL_CONGES_MAX_MOIS);
+    const majoration = majorationAncienneteConges(getAnciennete(emp.dateEntree, ref)) * (mois / 12);
+    const acquis = reprise.jours + Math.floor(mois * 2 + majoration);
+    const pris = conges.filter((c) => c.matricule === emp.matricule && c.type === "paye" && c.statut === "valide" && new Date(c.dateDebut) >= debut)
+      .reduce((s, c) => s + (c.jours || 0), 0);
+    return { acquis, pris, solde: acquis - pris, reprise, depuis: debut };
+  }
+  const acquis = droitCongesAcquis(emp.dateEntree, ref);
+  const pris = joursCongesPrisSurPeriode(conges, emp.matricule, emp.dateEntree, ref);
+  return { acquis, pris, solde: acquis - pris, reprise: null, depuis: debutPeriodeConges(emp.dateEntree, ref) };
 }
 
 /** Jours de congés payés validés pris pendant la période de cumul */
@@ -123,12 +166,14 @@ export function calculerSTC(
   paie: PayrollResult,
   joursCongesPris: number,
   motif: "licenciement" | "demission" | "retraite" | "fin_cdd",
-  dateFin?: string
+  dateFin?: string,
+  /** Jours acquis déjà calculés (reprise de solde comprise) ; à défaut, droit acquis depuis l'embauche */
+  joursAcquisCalcules?: number,
 ): SoldeToutCompte {
   const ref = dateFin ? new Date(dateFin) : new Date();
   const anciennete = getAnciennete(emp.dateEntree, ref);
   const smm = paie.brut;
-  const joursCongesAcquis = droitCongesAcquis(emp.dateEntree, ref);
+  const joursCongesAcquis = joursAcquisCalcules ?? droitCongesAcquis(emp.dateEntree, ref);
   const preavisMois = dureePreavisMois(emp.statut, anciennete);
   // Pas d'indemnité de préavis si démission ; pas d'indemnité de licenciement si démission ou fin de CDD normale.
   const indPreavis = motif === "demission" ? 0 : indemnitePreavis(smm, preavisMois);
@@ -274,4 +319,52 @@ export function controlerContrat(c: ContratAControler, statut: string | undefine
     }
   }
   return { erreurs, alertes };
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Solde de tout compte : net à payer (estimation)
+// ══════════════════════════════════════════════════════════════════════════════
+export interface STCNet {
+  /** Salaire du dernier mois au prorata des jours calendaires travaillés (si non encore payé) */
+  salaireProrata: number;
+  joursTravaillesDernierMois: number;
+  /** Éléments soumis à l'IR et aux cotisations : salaire au prorata + préavis + congés non pris */
+  brutSoumis: number;
+  /** Indemnité de licenciement ou de départ à la retraite, dans la limite légale : non soumise */
+  indemniteNonSoumise: number;
+  ir: number; trimf: number; ipres: number; ipm: number; totalRetenues: number;
+  netAPayer: number;
+}
+
+/**
+ * Net du solde de tout compte. Hypothèses (à valider par l'expert-comptable) :
+ * - le salaire du dernier mois, l'indemnité de préavis et l'indemnité de congés sont du salaire,
+ *   soumis à l'IR, à la TRIMF, à l'IPRES et à l'IPM, calculés comme une paie mensuelle ;
+ * - l'indemnité de licenciement ou de retraite, au montant légal, est exonérée d'IR et de cotisations.
+ * La régularisation annuelle de l'IR reste à effectuer sur la déclaration annuelle.
+ */
+export function calculerSTCNet(
+  stc: SoldeToutCompte, emp: Employee, paieMois: PayrollResult, params: PayrollParams,
+  dateFin: string, inclureSalaireDuMois: boolean,
+): STCNet {
+  const fin = new Date(dateFin + "T00:00:00");
+  const jours = Math.min(30, fin.getDate());
+  const salaireProrata = inclureSalaireDuMois ? Math.round(paieMois.brut * jours / 30) : 0;
+  const brutSoumis = salaireProrata + stc.indPreavis + stc.indCongesNonPris;
+  // Paie de sortie : un seul élément brut, sans prime d'ancienneté ni éléments variables (déjà inclus)
+  const sortie: Employee = {
+    ...emp, salaireBase: brutSoumis, sursalaire: 0, dateEntree: dateFin,
+    heuresAbsence: 0, heuresAbsMaladie: 0, hs115: 0, hs140: 0, hs160: 0, hs200: 0, nbPaniers: 0, indKilometrique: 0,
+    avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, retenueEcheances: 0,
+  };
+  const r = brutSoumis > 0 ? calculerPaie(sortie, params, fin) : null;
+  const ir = r?.ir ?? 0, trimf = r?.trimf ?? 0, ipres = (r?.ipresRG_s ?? 0) + (r?.ipresRC_s ?? 0), ipm = r?.ipm_s ?? 0;
+  const totalRetenues = ir + trimf + ipres + ipm;
+  return {
+    salaireProrata, joursTravaillesDernierMois: inclureSalaireDuMois ? jours : 0,
+    brutSoumis, indemniteNonSoumise: stc.indLicenciement,
+    ir, trimf, ipres, ipm, totalRetenues,
+    netAPayer: Math.round(brutSoumis - totalRetenues + stc.indLicenciement),
+  };
 }

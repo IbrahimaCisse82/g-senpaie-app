@@ -17,11 +17,13 @@ export const employeeSchema = z.object({
 export const entrepriseSchema = z.object({
   nom: z.string().trim().min(1, "Nom de l'entreprise requis").max(200),
   logo: z.string().optional().default(""),
-  ninea: z.string().trim().regex(/^\d{9}$/, "NINEA = 9 chiffres").optional().or(z.literal("")),
+  // NINEA : 7 à 9 chiffres, éventuellement suivis du code COFI (ex. « 006760210 2G3 »)
+  ninea: z.string().trim().regex(/^\d{7,9}(\s?[0-9A-Z]{3})?$/i, "NINEA : 7 à 9 chiffres, suivis éventuellement du code COFI (ex. 006760210 2G3)").optional().or(z.literal("")),
   rccm: z
     .string()
     .trim()
-    .regex(/^SN-[A-Z]{3}-\d{4}-[A-Z]-\d{5}$/, "RCCM au format SN-DKR-AAAA-B-XXXXX")
+    // RCCM : SN-DKR-2020-B-12345, avec tirets, points ou espaces, numéro de 1 à 6 chiffres (anciens formats compris)
+    .regex(/^SN[\s.-]?[A-Z]{2,4}[\s.-]?\d{4}[\s.-]?[A-Z][\s.-]?\d{1,6}$/i, "RCCM au format SN-DKR-AAAA-B-XXXXX")
     .optional()
     .or(z.literal("")),
   adresse: z.string().trim().max(300).optional().default(""),
@@ -33,6 +35,11 @@ export const entrepriseSchema = z.object({
 export type EmployeeInput = z.infer<typeof employeeSchema>;
 export type EntrepriseInput = z.infer<typeof entrepriseSchema>;
 
+const LIBELLES: Record<string, string> = {
+  matricule: "Matricule", prenom: "Prénom", nom: "Nom", fonction: "Fonction", dateEntree: "Date d'entrée",
+  salaireBase: "Salaire de base", sursalaire: "Sursalaire", femmes: "Nombre de femmes", enfants: "Nombre d'enfants",
+  telephone: "Téléphone", email: "E-mail", ninea: "NINEA", rccm: "RCCM", adresse: "Adresse", logo: "Logo",
+};
 export function formatZodError(err: z.ZodError): string {
-  return err.issues.map((i) => `• ${i.path.join(".") || "champ"}: ${i.message}`).join("\n");
+  return err.issues.map((i) => { const k = String(i.path[0] ?? ""); return `• ${LIBELLES[k] || k || "Champ"} : ${i.message}`; }).join("\n");
 }

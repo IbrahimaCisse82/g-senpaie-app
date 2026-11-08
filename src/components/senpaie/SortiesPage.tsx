@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import type { Employee, PayrollParams, Entreprise } from "@/lib/payroll";
 import { calculerPaie, fmt } from "@/lib/payroll";
-import { calculerSTC, joursCongesPrisSurPeriode } from "@/lib/legal";
+import { calculerSTC, calculerSTCNet, soldeConges } from "@/lib/legal";
+import type { Conge } from "@/hooks/useRH";
 import { useConges, logAttestation } from "@/hooks/useRH";
 import { exportHtmlToPdf } from "@/lib/pdfExport";
 import { Modal, Field, inputClass } from "./Modal";
@@ -217,7 +218,7 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
           emp={showSTC}
           params={params}
           entreprise={entreprise}
-          joursCongesPris={joursCongesPrisSurPeriode(conges, showSTC.matricule, showSTC.dateEntree)}
+          conges={conges}
           onClose={() => setShowSTC(null)}
           onGenerated={async () => { if (entrepriseId) { await logAttestation(userId, entrepriseId, showSTC.matricule, "stc"); loadLogs(); } }}
         />
@@ -279,8 +280,8 @@ export function SortiesPage({ userId, entrepriseId, employees, params, entrepris
   );
 }
 
-function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerated }: {
-  emp: Employee; params: PayrollParams; entreprise: Entreprise; joursCongesPris: number; onClose: () => void; onGenerated: () => void;
+function STCModal({ emp, params, entreprise, conges, onClose, onGenerated }: {
+  emp: Employee; params: PayrollParams; entreprise: Entreprise; conges: Conge[]; onClose: () => void; onGenerated: () => void;
 }) {
   // Données saisies échappées avant insertion dans le HTML (protection XSS)
   const hEmp = escapeStrings(emp);
@@ -288,30 +289,40 @@ function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerat
   const [motif, setMotif] = useState<"licenciement" | "demission" | "retraite" | "fin_cdd">("licenciement");
   const [dateFin, setDateFin] = useState(emp.dateSortie || new Date().toISOString().slice(0, 10));
   const paie = useMemo(() => calculerPaie(emp, params, new Date(dateFin)), [emp, params, dateFin]);
-  const stc = useMemo(() => calculerSTC(emp, paie, joursCongesPris, motif, dateFin), [emp, paie, joursCongesPris, motif, dateFin]);
+  const [inclureSalaire, setInclureSalaire] = useState(true);
+  // Solde de congés à la date de sortie (reprise de solde comprise)
+  const conge = useMemo(() => soldeConges(emp, conges, new Date(dateFin)), [emp, conges, dateFin]);
+  const stc = useMemo(() => calculerSTC(emp, paie, conge.pris, motif, dateFin, conge.acquis), [emp, paie, conge, motif, dateFin]);
+  const net = useMemo(() => calculerSTCNet(stc, emp, paie, params, dateFin, inclureSalaire), [stc, emp, paie, params, dateFin, inclureSalaire]);
+  const MOTIFS: Record<typeof motif, string> = { licenciement: "Licenciement", demission: "Démission", retraite: "Départ à la retraite", fin_cdd: "Fin de CDD" };
 
   const exportPdf = async () => {
     const html = `<div class="page" style="font-family:Arial,sans-serif;padding:30px;color:#111;background:#fff;width:734px;">
       <h1 style="text-align:center;margin:0 0 5px;font-size:18px;">SOLDE DE TOUT COMPTE</h1>
-      <div style="text-align:center;font-size:11px;color:#555;margin-bottom:25px;">Conformément aux dispositions du Code du Travail du Sénégal (art. L.61, L.143)</div>
+      <div style="text-align:center;font-size:11px;color:#555;margin-bottom:25px;">Code du travail (loi n° 2026-18) et Convention collective nationale interprofessionnelle de 2019 (art. 72, 75 et 80)</div>
       <div style="margin-bottom:18px;font-size:12px;">
         <b>Employeur :</b> ${hEnt.nom || "—"}${hEnt.ninea ? " · NINEA " + entreprise.ninea : ""}<br/>
         <b>Salarié :</b> ${hEmp.prenom} ${hEmp.nom} · Matricule ${hEmp.matricule}<br/>
         <b>Emploi :</b> ${hEmp.fonction} · <b>Statut :</b> ${hEmp.statut}<br/>
         <b>Date d'embauche :</b> ${hEmp.dateEntree} · <b>Date de sortie :</b> ${dateFin}<br/>
-        <b>Motif :</b> ${motif} · <b>Ancienneté :</b> ${stc.anciennete} an(s)
+        <b>Motif :</b> ${MOTIFS[motif]} · <b>Ancienneté :</b> ${stc.anciennete} an(s)
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:#f0f0f0;"><th style="border:1px solid #999;padding:6px;text-align:left;">Élément</th><th style="border:1px solid #999;padding:6px;text-align:right;">Montant (FCFA)</th></tr></thead>
         <tbody>
-          <tr><td style="border:1px solid #999;padding:5px;">Salaire moyen mensuel</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(stc.salaireMoyenMensuel)}</td></tr>
+          ${net.salaireProrata ? `<tr><td style="border:1px solid #999;padding:5px;">Salaire du mois de sortie (${net.joursTravaillesDernierMois} j / 30)</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(net.salaireProrata)}</td></tr>` : ""}
           <tr><td style="border:1px solid #999;padding:5px;">Indemnité compensatrice de préavis (${stc.preavisMois} mois)</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(stc.indPreavis)}</td></tr>
           <tr><td style="border:1px solid #999;padding:5px;">Indemnité compensatrice de congés payés (${Math.max(0, stc.joursCongesAcquis - stc.joursCongesPris)} j)</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(stc.indCongesNonPris)}</td></tr>
-          <tr><td style="border:1px solid #999;padding:5px;">Indemnité de licenciement</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(stc.indLicenciement)}</td></tr>
-          <tr style="background:#e8f5e9;font-weight:bold;"><td style="border:1px solid #999;padding:6px;">TOTAL BRUT À VERSER</td><td style="border:1px solid #999;padding:6px;text-align:right;">${fmt(stc.totalBrut)}</td></tr>
+          <tr style="background:#f7f7f7;font-weight:bold;"><td style="border:1px solid #999;padding:5px;">Total soumis à l'IR et aux cotisations</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(net.brutSoumis)}</td></tr>
+          <tr><td style="border:1px solid #999;padding:5px;">– Impôt sur le revenu (IR)</td><td style="border:1px solid #999;padding:5px;text-align:right;">– ${fmt(net.ir)}</td></tr>
+          <tr><td style="border:1px solid #999;padding:5px;">– TRIMF</td><td style="border:1px solid #999;padding:5px;text-align:right;">– ${fmt(net.trimf)}</td></tr>
+          <tr><td style="border:1px solid #999;padding:5px;">– IPRES part salariale</td><td style="border:1px solid #999;padding:5px;text-align:right;">– ${fmt(net.ipres)}</td></tr>
+          ${net.ipm ? `<tr><td style="border:1px solid #999;padding:5px;">– IPM part salariale</td><td style="border:1px solid #999;padding:5px;text-align:right;">– ${fmt(net.ipm)}</td></tr>` : ""}
+          <tr><td style="border:1px solid #999;padding:5px;">${motif === "retraite" ? "Indemnité de départ à la retraite" : "Indemnité de licenciement"} (non soumise, montant légal)</td><td style="border:1px solid #999;padding:5px;text-align:right;">${fmt(net.indemniteNonSoumise)}</td></tr>
+          <tr style="background:#e8f5e9;font-weight:bold;"><td style="border:1px solid #999;padding:6px;">NET À PAYER</td><td style="border:1px solid #999;padding:6px;text-align:right;">${fmt(net.netAPayer)}</td></tr>
         </tbody>
       </table>
-      <p style="font-size:10px;color:#555;margin-top:6px;">Montants bruts, avant retenues fiscales et sociales (IR, TRIMF, IPRES) applicables au préavis et à l'indemnité de congés ; l'indemnité de licenciement relève de son propre régime d'exonération. Congés : cumul limité aux 36 derniers mois.</p>
+      <p style="font-size:10px;color:#555;margin-top:6px;">Salaire de référence : ${fmt(stc.salaireMoyenMensuel)} FCFA/mois · ancienneté ${stc.anciennete} an(s). Retenues calculées comme une paie mensuelle ; la régularisation annuelle de l'IR intervient sur la déclaration annuelle des salaires.</p>
       <div style="margin-top:30px;font-size:11px;">
         Le présent reçu est délivré pour solde de tout compte. Toute contestation devra intervenir dans les délais légaux.<br/><br/><br/>
         Fait à ${hEnt.adresse || "Dakar"}, le ${new Date().toLocaleDateString("fr-FR")}<br/><br/><br/>
@@ -335,16 +346,27 @@ function STCModal({ emp, params, entreprise, joursCongesPris, onClose, onGenerat
         </Field>
         <Field label="Date de fin"><input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} className={inputClass} /></Field>
       </div>
+      <label className="flex items-center gap-2 text-[11px] text-muted-foreground mt-2 cursor-pointer">
+        <input type="checkbox" checked={inclureSalaire} onChange={(e) => setInclureSalaire(e.target.checked)} />
+        Inclure le salaire du mois de sortie (décocher s'il a déjà été payé par la paie mensuelle)
+      </label>
       <div className="bg-background border border-border rounded-lg p-4 mt-3 font-mono text-[12px] space-y-1.5">
         <Line l="Ancienneté" v={`${stc.anciennete} an(s)`} />
-        <Line l="Salaire moyen mensuel" v={`${fmt(stc.salaireMoyenMensuel)} FCFA`} />
+        <Line l="Salaire de référence" v={`${fmt(stc.salaireMoyenMensuel)} FCFA`} />
         <hr className="border-border my-2" />
+        {net.salaireProrata > 0 && <Line l={`Salaire du mois de sortie (${net.joursTravaillesDernierMois} j / 30)`} v={`${fmt(net.salaireProrata)} FCFA`} />}
         <Line l={`Préavis (${stc.preavisMois} mois)`} v={`${fmt(stc.indPreavis)} FCFA`} />
-        <Line l={`Congés non pris (${Math.max(0, stc.joursCongesAcquis - stc.joursCongesPris)} j)`} v={`${fmt(stc.indCongesNonPris)} FCFA`} />
-        <Line l="Indemnité de licenciement" v={`${fmt(stc.indLicenciement)} FCFA`} />
+        <Line l={`Congés non pris (${Math.max(0, stc.joursCongesAcquis - stc.joursCongesPris)} j${conge.reprise ? `, reprise du ${conge.reprise.date}` : ""})`} v={`${fmt(stc.indCongesNonPris)} FCFA`} />
+        <Line l="Total soumis" v={`${fmt(net.brutSoumis)} FCFA`} />
+        <Line l="– IR / TRIMF" v={`– ${fmt(net.ir + net.trimf)} FCFA`} />
+        <Line l="– IPRES (et IPM) salarié" v={`– ${fmt(net.ipres + net.ipm)} FCFA`} />
+        <Line l={motif === "retraite" ? "Indemnité de retraite (non soumise)" : "Indemnité de licenciement (non soumise)"} v={`${fmt(net.indemniteNonSoumise)} FCFA`} />
         <hr className="border-border my-2" />
-        <div className="flex justify-between font-bold text-primary text-[14px]"><span>TOTAL BRUT</span><span>{fmt(stc.totalBrut)} FCFA</span></div>
-        <div className="text-muted-foreground text-[10px] mt-2">Montants bruts, avant IR, TRIMF et IPRES sur le préavis et les congés. Congés : cumul limité aux 36 derniers mois.</div>
+        <div className="flex justify-between font-bold text-primary text-[14px]"><span>NET À PAYER</span><span>{fmt(net.netAPayer)} FCFA</span></div>
+        <div className="text-muted-foreground text-[10px] mt-2">
+          Estimation : préavis, congés et salaire du mois soumis à l'IR, la TRIMF et l'IPRES comme une paie mensuelle ; indemnité de
+          licenciement au montant légal exonérée. À faire valider par votre expert-comptable.
+        </div>
       </div>
       <div className="flex gap-2 justify-end mt-4">
         <button onClick={onClose} className="px-4 py-2 border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px]">Fermer</button>

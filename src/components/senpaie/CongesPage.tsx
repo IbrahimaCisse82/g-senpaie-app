@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import type { Employee } from "@/lib/payroll";
 import { MOIS } from "@/lib/payroll";
 import { useConges, type Conge } from "@/hooks/useRH";
-import { droitCongesAcquis, joursCongesPrisSurPeriode, joursOuvrables, absencesDuMois, CUMUL_CONGES_MAX_MOIS } from "@/lib/legal";
+import { soldeConges, joursOuvrables, absencesDuMois, CUMUL_CONGES_MAX_MOIS, DUREE_CONGE_MATERNITE_SEMAINES, finCongeMaternite } from "@/lib/legal";
 import { Modal, Field, inputClass } from "./Modal";
 
 interface Props {
@@ -19,6 +19,7 @@ const TYPE_LABEL: Record<Conge["type"], string> = {
   maladie: "Arrêt maladie",
   maternite: "Congé maternité",
   sans_solde: "Sans solde",
+  reprise_solde: "Reprise de solde",
 };
 
 const STATUT_LABEL: Record<Conge["statut"], string> = {
@@ -56,10 +57,9 @@ export function CongesPage({ userId, entrepriseId, employees, canWrite = true, o
 
   const soldes = useMemo(() => {
     return employees.map((emp) => {
-      // Cumul limité à 36 mois : au-delà, les congés non pris ne se reportent pas
-      const acquis = droitCongesAcquis(emp.dateEntree);
-      const pris = joursCongesPrisSurPeriode(conges, emp.matricule, emp.dateEntree);
-      return { emp, acquis, pris, solde: acquis - pris };
+      // Reprise de solde si elle existe ; sinon cumul limité à 36 mois depuis l'embauche
+      const { acquis, pris, solde, reprise } = soldeConges(emp, conges);
+      return { emp, acquis, pris, solde, reprise };
     });
   }, [employees, conges]);
 
@@ -137,7 +137,9 @@ export function CongesPage({ userId, entrepriseId, employees, canWrite = true, o
               <tr key={s.emp.matricule} className="border-b border-border">
                 <td className="py-1.5 px-3">{s.emp.matricule}</td>
                 <td className="py-1.5 px-3">{s.emp.nom} {s.emp.prenom}</td>
-                <td className="py-1.5 px-3 text-right">{s.acquis} j</td>
+                <td className="py-1.5 px-3 text-right" title={s.reprise ? `Dont ${s.reprise.jours} j repris au ${s.reprise.date}` : "Calculé depuis l'embauche (36 mois au plus)"}>
+                  {s.acquis} j{s.reprise && <span className="text-muted-foreground text-[10px]"> (reprise {s.reprise.date})</span>}
+                </td>
                 <td className="py-1.5 px-3 text-right">{s.pris} j</td>
                 <td className={`py-1.5 px-3 text-right font-bold ${s.solde < 0 ? "text-destructive" : "text-primary"}`}>{s.solde} j</td>
               </tr>
@@ -218,7 +220,15 @@ function CongeForm({ initial, employees, onClose, onSave }: {
   const [statut, setStatut] = useState<Conge["statut"]>(initial?.statut || "demande");
   const [motif, setMotif] = useState(initial?.motif || "");
 
-  const jours = dateDebut && dateFin ? joursOuvrables(dateDebut, dateFin) : 0;
+  const [joursRepris, setJoursRepris] = useState(initial?.type === "reprise_solde" ? initial.jours : 0);
+  const reprise = type === "reprise_solde";
+  const jours = reprise ? joursRepris : dateDebut && dateFin ? joursOuvrables(dateDebut, dateFin) : 0;
+  const choisirType = (t: Conge["type"]) => {
+    setType(t);
+    if (t === "reprise_solde") setStatut("valide");
+    // Congé maternité : 18 semaines (Code du travail 2026), date de fin proposée automatiquement
+    if (t === "maternite" && dateDebut && !dateFin) setDF(finCongeMaternite(dateDebut));
+  };
 
   return (
     <Modal title={initial ? "Modifier le congé" : "Nouvelle demande de congé"} onClose={onClose} width={520}>
@@ -228,20 +238,39 @@ function CongeForm({ initial, employees, onClose, onSave }: {
         </select>
       </Field>
       <Field label="Type">
-        <select value={type} onChange={(e) => setType(e.target.value as Conge["type"])} className={inputClass}>
+        <select value={type} onChange={(e) => choisirType(e.target.value as Conge["type"])} className={inputClass}>
           <option value="paye">Congé payé</option>
           <option value="maladie">Arrêt maladie</option>
           <option value="maternite">Congé maternité</option>
           <option value="sans_solde">Sans solde</option>
+          <option value="reprise_solde">Reprise de solde (jours dus à la mise en service)</option>
         </select>
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Date début"><input type="date" value={dateDebut} onChange={(e) => setDD(e.target.value)} className={inputClass} /></Field>
-        <Field label="Date fin"><input type="date" value={dateFin} onChange={(e) => setDF(e.target.value)} className={inputClass} /></Field>
-      </div>
-      <Field label={`Durée (jours ouvrables) : ${jours}`}>
-        <div className="text-muted-foreground text-[11px]">Calculée automatiquement, hors samedi/dimanche.</div>
-      </Field>
+      {reprise ? (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date de reprise"><input type="date" value={dateDebut} onChange={(e) => { setDD(e.target.value); setDF(e.target.value); }} className={inputClass} /></Field>
+            <Field label="Jours restant dus à cette date"><input type="number" min={0} step={0.5} value={joursRepris} onChange={(e) => setJoursRepris(+e.target.value)} className={inputClass} /></Field>
+          </div>
+          <div className="text-muted-foreground text-[11px] mb-3">
+            Solde de congés acquis et non pris à la date de reprise (registre ou dernier bulletin). Le droit continue ensuite à courir
+            à 2 jours ouvrables par mois ; les congés pris avant cette date ne sont plus décomptés.
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date début"><input type="date" value={dateDebut} onChange={(e) => { setDD(e.target.value); if (type === "maternite" && !dateFin && e.target.value) setDF(finCongeMaternite(e.target.value)); }} className={inputClass} /></Field>
+            <Field label="Date fin"><input type="date" value={dateFin} onChange={(e) => setDF(e.target.value)} className={inputClass} /></Field>
+          </div>
+          <Field label={`Durée (jours ouvrables) : ${jours}`}>
+            <div className="text-muted-foreground text-[11px]">
+              Calculée automatiquement, hors samedi/dimanche.
+              {type === "maternite" && ` Congé maternité : ${DUREE_CONGE_MATERNITE_SEMAINES} semaines (Code du travail 2026), date de fin proposée automatiquement.`}
+            </div>
+          </Field>
+        </>
+      )}
       <Field label="Statut">
         <select value={statut} onChange={(e) => setStatut(e.target.value as Conge["statut"])} className={inputClass}>
           <option value="demande">En attente</option>
@@ -252,8 +281,8 @@ function CongeForm({ initial, employees, onClose, onSave }: {
       <Field label="Motif (optionnel)"><textarea value={motif} onChange={(e) => setMotif(e.target.value)} className={inputClass} rows={2} /></Field>
       <div className="flex gap-3 justify-end mt-3">
         <button onClick={onClose} className="px-4 py-2 border border-muted-foreground text-muted-foreground rounded-lg font-bold text-[13px]">Annuler</button>
-        <button onClick={() => onSave({ id: initial?.id, matricule, type, dateDebut, dateFin, jours, statut, motif })}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-[13px]" disabled={!matricule || !dateDebut || !dateFin}>
+        <button onClick={() => onSave({ id: initial?.id, matricule, type, dateDebut, dateFin: reprise ? dateDebut : dateFin, jours, statut: reprise ? "valide" : statut, motif })}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-[13px]" disabled={!matricule || !dateDebut || (!reprise && !dateFin)}>
           💾 Enregistrer
         </button>
       </div>

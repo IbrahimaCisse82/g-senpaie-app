@@ -3,6 +3,7 @@ import type { PayrollParams } from "@/lib/payroll";
 import { CSS_AT_CLASSES } from "@/lib/payroll";
 import { Field, inputClass } from "./Modal";
 import { BulletinTemplateSelector } from "./BulletinTemplateSelector";
+import { MODES_TRANSPORT, PANIER_DEFAUT, primeTransport, joursOuvresDuMois, fmt as fmtF, type ModeTransport } from "@/lib/payroll";
 
 interface ParametresProps {
   params: PayrollParams;
@@ -131,11 +132,38 @@ export function Parametres({ params, onSave, onReset, bulletinTemplateId, onBull
       {/* Transport */}
       <div className="bg-card rounded-lg p-6 border border-border">
         <div className="text-primary text-xs font-bold mb-3.5 pb-2 border-b border-border">🚌 Indemnité de Transport</div>
-        <Field label="Montant mensuel (FCFA)">
-          <input type="number" step="500" min="0" value={local.transport.valeur}
-            onChange={(e) => setLocal((prev) => ({ ...prev, transport: { ...prev.transport, valeur: +e.target.value } }))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Montant mensuel (FCFA)">
+            <input type="number" step="500" min="0" value={local.transport.valeur}
+              onChange={(e) => setLocal((prev) => ({ ...prev, transport: { ...prev.transport, valeur: +e.target.value } }))}
+              className={`${inputClass} max-w-[200px]`} />
+          </Field>
+          <Field label="En cas d'absence">
+            <select value={local.transport.mode || "entiere"}
+              onChange={(e) => setLocal((prev) => ({ ...prev, transport: { ...prev.transport, mode: e.target.value as ModeTransport } }))}
+              className={inputClass}>
+              {MODES_TRANSPORT.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div className="text-muted-foreground text-[11px] mt-1">
+          Les heures d'absence et de maladie sont converties en jours (8 h = 1 jour). Exemple pour 2 jours d'absence et 26 000 F :
+          entière 26 000 F · par jour {fmtF(primeTransport(26000, "jour_calendaire", 2, new Date()))} F · par jour ouvré ({joursOuvresDuMois(new Date())} j ce mois) {fmtF(primeTransport(26000, "jour_ouvre", 2, new Date()))} F.
+        </div>
+      </div>
+
+      {/* Panier */}
+      <div className="bg-card rounded-lg p-6 border border-border mt-4">
+        <div className="text-primary text-xs font-bold mb-3.5 pb-2 border-b border-border">🍽️ Prime de Panier</div>
+        <Field label="Montant par panier (FCFA)">
+          <input type="number" step="50" min="0" value={local.panier?.valeur ?? PANIER_DEFAUT}
+            onChange={(e) => setLocal((prev) => ({ ...prev, panier: { label: "Prime de panier", ...(prev.panier || {}), valeur: +e.target.value } }))}
             className={`${inputClass} max-w-[200px]`} />
         </Field>
+        <div className="text-muted-foreground text-[11px] mt-1">
+          Multiplié par le nombre de paniers saisi sur la fiche de chaque salarié. Pour information, 3 heures de SMIG horaire
+          représentent environ 1 112 F (modèle SENEXCELPAIE).
+        </div>
       </div>
     </div>
   );

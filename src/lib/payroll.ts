@@ -56,7 +56,42 @@ export interface PayrollParams {
   CSS_AF: CotisationParam;
   CSS_AT: CotisationParam;
   IPM: CotisationParam;
-  transport: { label: string; valeur: number };
+  transport: { label: string; valeur: number; mode?: ModeTransport };
+  /** Prime de panier : montant versé par panier (nombre de paniers saisi par salarié) */
+  panier?: { label: string; valeur: number };
+}
+
+/**
+ * Prime de transport en cas d'absence (choix de l'entreprise) :
+ * - "entiere" : versée entière quelles que soient les absences ;
+ * - "jour_calendaire" : réduite de 1/30 par jour d'absence ;
+ * - "jour_ouvre" : réduite au prorata des jours ouvrés (lundi-vendredi) du mois.
+ */
+export type ModeTransport = "entiere" | "jour_calendaire" | "jour_ouvre";
+export const MODES_TRANSPORT: { id: ModeTransport; label: string }[] = [
+  { id: "entiere", label: "Versée entière (absences sans effet)" },
+  { id: "jour_calendaire", label: "Proratisée par jour (1/30 par jour d'absence)" },
+  { id: "jour_ouvre", label: "Proratisée par jour ouvré (jours ouvrés du mois)" },
+];
+export const PANIER_DEFAUT = 3000;
+/** Durée d'une journée de travail pour convertir les heures d'absence en jours (40 h / 5 j) */
+export const HEURES_PAR_JOUR = 8;
+
+/** Nombre de jours ouvrés (lundi à vendredi) du mois de la date donnée */
+export function joursOuvresDuMois(d: Date): number {
+  const an = d.getFullYear(), mo = d.getMonth(), fin = new Date(an, mo + 1, 0).getDate();
+  let n = 0;
+  for (let j = 1; j <= fin; j++) { const w = new Date(an, mo, j).getDay(); if (w !== 0 && w !== 6) n++; }
+  return n;
+}
+
+/** Prime de transport du mois selon le mode choisi et les jours d'absence (absences + maladie) */
+export function primeTransport(montant: number, mode: ModeTransport | undefined, joursAbsence: number, finPeriode: Date): number {
+  if (!montant || montant <= 0) return 0;
+  const jours = Math.max(0, joursAbsence || 0);
+  if (!mode || mode === "entiere" || jours === 0) return montant;
+  const base = mode === "jour_ouvre" ? joursOuvresDuMois(finPeriode) : 30;
+  return Math.round(montant * Math.max(0, base - jours) / base);
 }
 
 export interface CotisationParam {
@@ -319,8 +354,8 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const tauxMaintien = emp.tauxMaladie && emp.tauxMaladie > 0 ? Math.min(emp.tauxMaladie, 1) : 1;
   const indMaladie = heuresMaladie * tauxHoraireAbs * tauxMaintien;
 
-  // Prime de panier (constante 3000 FCFA × nb paniers)
-  const primePanier = (emp.nbPaniers || 0) * 3000;
+  // Prime de panier : montant paramétrable par l'entreprise × nombre de paniers
+  const primePanier = (emp.nbPaniers || 0) * (p.panier?.valeur ?? PANIER_DEFAUT);
   const indKilometrique = emp.indKilometrique || 0;
 
   const brut = salaireBase + sursalaire + primeAnc + totalHS - retAbsence + indMaladie;
@@ -370,7 +405,9 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const totalRet = ir + trimf + brs + ipresRG_s + ipresRC_s + ipm_s;
   const chargesPat = cfce + ipresRG_p + ipresRC_p + css_af + css_at + ipm_p;
   // Indemnité de transport : non due aux prestataires
-  const transport = regime === "prestataire" ? 0 : (p.transport.valeur || 0);
+  const joursAbsence = ((emp.heuresAbsence || 0) + (emp.heuresAbsMaladie || 0)) / HEURES_PAR_JOUR;
+  const transport = regime === "prestataire" ? 0
+    : primeTransport(p.transport.valeur || 0, p.transport.mode, joursAbsence, refDate ? new Date(refDate) : finDeMois());
   const net = brut - totalRet + transport + primePanier + indKilometrique - totalAvances;
   const masse = brut + chargesPat;
 
@@ -419,7 +456,7 @@ export function normaliserParams(saved: Partial<PayrollParams> | null | undefine
   if (!saved) return out;
   for (const key of Object.keys(defaults) as (keyof PayrollParams)[]) {
     const v = saved[key];
-    if (v && typeof v === "object") Object.assign(out[key], v);
+    if (v && typeof v === "object") (out as unknown as Record<string, object>)[key] = { ...(out[key] ?? {}), ...v };
   }
   return out;
 }
