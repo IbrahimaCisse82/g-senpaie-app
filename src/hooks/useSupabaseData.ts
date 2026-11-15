@@ -54,6 +54,8 @@ function dbToEmployee(row: Record<string, unknown> & { [k: string]: unknown }): 
     retCooperative: Number(row.ret_cooperative) || 0,
     fraisMedicaux: Number(row.frais_medicaux) || 0,
     indKilometrique: Number(row.ind_kilometrique) || 0,
+    gratification: Number((row as Record<string, unknown>).gratification) || 0,
+    regulIR: Number((row as Record<string, unknown>).regul_ir) || 0,
     dateSortie: (row.date_sortie as string) || "",
     motifSortie: (row.motif_sortie as string) || "",
   };
@@ -98,9 +100,16 @@ function employeeToDb(emp: Employee, userId: string, entrepriseId: string) {
     ret_cooperative: emp.retCooperative,
     frais_medicaux: emp.fraisMedicaux,
     ind_kilometrique: emp.indKilometrique,
+    gratification: emp.gratification || 0,
+    regul_ir: emp.regulIR || 0,
     date_sortie: emp.dateSortie || null,
     motif_sortie: emp.motifSortie || null,
   };
+}
+
+/** Erreur PostgREST / Postgres signalant que les colonnes gratification / regul_ir n'existent pas encore */
+export function colonnePrimesAbsente(error: { code?: string; message?: string }): boolean {
+  return (error.code === "PGRST204" || error.code === "42703") && /gratification|regul_ir/.test(error.message || "");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -123,9 +132,18 @@ export function useEmployees(userId: string | undefined, entrepriseId: string | 
   const saveEmployee = useCallback(async (emp: Employee, isNew: boolean) => {
     if (!userId || !entrepriseId) return;
     const row = employeeToDb(emp, userId, entrepriseId);
-    const { error } = isNew
-      ? await supabase.from("employees").insert(row)
-      : await supabase.from("employees").update(row).eq("entreprise_id" as never, entrepriseId as never).eq("matricule", emp.matricule);
+    const envoyer = (r: typeof row) => isNew
+      ? supabase.from("employees").insert(r as never)
+      : supabase.from("employees").update(r as never).eq("entreprise_id" as never, entrepriseId as never).eq("matricule", emp.matricule);
+    let { error } = await envoyer(row);
+    // Base pas encore mise à jour (colonnes gratification / regul_ir absentes) : on enregistre le reste de la fiche
+    if (error && colonnePrimesAbsente(error)) {
+      const { gratification: _g, regul_ir: _r, ...sansPrimes } = row;
+      ({ error } = await envoyer(sansPrimes as typeof row));
+      if (!error && ((emp.gratification || 0) !== 0 || (emp.regulIR || 0) !== 0)) {
+        toast({ title: "Mise à jour de la base requise", description: "La gratification et la régularisation IR n'ont pas été enregistrées : appliquez la mise à jour de la base de données (migration « primes et régularisation »).", variant: "destructive" });
+      }
+    }
     if (error) { handleError("Sauvegarde employé", error); return; }
     await fetchEmployees();
   }, [userId, entrepriseId, fetchEmployees]);

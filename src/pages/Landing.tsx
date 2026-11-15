@@ -56,6 +56,9 @@ export default function Landing() {
           <Link to="/auth" className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-bold text-sm hover:opacity-90 transition-opacity">
             🚀 Essayer gratuitement
           </Link>
+          <Link to="/auth?demo=1" className="px-8 py-3 border border-primary text-primary rounded-lg font-bold text-sm hover:bg-primary/10 transition-colors">
+            🧪 Voir la démo
+          </Link>
           <a href="#fonctionnalites" className="px-8 py-3 border border-border text-foreground rounded-lg font-bold text-sm hover:bg-secondary transition-colors">
             Découvrir les fonctionnalités
           </a>

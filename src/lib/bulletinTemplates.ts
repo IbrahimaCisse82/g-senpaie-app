@@ -76,6 +76,7 @@ function buildSalaryRows(emp: Employee, p: PayrollResult, anc: number): string[]
   const hAbs = (emp.heuresAbsence || 0) + (emp.heuresAbsMaladie || 0);
   if (p.retAbsence > 0) rows.push([`Retenue absences (${hAbs}h)`, `– ${fmtN(p.retAbsence)}`]);
   if (p.indMaladie > 0) rows.push([`Indemnité maladie (${emp.heuresAbsMaladie}h)`, fmtN(p.indMaladie)]);
+  if ((p.gratification || 0) > 0) rows.push(["Gratification / 13e mois", fmtN(p.gratification)]);
   return rows;
 }
 
@@ -84,6 +85,8 @@ function buildRetRows(p: PayrollResult): string[][] {
   if (p.regime === "salarie") {
     rows.push(["Impôt sur le Revenu (IR)", `– ${fmtN(p.ir)}`]);
     rows.push(["TRIMF", `– ${fmtN(p.trimf)}`]);
+    if ((p.regulIR || 0) > 0) rows.push(["Régularisation annuelle IR (complément)", `– ${fmtN(p.regulIR)}`]);
+    if ((p.regulIR || 0) < 0) rows.push(["Régularisation annuelle IR (remboursement)", `+ ${fmtN(-p.regulIR)}`]);
   }
   if (p.brs > 0) rows.push([`BRS sur honoraires${tx(p.brs, p.brut)}`, `– ${fmtN(p.brs)}`]);
   if (p.ipresRG_s > 0) rows.push([`IPRES R.G. salarié${tx(p.ipresRG_s, p.baseIPRES_RG)}`, `– ${fmtN(p.ipresRG_s)}`]);

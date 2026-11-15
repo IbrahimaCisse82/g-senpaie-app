@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import authBg from "@/assets/auth-bg.jpg";
 import { traduireErreurAuth } from "@/lib/authErreurs";
+import { connexionDemo } from "@/lib/demo";
 
 export default function Auth() {
   const { user, loading, signIn, signUp } = useAuth();
@@ -15,6 +16,7 @@ export default function Auth() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
 
   const handleGoogle = async () => {
     setError("");
@@ -23,6 +25,20 @@ export default function Auth() {
     });
     if (result.error) setError(result.error.message || "Erreur Google");
   };
+
+  const handleDemo = async () => {
+    setError(""); setSuccess(""); setDemoBusy(true);
+    const { error } = await connexionDemo();
+    if (error) setError(error);
+    setDemoBusy(false);
+  };
+
+  // Lien « Voir la démo » de la page d'accueil : /auth?demo=1 ouvre directement la démonstration
+  const [searchParams] = useSearchParams();
+  const demoLancee = useRef(false);
+  useEffect(() => {
+    if (searchParams.get("demo") === "1" && !user && !loading && !demoLancee.current) { demoLancee.current = true; handleDemo(); }
+  }, [searchParams, user, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -146,6 +162,15 @@ export default function Auth() {
                   </svg>
                   Continuer avec Google
                 </button>
+                <button
+                  type="button"
+                  onClick={handleDemo}
+                  disabled={demoBusy}
+                  className="w-full mt-2 py-2.5 bg-primary/10 border border-primary text-primary rounded-lg font-bold text-[13px] cursor-pointer hover:bg-primary/20 transition-colors disabled:opacity-50"
+                >
+                  {demoBusy ? "Ouverture de la démo…" : "🧪 Tester la démo (sans inscription)"}
+                </button>
+                <div className="text-muted-foreground text-[10px] text-center mt-1.5">Compte partagé avec des données fictives. N'y saisissez aucune donnée réelle.</div>
               </>
             )}
 

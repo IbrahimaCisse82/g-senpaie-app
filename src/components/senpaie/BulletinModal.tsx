@@ -12,6 +12,8 @@ interface BulletinModalProps {
   templateId?: string;
   /** Avances & prêts : leurs échéances de la période sont retenues sur le bulletin */
   avances?: Avance[];
+  /** Bulletin figé à la clôture : montants et période repris tels quels, sans recalcul */
+  fige?: { paie: PayrollResult; mois: number; annee: number };
   onClose: () => void;
 }
 
@@ -29,10 +31,12 @@ function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee:
     ["Heures supplémentaires", Math.round(p.totalHS)],
     ["Retenue absences", -Math.round(p.retAbsence)],
     ["Indemnité maladie", Math.round(p.indMaladie)],
+    ["Gratification / 13e mois", Math.round(p.gratification || 0)],
     ["SALAIRE BRUT", Math.round(p.brut)],
     [],
     ["IR", -Math.round(p.ir)],
     ["TRIMF", -Math.round(p.trimf)],
+    ["Régularisation annuelle IR", -Math.round(p.regulIR || 0)],
     ["IPRES RG salarié", -Math.round(p.ipresRG_s)],
     ["IPRES RC salarié", -Math.round(p.ipresRC_s)],
     ["IPM salarié", -Math.round(p.ipm_s)],
@@ -60,14 +64,18 @@ function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee:
   URL.revokeObjectURL(url);
 }
 
-export function BulletinModal({ emp: empFiche, params, entreprise, templateId, avances = [], onClose }: BulletinModalProps) {
+export function BulletinModal({ emp: empFiche, params, entreprise, templateId, avances = [], fige, onClose }: BulletinModalProps) {
   const now = new Date();
-  const [mois, setMois] = useState(now.getMonth());
-  const [annee, setAnnee] = useState(now.getFullYear());
+  const [mois, setMois] = useState(fige ? fige.mois : now.getMonth());
+  const [annee, setAnnee] = useState(fige ? fige.annee : now.getFullYear());
 
   const refDate = new Date(annee, mois + 1, 0);
-  const emp: Employee = { ...empFiche, retenueEcheances: empFiche.dbId ? retenueDuMois(avances, empFiche.dbId, mois + 1, annee) : 0 };
-  const p = calculerPaie(emp, params, refDate);
+  // Bulletin figé : les éléments variables du mois (heures, paniers…) archivés avec lui remplacent ceux de la fiche
+  const variablesFigees = (fige?.paie as (PayrollResult & { variables?: Partial<Employee> }) | undefined)?.variables;
+  const emp: Employee = fige
+    ? { ...empFiche, ...(variablesFigees ?? {}) }
+    : { ...empFiche, retenueEcheances: empFiche.dbId ? retenueDuMois(avances, empFiche.dbId, mois + 1, annee) : 0 };
+  const p = fige ? fige.paie : calculerPaie(emp, params, refDate);
   const anc = getAnciennete(emp.dateEntree, refDate);
   const periodeLabel = `${MOIS[mois]} ${annee}`;
   const years = Array.from({ length: 10 }, (_, i) => now.getFullYear() - i);
@@ -142,12 +150,18 @@ export function BulletinModal({ emp: empFiche, params, entreprise, templateId, a
       {/* Période + Boutons */}
       <div className="flex gap-2 items-center mb-5 p-3.5 bg-background rounded-lg flex-wrap">
         <div className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">Période :</div>
-        <select value={mois} onChange={(e) => setMois(+e.target.value)} className="py-1.5 px-2.5 bg-background border border-border rounded-lg text-foreground text-[13px] font-mono outline-none">
-          {MOIS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-        </select>
-        <select value={annee} onChange={(e) => setAnnee(+e.target.value)} className="py-1.5 px-2.5 bg-background border border-border rounded-lg text-foreground text-[13px] font-mono outline-none w-24">
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+        {fige ? (
+          <span className="text-foreground text-[13px] font-bold">{periodeLabel} <span className="text-primary text-[11px]">🔒 bulletin clôturé</span></span>
+        ) : (
+          <>
+            <select value={mois} onChange={(e) => setMois(+e.target.value)} className="py-1.5 px-2.5 bg-background border border-border rounded-lg text-foreground text-[13px] font-mono outline-none">
+              {MOIS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            <select value={annee} onChange={(e) => setAnnee(+e.target.value)} className="py-1.5 px-2.5 bg-background border border-border rounded-lg text-foreground text-[13px] font-mono outline-none w-24">
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </>
+        )}
         <div className="flex-1" />
         <div className="flex items-center gap-1 mr-2">
           <div className="w-2.5 h-2.5 rounded-full" style={{ background: template.couleurPrimaire }} />
@@ -204,6 +218,7 @@ export function BulletinModal({ emp: empFiche, params, entreprise, templateId, a
           )}
           {p.retAbsence > 0 && <Row l={`Retenue absences (${emp.heuresAbsence}h)`} v={p.retAbsence} c="text-destructive" neg />}
           {p.indMaladie > 0 && <Row l="Indemnité maladie" v={p.indMaladie} />}
+          {(p.gratification || 0) > 0 && <Row l="Gratification / 13e mois" v={p.gratification} c="text-senpaie-blue" />}
           <Row l="SALAIRE BRUT" v={p.brut} c="text-senpaie-blue" bold />
         </div>
 
@@ -212,6 +227,8 @@ export function BulletinModal({ emp: empFiche, params, entreprise, templateId, a
           <div className="text-destructive text-[10px] font-bold mb-1 uppercase tracking-wider">Retenues salariales</div>
           {p.regime === "salarie" && <Row l="Impôt sur le Revenu (IR)" v={p.ir} c="text-destructive" neg />}
           {p.regime === "salarie" && <Row l="TRIMF" v={p.trimf} c="text-destructive" neg />}
+          {(p.regulIR || 0) > 0 && <Row l="Régularisation annuelle IR (complément)" v={p.regulIR} c="text-destructive" neg />}
+          {(p.regulIR || 0) < 0 && <Row l="Régularisation annuelle IR (remboursement)" v={-p.regulIR} c="text-primary" />}
           {p.brs > 0 && <Row l={`BRS sur honoraires (${(params.BRS.taux * 100).toFixed(0)}%)`} v={p.brs} c="text-destructive" neg />}
           {p.ipresRG_s > 0 && <Row l={`IPRES R.G. salarié (${(params.IPRES_RG.taux * params.IPRES_RG.tauxSalarial * 100).toFixed(1).replace(".", ",")}%)`} v={p.ipresRG_s} c="text-destructive" neg />}
           {p.ipresRC_s > 0 && <Row l={`IPRES R.C.C. salarié (${(params.IPRES_RCC.taux * params.IPRES_RCC.tauxSalarial * 100).toFixed(1).replace(".", ",")}%)`} v={p.ipresRC_s} c="text-destructive" neg />}

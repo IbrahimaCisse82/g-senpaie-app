@@ -342,6 +342,7 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
       avanceTabaski: +(form.avanceTabaski || 0), avanceCaisse: +(form.avanceCaisse || 0),
       avanceFinanciere: +(form.avanceFinanciere || 0), retCooperative: +(form.retCooperative || 0),
       fraisMedicaux: +(form.fraisMedicaux || 0), indKilometrique: +(form.indKilometrique || 0),
+      gratification: +(form.gratification || 0), regulIR: +(form.regulIR || 0),
     });
   };
 
@@ -496,6 +497,15 @@ export function EmployeeForm({ initial, onSave, onClose, existingMats, conventio
           <Field label="Indemnité kilométrique (FCFA)">
             <input type="number" min="0" value={form.indKilometrique || ""} onChange={(e) => set("indKilometrique", e.target.value)} placeholder="0" className={inputClass} />
           </Field>
+          <Field label="Gratification / 13e mois du mois (FCFA)">
+            <input type="number" min="0" value={form.gratification || ""} onChange={(e) => set("gratification", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Régularisation IR (+ retenue, − remboursement)">
+            <input type="number" value={form.regulIR || ""} onChange={(e) => set("regulIR", e.target.value)} placeholder="0" className={inputClass} />
+          </Field>
+        </div>
+        <div className="text-muted-foreground text-[10px] -mt-2">
+          La gratification est soumise aux cotisations et imposée sans être multipliée par 12. Ces deux montants ne valent que pour le mois en cours : ils sont remis à zéro à la clôture.
         </div>
       </div>
 

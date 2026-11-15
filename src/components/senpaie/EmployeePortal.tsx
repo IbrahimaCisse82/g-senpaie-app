@@ -1,8 +1,11 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConges, useContrats } from "@/hooks/useRH";
-import { calculerPaie, fmt, MOIS, type Employee, type PayrollParams } from "@/lib/payroll";
+import { fmt, MOIS, type Employee, type PayrollParams, type PayrollResult } from "@/lib/payroll";
+import { completerPaie } from "@/lib/dads";
+import { calculerPaie } from "@/lib/payroll";
 import type { Entreprise } from "@/lib/payroll";
 
 const BulletinModal = lazy(() => import("@/components/senpaie/BulletinModal").then((m) => ({ default: m.BulletinModal })));
@@ -32,15 +35,24 @@ export function EmployeePortal({ userId, entrepriseId, employee, params, entrepr
   // Défense en profondeur : en plus des règles d'accès de la base, on n'affiche que les congés du salarié connecté
   const conges = congesVisibles.filter((c) => c.matricule === employee?.matricule);
   const { contrats } = useContrats(userId, entrepriseId);
-  const [showBulletin, setShowBulletin] = useState(false);
+  type BulletinFige = { id: string; mois: number; annee: number; brut: number; net: number; data: Partial<PayrollResult> | null };
+  const [bulletins, setBulletins] = useState<BulletinFige[]>([]);
+  const [ouvert, setOuvert] = useState<BulletinFige | null>(null);
+  const matricule = employee?.matricule;
+  // Seuls les bulletins clôturés sont visibles par le salarié (les règles d'accès de la base limitent déjà à ses propres bulletins)
+  useEffect(() => {
+    if (!entrepriseId || !matricule) return;
+    supabase.from("bulletins_mois").select("id, mois, annee, brut, net, data")
+      .eq("entreprise_id", entrepriseId).eq("matricule", matricule)
+      .order("annee", { ascending: false }).order("mois", { ascending: false })
+      .then(({ data }) => setBulletins((data ?? []) as unknown as BulletinFige[]));
+  }, [entrepriseId, matricule]);
   const [debut, setDebut] = useState("");
   const [fin, setFin] = useState("");
   const [motif, setMotif] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const paie = useMemo(() => (employee ? calculerPaie(employee, params) : null), [employee, params]);
-  const now = new Date();
   const jours = joursOuvrables(debut, fin);
 
   if (!employee) {
@@ -88,14 +100,19 @@ export function EmployeePortal({ userId, entrepriseId, employee, params, entrepr
         </section>
 
         <section className="page-section rounded-lg border border-border bg-card p-5 space-y-3">
-          <h2 className="font-bold">Mon bulletin — {MOIS[now.getMonth()]} {now.getFullYear()}</h2>
-          {paie && (
-            <div className="text-sm grid grid-cols-2 gap-y-1">
-              <span className="text-muted-foreground">Salaire brut</span><span>{fmt(paie.brut)} F</span>
-              <span className="text-muted-foreground">Net à payer</span><span className="font-bold text-primary">{fmt(paie.net)} F</span>
-            </div>
+          <h2 className="font-bold">Mes bulletins de paie</h2>
+          {bulletins.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucun bulletin disponible pour le moment. Votre bulletin apparaît ici dès que le mois est clôturé par votre employeur.</p>
+          ) : (
+            <ul className="text-sm divide-y divide-border max-h-64 overflow-y-auto">
+              {bulletins.map((b) => (
+                <li key={b.id} className="py-2 flex items-center justify-between gap-2">
+                  <span>{MOIS[b.mois]} {b.annee} · <span className="font-bold text-primary">{fmt(Number(b.net))} F</span> net</span>
+                  <Button size="sm" variant="outline" onClick={() => setOuvert(b)}>Voir / télécharger</Button>
+                </li>
+              ))}
+            </ul>
           )}
-          <Button onClick={() => setShowBulletin(true)}>Voir / télécharger le bulletin</Button>
         </section>
 
         <section className="page-section rounded-lg border border-border bg-card p-5 space-y-3">
@@ -130,9 +147,11 @@ export function EmployeePortal({ userId, entrepriseId, employee, params, entrepr
         </section>
       </main>
 
-      {showBulletin && (
+      {ouvert && (
         <Suspense fallback={null}>
-          <BulletinModal emp={employee} params={params} entreprise={entreprise} templateId={templateId} onClose={() => setShowBulletin(false)} />
+          <BulletinModal emp={employee} params={params} entreprise={entreprise} templateId={templateId}
+            fige={{ mois: ouvert.mois, annee: ouvert.annee, paie: completerPaie(ouvert.data, calculerPaie({ ...employee, salaireBase: 0, sursalaire: 0 }, params, new Date(ouvert.annee, ouvert.mois + 1, 0))) }}
+            onClose={() => setOuvert(null)} />
         </Suspense>
       )}
     </div>

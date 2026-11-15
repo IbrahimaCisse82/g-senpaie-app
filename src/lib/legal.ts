@@ -334,13 +334,18 @@ export interface STCNet {
   /** Indemnité de licenciement ou de départ à la retraite, dans la limite légale : non soumise */
   indemniteNonSoumise: number;
   ir: number; trimf: number; ipres: number; ipm: number; totalRetenues: number;
+  /** Nombre de mois de salaire que représente le brut soumis (au moins 1) : base de l'étalement */
+  moisEquivalents: number;
   netAPayer: number;
 }
 
 /**
  * Net du solde de tout compte. Hypothèses (à valider par l'expert-comptable) :
  * - le salaire du dernier mois, l'indemnité de préavis et l'indemnité de congés sont du salaire,
- *   soumis à l'IR, à la TRIMF, à l'IPRES et à l'IPM, calculés comme une paie mensuelle ;
+ *   soumis à l'IR, à la TRIMF, à l'IPRES et à l'IPM ;
+ * - ces sommes représentent plusieurs mois de salaire : elles sont étalées sur le nombre de mois équivalent
+ *   (brut soumis / salaire mensuel, au moins 1), l'impôt et les cotisations plafonnées étant calculés
+ *   sur un mois puis multipliés — sans quoi le tout serait imposé comme un seul très gros salaire ;
  * - l'indemnité de licenciement ou de retraite, au montant légal, est exonérée d'IR et de cotisations.
  * La régularisation annuelle de l'IR reste à effectuer sur la déclaration annuelle.
  */
@@ -352,19 +357,23 @@ export function calculerSTCNet(
   const jours = Math.min(30, fin.getDate());
   const salaireProrata = inclureSalaireDuMois ? Math.round(paieMois.brut * jours / 30) : 0;
   const brutSoumis = salaireProrata + stc.indPreavis + stc.indCongesNonPris;
+  // Étalement : le brut soumis vaut « moisEquivalents » mois de salaire
+  const moisEquivalents = paieMois.brut > 0 ? Math.max(1, brutSoumis / paieMois.brut) : 1;
   // Paie de sortie : un seul élément brut, sans prime d'ancienneté ni éléments variables (déjà inclus)
   const sortie: Employee = {
-    ...emp, salaireBase: brutSoumis, sursalaire: 0, dateEntree: dateFin,
+    ...emp, salaireBase: brutSoumis / moisEquivalents, sursalaire: 0, dateEntree: dateFin,
     heuresAbsence: 0, heuresAbsMaladie: 0, hs115: 0, hs140: 0, hs160: 0, hs200: 0, nbPaniers: 0, indKilometrique: 0,
     avanceTabaski: 0, avanceCaisse: 0, avanceFinanciere: 0, retCooperative: 0, fraisMedicaux: 0, retenueEcheances: 0,
+    gratification: 0, regulIR: 0,
   };
   const r = brutSoumis > 0 ? calculerPaie(sortie, params, fin) : null;
-  const ir = r?.ir ?? 0, trimf = r?.trimf ?? 0, ipres = (r?.ipresRG_s ?? 0) + (r?.ipresRC_s ?? 0), ipm = r?.ipm_s ?? 0;
+  const k = moisEquivalents;
+  const ir = (r?.ir ?? 0) * k, trimf = (r?.trimf ?? 0) * k, ipres = ((r?.ipresRG_s ?? 0) + (r?.ipresRC_s ?? 0)) * k, ipm = (r?.ipm_s ?? 0) * k;
   const totalRetenues = ir + trimf + ipres + ipm;
   return {
     salaireProrata, joursTravaillesDernierMois: inclureSalaireDuMois ? jours : 0,
     brutSoumis, indemniteNonSoumise: stc.indLicenciement,
-    ir, trimf, ipres, ipm, totalRetenues,
+    ir, trimf, ipres, ipm, totalRetenues, moisEquivalents,
     netAPayer: Math.round(brutSoumis - totalRetenues + stc.indLicenciement),
   };
 }

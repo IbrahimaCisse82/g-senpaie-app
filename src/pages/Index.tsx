@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
 import { Navigate } from "react-router-dom";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
@@ -36,8 +36,9 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { employeeSchema, entrepriseSchema, formatZodError } from "@/lib/validation";
 import { buildAlerts } from "@/lib/alerts";
 import { DEMO_EMPLOYEES, isDemoEmployee } from "@/lib/demoData";
-import { resteVariables, remiseAZeroVariables } from "@/lib/payroll";
+import { resteVariables, remiseAZeroVariables, ELEMENTS_VARIABLES } from "@/lib/payroll";
 import { EmployeePortal } from "@/components/senpaie/EmployeePortal";
+import { estCompteDemo } from "@/lib/demo";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -88,6 +89,15 @@ const Index = () => {
   };
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); }, []);
+
+  // Compte de démonstration : les salariés d'exemple sont chargés automatiquement à la première ouverture
+  const compteDemo = estCompteDemo(user?.email);
+  const demoChargee = useRef(false);
+  useEffect(() => {
+    if (!compteDemo || empLoading || !entrepriseId || employees.length > 0 || demoChargee.current) return;
+    demoChargee.current = true;
+    (async () => { for (const emp of DEMO_EMPLOYEES) await saveEmployee(emp, true); })();
+  }, [compteDemo, empLoading, entrepriseId, employees.length, saveEmployee]);
 
   if (authLoading || entLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -196,7 +206,8 @@ const Index = () => {
         email: e.email?.trim() || null,
         brut: Math.round(e.paie.brut),
         net: Math.round(e.paie.net),
-        data: JSON.parse(JSON.stringify(e.paie)),
+        // Montants figés + éléments variables saisis ce mois-là (heures, paniers…) pour réafficher le bulletin à l'identique
+        data: JSON.parse(JSON.stringify({ ...e.paie, variables: Object.fromEntries(ELEMENTS_VARIABLES.map((k) => [k, e[k] || 0])) })),
         statut_envoi: e.email?.trim() ? "en_attente" : "sans_email",
       }));
       const { error } = await supabase.from("bulletins_mois").upsert(payload as never, { onConflict: "entreprise_id,mois,annee,matricule" });
@@ -303,6 +314,12 @@ const Index = () => {
       )}
 
       <main className={`${isMobile ? "pt-14 px-3 pb-5" : "ml-[220px] p-7"} min-h-screen`}>
+        {compteDemo && (
+          <div className="mb-4 rounded-lg border border-primary bg-primary/10 px-4 py-2.5 text-[12px] flex flex-wrap items-center justify-between gap-2">
+            <span>🧪 <strong>Compte de démonstration</strong> — données fictives, partagées entre tous les visiteurs. N'y saisissez aucune donnée réelle.</span>
+            <button onClick={signOut} className="px-3 py-1 bg-primary text-primary-foreground rounded-md font-bold text-[11px] cursor-pointer border-none">Créer mon compte</button>
+          </div>
+        )}
         {empLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-primary animate-pulse">Chargement des données…</div>
@@ -356,7 +373,8 @@ const Index = () => {
               />
             )}
             {activeTab === "contrats" && <ContratsPage userId={user.id} entrepriseId={entrepriseId} employees={employees} entreprise={entreprise} />}
-            {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history} />}
+            {activeTab === "declarations" && <DeclarationsPage employees={employees} params={params} entreprise={entreprise} history={history}
+              canEdit={canWriteEmployees} onSaveEmployee={(e) => saveEmployee(e, false)} />}
             {activeTab === "sorties" && <SortiesPage userId={user.id} entrepriseId={entrepriseId} employees={employees} params={params} entreprise={entreprise} />}
             {activeTab === "avances" && <AvancesPage entrepriseId={entrepriseId} employees={employees} />}
             {activeTab === "equipe" && <EquipePage userId={user.id} userEmail={user.email || ""} entrepriseId={entrepriseId} role={role} />}

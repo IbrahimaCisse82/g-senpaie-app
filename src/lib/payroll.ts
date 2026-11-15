@@ -41,6 +41,10 @@ export interface Employee {
   retCooperative: number;
   fraisMedicaux: number;
   indKilometrique: number;
+  /** Gratification / 13e mois / prime exceptionnelle du mois : soumise aux cotisations, imposée sans annualisation */
+  gratification?: number;
+  /** Régularisation annuelle de l'IR à passer sur le bulletin : positif = complément retenu, négatif = trop-perçu remboursé */
+  regulIR?: number;
   /** Échéances d'avances/prêts du mois (module Avances & prêts) — calculé, jamais enregistré sur la fiche */
   retenueEcheances?: number;
   // Sortie
@@ -156,6 +160,12 @@ export interface PayrollResult {
   fraisMedicaux: number;
   /** Remboursement des avances et prêts échelonnés du mois */
   retenueEcheances: number;
+  /** Gratification / 13e mois versé ce mois (inclus dans le brut) */
+  gratification: number;
+  /** Part de l'IR due à la gratification (incluse dans ir) */
+  irGratification: number;
+  /** Régularisation annuelle de l'IR (incluse dans le total des retenues, hors ligne IR) */
+  regulIR: number;
 }
 
 export interface Convention {
@@ -304,12 +314,17 @@ export const REDUCTION_FAMILLE: Record<string, [number, number, number]> = {
  * 4. IR annuel = max(0 ; impôt − réduction), divisé par 12.
  */
 export function calculerIR(brut: number, parts: number): { ir: number; revenuImposable: number; impotBrut: number; reduction: number } {
-  const annuel = brut * 12;
+  const a = calculerIRAnnuel(brut * 12, parts);
+  return { ir: a.ir / 12, revenuImposable: a.revenuImposable, impotBrut: a.impotBrut, reduction: a.reduction };
+}
+
+/** IR annuel sur un revenu brut annuel réel (même barème, même abattement, même réduction que le calcul mensuel) */
+export function calculerIRAnnuel(annuel: number, parts: number): { ir: number; revenuImposable: number; impotBrut: number; reduction: number } {
   const revenuImposable = Math.floor((annuel - Math.min(annuel * 0.3, 900000)) / 1000) * 1000;
   const impotBrut = baremeIR(Math.max(0, revenuImposable));
   const r = REDUCTION_FAMILLE[String(parts)];
   const reduction = r ? Math.min(r[2], Math.max(impotBrut * r[0], r[1])) : 0;
-  return { ir: Math.max(0, impotBrut - reduction) / 12, revenuImposable, impotBrut, reduction };
+  return { ir: Math.max(0, impotBrut - reduction), revenuImposable, impotBrut, reduction };
 }
 
 /** Calcul TRIMF mensuel (barème annuel × parts TRIMF, tranche minimale forfaitaire de 900 F/an) */
@@ -358,14 +373,23 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const primePanier = (emp.nbPaniers || 0) * (p.panier?.valeur ?? PANIER_DEFAUT);
   const indKilometrique = emp.indKilometrique || 0;
 
-  const brut = salaireBase + sursalaire + primeAnc + totalHS - retAbsence + indMaladie;
+  // Gratification / 13e mois : versement ponctuel, soumis aux cotisations comme le salaire
+  const gratification = Math.max(0, emp.gratification || 0);
+  const brutCourant = salaireBase + sursalaire + primeAnc + totalHS - retAbsence + indMaladie;
+  const brut = brutCourant + gratification;
 
   // Impôts — uniquement pour les salariés (CDI / CDD)
+  // Le salaire courant est annualisé (× 12) ; la gratification, versée une seule fois, ne l'est pas :
+  // son impôt est le supplément d'IR annuel qu'elle provoque (sinon elle serait imposée comme douze versements).
   const partsIR = getPartsIR(emp.situationFamille, emp.enfants);
-  const irCalc = calculerIR(brut, partsIR);
-  const ir = salarie ? irCalc.ir : 0;
+  const irCalc = calculerIR(brutCourant, partsIR);
+  const irGratification = salarie && gratification > 0
+    ? Math.max(0, calculerIRAnnuel(brutCourant * 12 + gratification, partsIR).ir - irCalc.ir * 12) : 0;
+  const ir = salarie ? irCalc.ir + irGratification : 0;
   const partsTRIMFCap = Math.min(1 + (emp.femmes || 0), 5);
-  const trimf = salarie ? calculerTRIMF(brut, partsTRIMFCap) : 0;
+  const trimf = salarie ? calculerTRIMF(brutCourant, partsTRIMFCap) : 0;
+  // Régularisation annuelle de l'IR (salariés) : complément (+) ou remboursement (−)
+  const regulIR = salarie ? (emp.regulIR || 0) : 0;
   // BRS : retenue à la source sur honoraires des prestataires
   const brs = regime === "prestataire" ? brut * p.BRS.taux : 0;
 
@@ -402,7 +426,7 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
   const retenueEcheances = Math.max(0, emp.retenueEcheances || 0);
   const totalAvances = avanceTabaski + avanceCaisse + avanceFinanciere + retCooperative + fraisMedicaux + retenueEcheances;
 
-  const totalRet = ir + trimf + brs + ipresRG_s + ipresRC_s + ipm_s;
+  const totalRet = ir + regulIR + trimf + brs + ipresRG_s + ipresRC_s + ipm_s;
   const chargesPat = cfce + ipresRG_p + ipresRC_p + css_af + css_at + ipm_p;
   // Indemnité de transport : non due aux prestataires
   const joursAbsence = ((emp.heuresAbsence || 0) + (emp.heuresAbsMaladie || 0)) / HEURES_PAR_JOUR;
@@ -420,6 +444,7 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
     tauxHoraire, retAbsence, indMaladie, mtHS115, mtHS140, mtHS160, mtHS200, totalHS,
     primePanier, indKilometrique, totalAvances,
     avanceTabaski, avanceCaisse, avanceFinanciere, retCooperative, fraisMedicaux, retenueEcheances,
+    gratification, irGratification, regulIR,
   };
 }
 
@@ -427,7 +452,7 @@ export function calculerPaie(emp: Employee, p: PayrollParams, refDate?: Date): P
 //  Éléments variables du mois (remis à zéro à la clôture)
 // ══════════════════════════════════════════════════════════════════════════════
 /** Rubriques propres à un mois : elles ne doivent pas être reprises sur le bulletin suivant */
-export const ELEMENTS_VARIABLES = ["heuresAbsence", "heuresAbsMaladie", "hs115", "hs140", "hs160", "hs200", "nbPaniers"] as const;
+export const ELEMENTS_VARIABLES = ["heuresAbsence", "heuresAbsMaladie", "hs115", "hs140", "hs160", "hs200", "nbPaniers", "gratification", "regulIR"] as const;
 
 export function resteVariables(e: Employee): boolean {
   return ELEMENTS_VARIABLES.some((k) => (e[k] || 0) !== 0);

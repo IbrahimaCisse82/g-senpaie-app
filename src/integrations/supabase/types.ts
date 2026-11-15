@@ -437,6 +437,7 @@ export type Database = {
           femmes: number
           fonction: string
           frais_medicaux: number
+          gratification: number
           heures_abs_maladie: number
           heures_absence: number
           hs115: number
@@ -452,6 +453,7 @@ export type Database = {
           nb_paniers: number
           nom: string
           prenom: string
+          regul_ir: number
           ret_cooperative: number
           salaire_base: number
           sexe: string
@@ -482,6 +484,7 @@ export type Database = {
           femmes?: number
           fonction?: string
           frais_medicaux?: number
+          gratification?: number
           heures_abs_maladie?: number
           heures_absence?: number
           hs115?: number
@@ -497,6 +500,7 @@ export type Database = {
           nb_paniers?: number
           nom: string
           prenom: string
+          regul_ir?: number
           ret_cooperative?: number
           salaire_base?: number
           sexe?: string
@@ -527,6 +531,7 @@ export type Database = {
           femmes?: number
           fonction?: string
           frais_medicaux?: number
+          gratification?: number
           heures_abs_maladie?: number
           heures_absence?: number
           hs115?: number
@@ -542,6 +547,7 @@ export type Database = {
           nb_paniers?: number
           nom?: string
           prenom?: string
+          regul_ir?: number
           ret_cooperative?: number
           salaire_base?: number
           sexe?: string

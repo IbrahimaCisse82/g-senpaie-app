@@ -22,6 +22,12 @@ export interface LigneDADS {
   trimfAnnuel: number;
   ipresAnnuel: number;
   cssAnnuel: number;
+  /** BRS retenue sur les honoraires des prestataires */
+  brsAnnuel: number;
+  /** CFCE à la charge de l'employeur */
+  cfceAnnuel: number;
+  ipmAnnuel: number;
+  netAnnuel: number;
 }
 
 const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : 0);
@@ -43,6 +49,7 @@ export function calculerDADS(bulletins: BulletinArchive[], employees: Employee[]
           ? { matricule: e.matricule, nom: e.nom, prenom: e.prenom, dateEntree: e.dateEntree, dateSortie: e.dateSortie }
           : { matricule: b.matricule, nom: reste.join(" "), prenom, dateEntree: "" },
         moisPayes: [], brutAnnuel: 0, irAnnuel: 0, trimfAnnuel: 0, ipresAnnuel: 0, cssAnnuel: 0,
+        brsAnnuel: 0, cfceAnnuel: 0, ipmAnnuel: 0, netAnnuel: 0,
       };
       parMat.set(b.matricule, l);
     }
@@ -50,7 +57,11 @@ export function calculerDADS(bulletins: BulletinArchive[], employees: Employee[]
     const p = b.data || {};
     l.moisPayes.push(b.mois);
     l.brutAnnuel += n(p.brut) || n(b.brut);
-    l.irAnnuel += n(p.ir);
+    l.irAnnuel += n(p.ir) + n(p.regulIR); // régularisation annuelle comprise
+    l.brsAnnuel += n(p.brs);
+    l.cfceAnnuel += n(p.cfce);
+    l.ipmAnnuel += n(p.ipm_s) + n(p.ipm_p);
+    l.netAnnuel += n(p.net);
     l.trimfAnnuel += n(p.trimf);
     l.ipresAnnuel += n(p.ipresRG_s) + n(p.ipresRC_s);
     l.cssAnnuel += n(p.css_af) + n(p.css_at);
@@ -58,6 +69,12 @@ export function calculerDADS(bulletins: BulletinArchive[], employees: Employee[]
   return [...parMat.values()]
     .map((l) => ({ ...l, moisPayes: l.moisPayes.sort((a, b) => a - b) }))
     .sort((a, b) => a.emp.matricule.localeCompare(b.emp.matricule));
+}
+
+/** Bulletin figé complété par des zéros pour les rubriques absentes des anciennes archives */
+export function completerPaie(data: Partial<PayrollResult> | null, modele: PayrollResult): PayrollResult {
+  const zero = Object.fromEntries(Object.entries(modele).map(([k, v]) => [k, typeof v === "number" ? 0 : v]));
+  return { ...(zero as unknown as PayrollResult), ...(data || {}) };
 }
 
 /** Mois de l'année pour lesquels au moins un bulletin a été clôturé */
