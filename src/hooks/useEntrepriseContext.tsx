@@ -44,12 +44,7 @@ export function EntrepriseProvider({ children }: { children: ReactNode }) {
       .from("entreprises").select("id").eq("user_id", user.id).maybeSingle();
 
     if (ent) {
-      // Backfill missing membership
-      await supabase.from("entreprise_members" as never).insert({
-        entreprise_id: ent.id,
-        user_id: user.id,
-        role: "admin",
-      } as never);
+      // L'appartenance est créée côté base (trigger + rattrapage de migration) : le client ne peut plus s'ajouter lui-même.
       setEntrepriseId(ent.id);
       setRole("admin");
       setLoading(false);
@@ -63,11 +58,7 @@ export function EntrepriseProvider({ children }: { children: ReactNode }) {
       .select("id").single();
 
     if (created) {
-      await supabase.from("entreprise_members" as never).insert({
-        entreprise_id: created.id,
-        user_id: user.id,
-        role: "admin",
-      } as never);
+      // Le trigger de la base ajoute le créateur comme administrateur.
       setEntrepriseId(created.id);
       setRole("admin");
     }

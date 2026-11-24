@@ -1,4 +1,5 @@
 import type { Employee, PayrollResult } from "@/lib/payroll";
+import { csvCell } from "@/lib/utils";
 import { fmt, MOIS } from "@/lib/payroll";
 import { useProgressiveList } from "@/hooks/useProgressiveList";
 
@@ -42,7 +43,7 @@ function exportCSV(allPaies: (Employee & { paie: PayrollResult })[], totaux: Cot
     Math.round(totaux.net),
   ];
 
-  const csvContent = [headers, ...rows, totRow].map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
+  const csvContent = [headers, ...rows, totRow].map((r) => r.map(csvCell).join(";")).join("\n");
   const BOM = "\uFEFF";
   const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -72,7 +73,7 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
     Math.round(e.paie.net), Math.round(e.paie.chargesPat), Math.round(e.paie.masse),
   ]);
 
-  const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
+  const csv = [headers, ...rows].map((r) => r.map(csvCell).join(";")).join("\n");
   const BOM = "\uFEFF";
   const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

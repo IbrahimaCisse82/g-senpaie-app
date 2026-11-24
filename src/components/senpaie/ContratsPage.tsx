@@ -3,6 +3,7 @@ import type { Employee, Entreprise } from "@/lib/payroll";
 import { useContrats, type Contrat } from "@/hooks/useRH";
 import { exportHtmlToPdf } from "@/lib/pdfExport";
 import { fmt } from "@/lib/payroll";
+import { escapeStrings, safeImageUrl } from "@/lib/utils";
 import { Modal, Field, inputClass } from "./Modal";
 import { controlerContrat, periodeEssaiMaxMois } from "@/lib/legal";
 
@@ -145,7 +146,11 @@ function ContratForm({ initial, employees, autresContrats = [], onClose, onSave 
   );
 }
 
-function buildContratHtml(emp: Employee, c: Contrat, ent: Entreprise): string {
+export function buildContratHtml(empBrut: Employee, cBrut: Contrat, entBrut: Entreprise): string {
+  // Toutes les données saisies sont échappées avant insertion dans le HTML (protection XSS)
+  const emp = escapeStrings(empBrut);
+  const c = escapeStrings(cBrut);
+  const ent = { ...escapeStrings(entBrut), logo: safeImageUrl(entBrut.logo) };
   const today = new Date().toLocaleDateString("fr-FR");
   const dureeText = c.type === "CDD" && c.dateFin
     ? `déterminée, jusqu'au <b>${c.dateFin}</b>`

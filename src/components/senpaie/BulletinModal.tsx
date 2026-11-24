@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { csvCell } from "@/lib/utils";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
 import { getTemplate } from "@/lib/bulletinTemplates";
@@ -53,7 +54,7 @@ function exportBulletinCSV(emp: Employee, p: PayrollResult, mois: number, annee:
     ["Masse salariale", Math.round(p.masse)],
   ];
 
-  const csv = rows.map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
+  const csv = rows.map((r) => r.map(csvCell).join(";")).join("\n");
   const BOM = "\uFEFF";
   const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

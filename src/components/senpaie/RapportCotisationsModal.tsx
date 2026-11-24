@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { csvCell } from "@/lib/utils";
 import type { Employee, PayrollParams } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,7 +52,7 @@ function exportRapportCSV(rows: PeriodeTotaux[], totals: ReturnType<typeof sumTo
     Math.round(totals.cfce), Math.round(totals.ipm), Math.round(totals.totalRet),
     Math.round(totals.chargesPat), Math.round(totals.net), Math.round(totals.masse),
   ];
-  const csv = [headers, ...csvRows, totRow].map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
+  const csv = [headers, ...csvRows, totRow].map((r) => r.map(csvCell).join(";")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

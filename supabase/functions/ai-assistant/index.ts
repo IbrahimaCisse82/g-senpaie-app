@@ -1,7 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Définir ALLOWED_ORIGIN (ex. https://app.g-senpaie.sn) pour restreindre l'appel à l'application ; « * » par défaut.
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
+  "Vary": "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -28,10 +30,13 @@ Deno.serve(async (req) => {
     });
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return refus(401, "Non authentifié");
-    const { data: membre } = await supabase.from("entreprise_members").select("role").eq("user_id", user.id).limit(1).maybeSingle();
-    if (!membre || membre.role === "employe") return refus(403, "Accès réservé aux gestionnaires de paie");
+    // Au moins une appartenance avec un rôle de gestion (et non la première trouvée, qui pouvait être « employé »).
+    const { data: membres } = await supabase.from("entreprise_members").select("role").eq("user_id", user.id);
+    if (!membres?.some((m) => m.role !== "employe")) return refus(403, "Accès réservé aux gestionnaires de paie");
     const { messages } = await req.json();
     if (!Array.isArray(messages) || messages.length > 50) throw new Error("Messages invalides");
+    // Borne la taille de la requête pour limiter la consommation de crédits IA.
+    if (JSON.stringify(messages).length > 60_000) return refus(413, "Conversation trop longue, recommencez une nouvelle discussion.");
     const key = Deno.env.get("LOVABLE_API_KEY");
     if (!key) throw new Error("LOVABLE_API_KEY manquant");
 

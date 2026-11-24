@@ -27,3 +27,14 @@ export function escapeStrings<T extends object>(obj: T): T {
   for (const [k, v] of Object.entries(out)) if (typeof v === "string") out[k] = escapeHtml(v);
   return out as T;
 }
+
+/**
+ * Cellule CSV sûre : guillemets doublés et neutralisation des formules (= + - @ tabulation).
+ * Les nombres négatifs (« -1 250,5 ») restent lisibles ; tout autre texte commençant par un de ces
+ * caractères reçoit une apostrophe pour qu'Excel ne l'exécute pas.
+ */
+export function csvCell(value: unknown): string {
+  let t = String(value ?? "");
+  if (/^[=+@\t\r]/.test(t) || (/^-/.test(t) && !/^-[\d\s.,\u00a0\u202f]+$/.test(t))) t = "'" + t;
+  return `"${t.replace(/"/g, '""')}"`;
+}

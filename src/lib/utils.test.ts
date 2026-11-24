@@ -15,3 +15,19 @@ describe("protection XSS des bulletins", () => {
     expect(r).toEqual({ nom: "&lt;b&gt;", salaire: 1000 });
   });
 });
+
+import { csvCell } from "./utils";
+describe("csvCell", () => {
+  it("neutralise les formules et double les guillemets", () => {
+    expect(csvCell('=HYPERLINK("http://x")')).toBe(`"'=HYPERLINK(""http://x"")"`);
+    expect(csvCell("+33 1")).toBe(`"'+33 1"`);
+    expect(csvCell("@cmd")).toBe(`"'@cmd"`);
+    expect(csvCell("-cmd|calc")).toBe(`"'-cmd|calc"`);
+  });
+  it("laisse intacts nombres, négatifs et texte normal", () => {
+    expect(csvCell(1250)).toBe('"1250"');
+    expect(csvCell("-1 250,5")).toBe('"-1 250,5"');
+    expect(csvCell("Fatou Sarr")).toBe('"Fatou Sarr"');
+    expect(csvCell(null)).toBe('""');
+  });
+});

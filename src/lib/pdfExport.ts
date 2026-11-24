@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/utils";
 /**
  * Helper PDF universel : convertit un HTML en PDF téléchargé.
  * Réutilise la même stratégie que BulletinModal (jspdf + html2canvas via Blob).
@@ -67,7 +68,7 @@ export async function exportHtmlToPdf(html: string, filename: string, opts?: { o
 /** Export tableau de données en CSV compatible Excel (séparateur ;, BOM UTF-8) */
 export function exportRowsToCsv(rows: (string | number)[][], filename: string) {
   const csv = rows
-    .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";"))
+    .map((r) => r.map(csvCell).join(";"))
     .join("\n");
   const BOM = "\uFEFF";
   const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
