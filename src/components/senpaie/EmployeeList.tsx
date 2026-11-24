@@ -43,8 +43,8 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
       const { employees: parsed, errors } = await parseEmployeeFile(file, employees.map((e) => e.matricule));
       if (parsed.length) await onImport(parsed);
       setImportReport({ ok: parsed.length, errors });
-    } catch {
-      setImportReport({ ok: 0, errors: [{ ligne: 0, message: "Fichier illisible — utilisez le modèle Excel." }] });
+    } catch (e) {
+      setImportReport({ ok: 0, errors: [{ ligne: 0, message: e instanceof Error && e.message ? e.message : "Fichier illisible — utilisez le modèle Excel." }] });
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -105,7 +105,7 @@ export function EmployeeList({ employees, search, onSearchChange, onAdd, onEdit,
               <button onClick={() => fileRef.current?.click()} disabled={importing} className="px-3 py-2.5 bg-secondary border border-border text-foreground rounded-lg font-bold text-[11px] cursor-pointer whitespace-nowrap disabled:opacity-50">
                 {importing ? "Import…" : "⬆ Importer Excel"}
               </button>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+              <input ref={fileRef} type="file" accept=".xlsx,.csv" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); }} />
             </>
           )}

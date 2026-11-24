@@ -25,3 +25,26 @@ jobs:
         run: npx vitest run
       - name: Build
         run: npm run build
+
+  cloisonnement:
+    # Rejoue toutes les migrations sur un Postgres vide puis vérifie qu'une entreprise ne voit,
+    # ne modifie et ne rejoint jamais une autre entreprise (règles d'accès par ligne).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrations et test d'isolation
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: bash supabase/tests/run.sh

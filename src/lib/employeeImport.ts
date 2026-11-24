@@ -1,4 +1,5 @@
 import type { Employee } from "@/lib/payroll";
+import { telechargerXlsx, lireFeuille, type Cellule } from "@/lib/xlsxIO";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
 import { normaliserStatut, normaliserSituation, STATUTS } from "./payroll";
 
@@ -51,39 +52,26 @@ const toDate = (v: unknown): string => {
 
 /** Génère et télécharge le fichier modèle d'import */
 export async function downloadImportTemplate() {
-  const XLSX = await import("xlsx");
   const headers = IMPORT_COLUMNS.map((c) => c.header);
   const example = [
     "EMP001", "Fatou", "Diop", "F", "1992-04-15", "770000000", "fatou.diop@exemple.sn",
     "Marié(e)", 0, 2, "Comptable", "COMMERCE", "M1", "employés", "CDI", "2020-01-06", 250000, 50000,
   ];
-  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-  ws["!cols"] = headers.map((h) => ({ wch: Math.max(14, h.length + 2) }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Employés");
-  XLSX.writeFile(wb, "modele_import_employes.xlsx");
+  await telechargerXlsx("modele_import_employes.xlsx", "Employés", [headers, example]);
 }
 
 /** Exporte la liste des employés au format Excel */
 export async function exportEmployeesXlsx(employees: Employee[]) {
-  const XLSX = await import("xlsx");
-  const rows = employees.map((e) =>
-    Object.fromEntries(IMPORT_COLUMNS.map((c) => [c.header, e[c.key] ?? ""])),
-  );
-  const ws = XLSX.utils.json_to_sheet(rows, { header: IMPORT_COLUMNS.map((c) => c.header) });
-  ws["!cols"] = IMPORT_COLUMNS.map((c) => ({ wch: Math.max(14, c.header.length + 2) }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Employés");
-  XLSX.writeFile(wb, `employes_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const lignes: Cellule[][] = [
+    IMPORT_COLUMNS.map((c) => c.header),
+    ...employees.map((e) => IMPORT_COLUMNS.map((c) => (e[c.key] ?? "") as string | number)),
+  ];
+  await telechargerXlsx(`employes_${new Date().toISOString().slice(0, 10)}.xlsx`, "Employés", lignes);
 }
 
 /** Parse un fichier Excel/CSV en employés, avec contrôles de cohérence */
-export async function parseEmployeeFile(file: File, existingMats: string[] = []): Promise<ImportResult> {
-  const XLSX = await import("xlsx");
-  const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+export async function parseEmployeeFile(file: Pick<File, "name" | "type" | "text" | "arrayBuffer">, existingMats: string[] = []): Promise<ImportResult> {
+  const raw: Record<string, unknown>[] = await lireFeuille(file);
 
   const employees: Employee[] = [];
   const errors: ImportRowError[] = [];

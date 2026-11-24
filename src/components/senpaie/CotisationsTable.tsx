@@ -1,4 +1,5 @@
 import type { Employee, PayrollResult } from "@/lib/payroll";
+import { telechargerXlsx } from "@/lib/xlsxIO";
 import { csvCell } from "@/lib/utils";
 import { fmt, MOIS } from "@/lib/payroll";
 import { useProgressiveList } from "@/hooks/useProgressiveList";
@@ -85,7 +86,6 @@ function exportAllBulletinsCSV(allPaies: (Employee & { paie: PayrollResult })[])
 }
 
 async function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], totaux: CotisationsTableProps["totaux"]) {
-  const XLSX = await import("xlsx");
   const headers = ["Employé", "Matricule", "Statut", "Brut", "IR", "TRIMF", "IPRES RG", "IPRES RC", "CSS", "IPM", "Ret. Sal.", "Ch. Pat.", "Masse", "Net"];
   const rows = allPaies.map((emp) => [
     `${emp.prenom} ${emp.nom}`, emp.matricule, emp.statut,
@@ -109,11 +109,7 @@ async function exportXLSX(allPaies: (Employee & { paie: PayrollResult })[], tota
     Math.round(allPaies.reduce((s, e) => s + e.paie.totalRet, 0)),
     Math.round(totaux.ch), Math.round(totaux.mass), Math.round(totaux.net),
   ];
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows, totRow]);
-  ws["!cols"] = headers.map(() => ({ wch: 14 }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Cotisations");
-  XLSX.writeFile(wb, `cotisations_${MOIS[new Date().getMonth()]}_${new Date().getFullYear()}.xlsx`);
+  await telechargerXlsx(`cotisations_${MOIS[new Date().getMonth()]}_${new Date().getFullYear()}.xlsx`, "Cotisations", [headers, ...rows, totRow]);
 }
 
 export function CotisationsTable({ allPaies, totaux, onOpenRapport }: CotisationsTableProps) {
