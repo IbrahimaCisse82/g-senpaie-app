@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
+import { confirmer } from "@/lib/dialog";
 import { Navigate } from "react-router-dom";
 import type { Employee, PayrollResult, Convention } from "@/lib/payroll";
 import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
@@ -196,7 +197,7 @@ const Index = () => {
         return;
       }
     }
-    if (!confirm(`Clôturer ${MOIS[mois]} ${annee} et figer ${allPaies.length} bulletin(s) ?\nLes absences, heures supplémentaires et paniers saisis seront remis à zéro pour le mois suivant.`)) return;
+    if (!(await confirmer(`Clôturer ${MOIS[mois]} ${annee} et figer ${allPaies.length} bulletin(s) ?\nLes absences, heures supplémentaires et paniers saisis seront remis à zéro pour le mois suivant.`))) return;
     await saveSnapshot(mois, annee, totaux, allPaies.length);
     if (entrepriseId && allPaies.length) {
       const payload = allPaies.map((e) => ({

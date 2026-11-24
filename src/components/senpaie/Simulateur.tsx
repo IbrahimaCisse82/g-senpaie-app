@@ -4,6 +4,9 @@ import { calculerPaie, fmt, MOIS } from "@/lib/payroll";
 import { EMPTY_EMPLOYEE } from "@/lib/constants";
 import { Field, inputClass } from "./Modal";
 
+/** Valeur numérique saisie, ramenée dans [min, max] (champ vide ou texte invalide = min) : évite les dates ou calculs impossibles. */
+const borne = (v: string, min: number, max: number) => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min; };
+
 interface SimulateurProps {
   params: PayrollParams;
 }
@@ -41,7 +44,7 @@ export function Simulateur({ params }: SimulateurProps) {
 
         <Field label={`Salaire de base : ${fmt(s.salaireBase)} F`}>
           <input type="range" min={50000} max={2000000} step={5000} value={s.salaireBase}
-            onChange={(e) => setS((p) => ({ ...p, salaireBase: +e.target.value }))}
+            onChange={(e) => setS((p) => ({ ...p, salaireBase: borne(e.target.value, 0, 1e9) }))}
             className="w-full accent-primary h-2 cursor-pointer" />
           <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
             <span>50k</span><span>2M</span>
@@ -50,16 +53,16 @@ export function Simulateur({ params }: SimulateurProps) {
 
         <div className="grid grid-cols-2 gap-x-3">
           <Field label="Ancienneté (ans)">
-            <input type="number" value={s.anciennete} min={0} max={40} onChange={(e) => setS((p) => ({ ...p, anciennete: +e.target.value }))} className={inputClass} />
+            <input type="number" value={s.anciennete} min={0} max={40} onChange={(e) => setS((p) => ({ ...p, anciennete: borne(e.target.value, 0, 40) }))} className={inputClass} />
           </Field>
           <Field label="Enfants">
-            <input type="number" value={s.enfants} min={0} onChange={(e) => setS((p) => ({ ...p, enfants: +e.target.value }))} className={inputClass} />
+            <input type="number" value={s.enfants} min={0} onChange={(e) => setS((p) => ({ ...p, enfants: borne(e.target.value, 0, 20) }))} className={inputClass} />
           </Field>
           <Field label="Femmes">
-            <input type="number" value={s.femmes} min={0} max={4} onChange={(e) => setS((p) => ({ ...p, femmes: +e.target.value }))} className={inputClass} />
+            <input type="number" value={s.femmes} min={0} max={4} onChange={(e) => setS((p) => ({ ...p, femmes: borne(e.target.value, 0, 4) }))} className={inputClass} />
           </Field>
           <Field label="Sursalaire">
-            <input type="number" value={s.sursalaire} min={0} onChange={(e) => setS((p) => ({ ...p, sursalaire: +e.target.value }))} className={inputClass} />
+            <input type="number" value={s.sursalaire} min={0} onChange={(e) => setS((p) => ({ ...p, sursalaire: borne(e.target.value, 0, 1e9) }))} className={inputClass} />
           </Field>
         </div>
 

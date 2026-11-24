@@ -46,7 +46,12 @@ export default function Auth() {
     </div>
   );
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    // Invitation ouverte avant la connexion ou l'inscription : on la reprend pour rattacher le compte à l'entreprise.
+    let invitation: string | null = null;
+    try { invitation = localStorage.getItem("pending_invitation"); } catch { /* stockage indisponible */ }
+    return <Navigate to={invitation ? `/invitation?token=${encodeURIComponent(invitation)}` : "/"} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

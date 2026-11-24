@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { confirmer } from "@/lib/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntrepriseCtx } from "@/hooks/useEntrepriseContext";
 import { calculerDADS, moisClotures, completerPaie, type BulletinArchive, type LigneDADS } from "@/lib/dads";
@@ -258,14 +259,16 @@ export function DeclarationsPage({ employees, params, entreprise, onSaveEmployee
   // ── Régularisation annuelle de l'IR (année en cours : le mois ouvert est ajouté aux bulletins clôturés)
   const moisCourant = now.getMonth();
   const moisOuvert = annee === now.getFullYear() && !bulletinsAnnee.some((b) => b.mois === moisCourant && b.annee === annee) ? moisCourant : null;
+  // Le report sur un bulletin n'a de sens qu'en décembre : avant, l'année n'est pas complète et l'écart (souvent un « remboursement ») est trompeur.
+  const regulIndicative = annee === now.getFullYear() && moisCourant < 11;
   const regulRows = useMemo(() => regularisationIR(bulletinsAnnee, employees, params, annee, moisOuvert), [bulletinsAnnee, employees, params, annee, moisOuvert]);
   const [regulBusy, setRegulBusy] = useState(false);
   const [regulMsg, setRegulMsg] = useState("");
   const appliquerRegul = async () => {
-    if (!onSaveEmployee || moisOuvert === null) return;
+    if (!onSaveEmployee || moisOuvert === null || regulIndicative) return;
     const aFaire = regulRows.filter((l) => l.ecart !== 0 || (employees.find((e) => e.matricule === l.matricule)?.regulIR || 0) !== 0);
     if (!aFaire.length) { setRegulMsg("Aucun écart à régulariser."); return; }
-    if (!confirm(`Reporter la régularisation de l'IR sur le bulletin de ${MOIS[moisOuvert]} ${annee} pour ${aFaire.length} salarié(s) ?\nLe net à payer du mois sera modifié.`)) return;
+    if (!(await confirmer(`Reporter la régularisation de l'IR sur le bulletin de ${MOIS[moisOuvert]} ${annee} pour ${aFaire.length} salarié(s) ?\nLe net à payer du mois sera modifié.`))) return;
     setRegulBusy(true);
     for (const l of aFaire) {
       const e = employees.find((x) => x.matricule === l.matricule);
@@ -376,7 +379,7 @@ ${dadsRows.map((r) => `    <Salarie>
         {tab === "regul" && (
           <>
             <button onClick={exportRegulCsv} className="px-3 py-2 bg-transparent border border-primary text-primary rounded-lg font-bold text-[12px]">📥 CSV</button>
-            {canEdit && onSaveEmployee && moisOuvert !== null && (
+            {canEdit && onSaveEmployee && moisOuvert !== null && !regulIndicative && (
               <button onClick={appliquerRegul} disabled={regulBusy || !regulRows.length} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-[12px] disabled:opacity-50">
                 {regulBusy ? "…" : `Reporter sur le bulletin de ${MOIS[moisOuvert]}`}
               </button>
@@ -441,6 +444,11 @@ ${dadsRows.map((r) => `    <Salarie>
                 ? <>Calcul sur les mois clôturés + {MOIS[moisOuvert]} (mois en cours). À passer sur le dernier bulletin de l'année ou au départ du salarié.</>
                 : <>Calcul sur les seuls bulletins clôturés de {annee}.</>}
             </div>
+            {regulIndicative && (
+              <div className="text-yellow-500 font-bold">
+                ⚠️ Simulation : seuls les mois clôturés (et le mois en cours) sont comptés, l'année n'est pas complète. Un « remboursement » affiché avant décembre est normal et ne doit pas être appliqué : la régularisation se reporte sur le bulletin de décembre.
+              </div>
+            )}
             {regulMsg && <div className="text-foreground font-bold">{regulMsg}</div>}
           </div>
           {regulRows.length === 0 && <div className="px-4 py-6 text-center text-muted-foreground text-[12px]">Aucun bulletin de salarié pour {annee}.</div>}

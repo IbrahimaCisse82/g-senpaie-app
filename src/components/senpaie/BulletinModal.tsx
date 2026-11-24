@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { avertir } from "@/lib/dialog";
 import { csvCell } from "@/lib/utils";
 import type { Employee, PayrollParams, PayrollResult, Entreprise } from "@/lib/payroll";
 import { calculerPaie, getAnciennete, fmt, MOIS } from "@/lib/payroll";
@@ -133,7 +134,7 @@ export function BulletinModal({ emp: empFiche, params, entreprise, templateId, a
       const html = template.generate(emp, p, mois, annee, anc, entreprise);
       const win = window.open("", "_blank");
       if (win) { win.document.write(html); win.document.close(); }
-      else { alert("Erreur lors de la génération du PDF. Veuillez autoriser les popups."); }
+      else { void avertir("Erreur lors de la génération du PDF. Veuillez autoriser les fenêtres contextuelles."); }
     } finally {
       setGenerating(false);
     }

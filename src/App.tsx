@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import { DialogHost } from "@/lib/dialog";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ const App = () => (
       <EntrepriseProvider>
       <TooltipProvider>
         <Toaster />
+        <DialogHost />
         <Sonner />
         <BrowserRouter>
           <ErrorBoundary>

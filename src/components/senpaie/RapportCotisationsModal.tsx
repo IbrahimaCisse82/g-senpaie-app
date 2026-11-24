@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { avertir } from "@/lib/dialog";
 import { csvCell } from "@/lib/utils";
 import type { Employee, PayrollParams } from "@/lib/payroll";
 import { fmt, MOIS } from "@/lib/payroll";
@@ -254,7 +255,7 @@ export function RapportCotisationsModal({ entrepriseId, employees, entreprise, o
       const html = genererRapportHTML(rows, totals, entreprise, employees.length, periodeLabel);
       const win = window.open("", "_blank");
       if (win) { win.document.write(html); win.document.close(); }
-      else alert("Erreur lors de la génération du PDF.");
+      else void avertir("Erreur lors de la génération du PDF.");
     } finally {
       setGenerating(false);
     }

@@ -17,13 +17,15 @@ export default function Invitation() {
     if (!token) { setStatus("invalid"); return; }
     if (loading) return;
     if (!user) {
-      sessionStorage.setItem("pending_invitation", token);
+      try { localStorage.setItem("pending_invitation", token); } catch { /* stockage indisponible */ }
       navigate("/auth", { replace: true });
       return;
     }
     (async () => {
       const { data, error } = await supabase.functions.invoke("accept-invitation", { body: { token } });
       const res = data as { ok?: boolean; error?: string; expected?: string } | null;
+      // Jeton traité (accepté ou refusé) : on ne le rejoue pas à la prochaine connexion.
+      try { localStorage.removeItem("pending_invitation"); } catch { /* stockage indisponible */ }
       if (error || !res?.ok) {
         const code = res?.error;
         if (code === "expired") setStatus("expired");
@@ -33,7 +35,7 @@ export default function Invitation() {
         } else { setStatus("invalid"); setMsg(code || error?.message || ""); }
         return;
       }
-      sessionStorage.removeItem("pending_invitation");
+      try { localStorage.removeItem("pending_invitation"); } catch { /* stockage indisponible */ }
       await refetch();
       setStatus("ok");
       setTimeout(() => navigate("/", { replace: true }), 1500);

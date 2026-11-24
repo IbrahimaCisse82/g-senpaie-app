@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { avertir } from "@/lib/dialog";
 import type { Entreprise } from "@/lib/payroll";
 import { Field, inputClass } from "./Modal";
 
@@ -20,7 +21,7 @@ export function EntreprisePage({ entreprise, onSave, onUploadLogo }: EntrepriseP
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert("Le fichier est trop volumineux. Max 2 Mo.");
+      void avertir("Le fichier est trop volumineux. Max 2 Mo.");
       return;
     }
 

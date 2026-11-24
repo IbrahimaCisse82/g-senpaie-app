@@ -33,7 +33,7 @@ export function Parametres({ params, onSave, onReset, bulletinTemplateId, onBull
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap gap-3 justify-between items-center mb-6">
         <div>
           <h1 className="text-foreground text-xl font-extrabold mb-1">Paramètres</h1>
           <div className="text-muted-foreground text-[11px]">Taux des cotisations sociales · République du Sénégal</div>

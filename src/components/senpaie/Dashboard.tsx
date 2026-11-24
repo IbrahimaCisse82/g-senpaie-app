@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { confirmer } from "@/lib/dialog";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { StatCard } from "./StatCard";
 import type { Employee, PayrollResult } from "@/lib/payroll";
@@ -273,8 +274,8 @@ export function Dashboard({ allPaies, totaux, history = [], conges = [], contrat
                   </div>
                   <button
                     disabled={!canReopen}
-                    onClick={() => {
-                      if (canReopen && confirm(`Rouvrir ${MOIS[h.mois]} ${h.annee} ? Les données de clôture seront supprimées.`)) {
+                    onClick={async () => {
+                      if (canReopen && await confirmer(`Rouvrir ${MOIS[h.mois]} ${h.annee} ? Les données de clôture seront supprimées.`, { confirmer: "Rouvrir le mois" })) {
                         onReopenMonth(h.mois, h.annee);
                       }
                     }}
